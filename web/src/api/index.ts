@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/store/auth'
 import { ENV } from '@/utils/env'
+import { ROUTES } from '@/routes/constants'
 
 // ======================
 // API 响应类型定义
@@ -87,7 +88,7 @@ apiClient.interceptors.response.use(
         // Handle 401 unauthorized error
         if (status === 401) {
             useAuthStore.getState().logout()
-            window.location.href = '/login'
+            window.location.href = ROUTES.ADMIN_LOGIN
         }
 
         // Convert to custom API error object

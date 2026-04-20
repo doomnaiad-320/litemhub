@@ -169,6 +169,23 @@ func SetAPIRouter(router *gin.Engine) {
 			tokenRoute.DELETE("/:group/:id", controller.DeleteGroupToken)
 		}
 
+		appUsersRoute := apiRouter.Group("/app_users")
+		{
+			appUsersRoute.GET("", controller.GetAppUsers)
+			appUsersRoute.GET("/", controller.GetAppUsers)
+			appUsersRoute.POST("", controller.CreateAppUser)
+			appUsersRoute.GET("/search", controller.SearchAppUsers)
+			appUsersRoute.POST("/", controller.CreateAppUser)
+			appUsersRoute.GET("/:id", controller.GetAppUser)
+			appUsersRoute.PUT("/:id", controller.UpdateAppUser)
+			appUsersRoute.DELETE("/:id", controller.DeleteAppUser)
+			appUsersRoute.POST("/:id/status", controller.UpdateAppUserStatus)
+			appUsersRoute.POST("/:id/password", controller.ResetAppUserPassword)
+			appUsersRoute.GET("/:id/wallet", controller.GetAppUserWallet)
+			appUsersRoute.GET("/:id/wallet_logs", controller.GetAppUserWalletLogs)
+			appUsersRoute.POST("/:id/recharge", controller.RechargeAppUserBalance)
+		}
+
 		logsRoute := apiRouter.Group("/logs")
 		{
 			logsRoute.GET("/export", controller.ExportLogs)

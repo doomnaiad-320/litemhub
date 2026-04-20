@@ -31,15 +31,16 @@ const (
 )
 
 type Token struct {
-	CreatedAt time.Time       `json:"created_at"`
-	Group     *Group          `json:"-"          gorm:"foreignKey:GroupID"`
-	Key       string          `json:"key"        gorm:"type:char(48);uniqueIndex"`
-	Name      EmptyNullString `json:"name"       gorm:"size:32;index;uniqueIndex:idx_group_name;not null"`
-	GroupID   string          `json:"group"      gorm:"size:64;index;uniqueIndex:idx_group_name"`
-	Subnets   []string        `json:"subnets"    gorm:"serializer:fastjson;type:text"`
-	Models    []string        `json:"models"     gorm:"serializer:fastjson;type:text"`
-	Status    int             `json:"status"     gorm:"default:1;index"`
-	ID        int             `json:"id"         gorm:"primaryKey"`
+	CreatedAt   time.Time       `json:"created_at"`
+	Group       *Group          `json:"-"          gorm:"foreignKey:GroupID"`
+	Key         string          `json:"key"        gorm:"type:char(48);uniqueIndex"`
+	Name        EmptyNullString `json:"name"       gorm:"size:32;index;uniqueIndex:idx_group_name;not null"`
+	GroupID     string          `json:"group"      gorm:"size:64;index;uniqueIndex:idx_group_name"`
+	Subnets     []string        `json:"subnets"    gorm:"serializer:fastjson;type:text"`
+	Models      []string        `json:"models"     gorm:"serializer:fastjson;type:text"`
+	Status      int             `json:"status"     gorm:"default:1;index"`
+	ID          int             `json:"id"         gorm:"primaryKey"`
+	OwnerUserID int             `json:"owner_user_id,omitempty" gorm:"index"`
 
 	UsedAmount   float64 `json:"used_amount"   gorm:"index"`
 	RequestCount int     `json:"request_count" gorm:"index"`
@@ -174,6 +175,14 @@ func getTokenOrder(order string) string {
 	}
 }
 
+func adminTokenQuery() *gorm.DB {
+	return DB.Model(&Token{}).Where("owner_user_id = ?", 0)
+}
+
+func appUserTokenQuery(userID int) *gorm.DB {
+	return DB.Model(&Token{}).Where("owner_user_id = ?", userID)
+}
+
 func InsertToken(token *Token, autoCreateGroup, ignoreExist bool) error {
 	if autoCreateGroup {
 		group := &Group{
@@ -228,7 +237,7 @@ func GetTokens(
 	order string,
 	status int,
 ) (tokens []*Token, total int64, err error) {
-	tx := DB.Model(&Token{})
+	tx := adminTokenQuery()
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
@@ -259,7 +268,7 @@ func SearchTokens(
 	status int,
 	name, key string,
 ) (tokens []*Token, total int64, err error) {
-	tx := DB.Model(&Token{})
+	tx := adminTokenQuery()
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
@@ -351,7 +360,7 @@ func SearchGroupTokens(
 		return nil, 0, errors.New("group is empty")
 	}
 
-	tx := DB.Model(&Token{}).
+	tx := adminTokenQuery().
 		Where("group_id = ?", group)
 	if name != "" {
 		tx = tx.Where("name = ?", name)
@@ -486,7 +495,7 @@ func GetGroupTokenByID(group string, id int) (*Token, error) {
 	}
 
 	token := Token{}
-	err := DB.
+	err := adminTokenQuery().
 		Where("id = ? and group_id = ?", id, group).
 		First(&token).Error
 
@@ -499,7 +508,7 @@ func GetTokenByID(id int) (*Token, error) {
 	}
 
 	token := Token{ID: id}
-	err := DB.First(&token, "id = ?", id).Error
+	err := adminTokenQuery().First(&token, "id = ?", id).Error
 
 	return &token, HandleNotFound(err, ErrTokenNotFound)
 }
@@ -521,7 +530,7 @@ func UpdateTokenStatus(id, status int) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where("id = ?", id).
+		Where("id = ? AND owner_user_id = ?", id, 0).
 		Updates(
 			map[string]any{
 				"status": status,
@@ -552,7 +561,7 @@ func UpdateGroupTokenStatus(group string, id, status int) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where("id = ? and group_id = ?", id, group).
+		Where("id = ? and group_id = ? AND owner_user_id = ?", id, group, 0).
 		Updates(
 			map[string]any{
 				"status": status,
@@ -582,7 +591,7 @@ func DeleteGroupTokenByID(groupID string, id int) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where(token).
+		Where("id = ? AND group_id = ? AND owner_user_id = ?", id, groupID, 0).
 		Delete(&token)
 
 	return HandleUpdateResult(result, ErrTokenNotFound)
@@ -616,6 +625,7 @@ func DeleteGroupTokensByIDs(group string, ids []int) (err error) {
 				},
 			}).
 			Where("group_id = ?", group).
+			Where("owner_user_id = ?", 0).
 			Where("id IN (?)", ids).
 			Delete(&tokens).
 			Error
@@ -642,7 +652,7 @@ func DeleteTokenByID(id int) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where(token).
+		Where("id = ? AND owner_user_id = ?", id, 0).
 		Delete(&token)
 
 	return HandleUpdateResult(result, ErrTokenNotFound)
@@ -671,6 +681,7 @@ func DeleteTokensByIDs(ids []int) (err error) {
 					{Name: "key"},
 				},
 			}).
+			Where("owner_user_id = ?", 0).
 			Where("id IN (?)", ids).
 			Delete(&tokens).
 			Error
@@ -775,7 +786,7 @@ func UpdateToken(id int, update UpdateTokenRequest) (token *Token, err error) {
 
 	result := DB.
 		Select(selects).
-		Where("id = ?", id).
+		Where("id = ? AND owner_user_id = ?", id, 0).
 		Clauses(clause.Returning{}).
 		Updates(token)
 	if result.Error != nil {
@@ -878,7 +889,7 @@ func UpdateGroupToken(
 
 	result := DB.
 		Select(selects).
-		Where("id = ? and group_id = ?", id, group).
+		Where("id = ? and group_id = ? AND owner_user_id = ?", id, group, 0).
 		Clauses(clause.Returning{}).
 		Updates(token)
 	if result.Error != nil {
@@ -1087,7 +1098,7 @@ func UpdateTokenName(id int, name string) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where("id = ?", id).
+		Where("id = ? AND owner_user_id = ?", id, 0).
 		Update("name", name)
 	if result.Error != nil && errors.Is(result.Error, gorm.ErrDuplicatedKey) {
 		return errors.New("token name already exists in this group")
@@ -1113,7 +1124,7 @@ func UpdateGroupTokenName(group string, id int, name string) (err error) {
 				{Name: "key"},
 			},
 		}).
-		Where("id = ? and group_id = ?", id, group).
+		Where("id = ? and group_id = ? AND owner_user_id = ?", id, group, 0).
 		Update("name", name)
 	if result.Error != nil && errors.Is(result.Error, gorm.ErrDuplicatedKey) {
 		return errors.New("token name already exists in this group")

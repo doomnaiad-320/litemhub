@@ -228,6 +228,7 @@ func NewMetaByContext(
 func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	requestModel := middleware.GetRequestModel(c)
 	mc := middleware.GetModelConfig(c)
+	group := middleware.GetGroup(c)
 
 	// Get initial channel
 	initialChannel, err := getInitialChannel(c, requestModel, mode)
@@ -252,6 +253,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 	}
+	price = price.ApplyMultiplier(group.GetPriceMultiplier())
 
 	meta := NewMetaByContext(c, initialChannel.channel, mode)
 
@@ -284,6 +286,42 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 
 		return
 	}
+
+	walletUser := middleware.GetWalletUserIfExists(c)
+	if walletUser != nil {
+		reserveAmount := estimateWalletReserveAmount(c, mc, price, meta.RequestUsage, meta.RequestServiceTier)
+		if reserveAmount > 0 {
+			_, reservation, reserveErr := model.ReserveAppUserBalance(model.AppUserReserveBalanceParams{
+				RequestID: meta.RequestID,
+				UserID:    walletUser.ID,
+				TokenID:   meta.Token.ID,
+				GroupID:   meta.Group.ID,
+				Model:     meta.OriginModel,
+				Amount:    reserveAmount,
+				ExpiresAt: meta.RequestAt.Add(30 * time.Minute),
+				Remark:    "relay request reserved",
+			})
+			if reserveErr != nil {
+				statusCode := http.StatusInternalServerError
+				message := reserveErr.Error()
+				if errors.Is(reserveErr, model.ErrAppWalletInsufficientBalance) {
+					statusCode = http.StatusForbidden
+					message = "wallet balance not enough"
+				}
+
+				middleware.AbortLogWithMessageWithMode(mode, c, statusCode, message)
+				return
+			}
+
+			middleware.SetWalletReservation(c, reservation)
+
+			if log := common.GetLogger(c); log != nil {
+				log.Data["wallet_reserve_amount"] = strconv.FormatFloat(reserveAmount, 'f', -1, 64)
+			}
+		}
+	}
+
+	defer releaseWalletReservationOnAbort(c)
 
 	// First attempt
 	result, retry := RelayHelper(c, meta, relayController.Handler)
@@ -375,6 +413,10 @@ func recordResult(
 		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
 	}
 
+	if downstreamResult {
+		finalizeWalletReservation(c, code, amount)
+	}
+
 	consume.AsyncConsume(
 		gbc.Consumer,
 		code,
@@ -398,6 +440,215 @@ func effectiveDetailBodyMaxSize(modelLimit, globalLimit int64) int64 {
 	}
 
 	return globalLimit
+}
+
+func estimateWalletReserveAmount(
+	c *gin.Context,
+	mc model.ModelConfig,
+	price model.Price,
+	requestUsage model.Usage,
+	serviceTier string,
+) float64 {
+	if !priceHasBillableAmount(price) {
+		return 0
+	}
+
+	reserveUsage := requestUsage
+	if reserveUsage.OutputTokens == 0 {
+		if outputTokens := getReserveOutputTokens(c, mc, requestUsage); outputTokens > 0 {
+			reserveUsage.OutputTokens = model.ZeroNullInt64(outputTokens)
+		}
+	}
+
+	if price.ThinkingModeOutputPrice > 0 &&
+		reserveUsage.ReasoningTokens == 0 &&
+		reserveUsage.OutputTokens > 0 {
+		reserveUsage.ReasoningTokens = reserveUsage.OutputTokens
+	}
+
+	if price.WebSearchPrice > 0 && reserveUsage.WebSearchCount == 0 {
+		reserveUsage.WebSearchCount = 1
+	}
+
+	amount := consume.CalculateAmount(http.StatusOK, reserveUsage, price, serviceTier)
+	if amount > 0 {
+		return amount
+	}
+
+	return middleware.GroupMinimumBalance
+}
+
+func getReserveOutputTokens(
+	c *gin.Context,
+	mc model.ModelConfig,
+	requestUsage model.Usage,
+) int64 {
+	if requestMaxTokens := getRequestMaxOutputTokens(c); requestMaxTokens > 0 {
+		return requestMaxTokens
+	}
+
+	if maxOutputTokens, ok := mc.MaxOutputTokens(); ok && maxOutputTokens > 0 {
+		return int64(maxOutputTokens)
+	}
+
+	if maxContextTokens, ok := mc.MaxContextTokens(); ok && maxContextTokens > 0 {
+		remainingTokens := int64(maxContextTokens) - int64(requestUsage.InputTokens)
+		if remainingTokens > 0 {
+			return remainingTokens
+		}
+	}
+
+	return 0
+}
+
+func getRequestMaxOutputTokens(c *gin.Context) int64 {
+	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
+	if err != nil {
+		return 0
+	}
+
+	for _, value := range []int64{
+		getNodeInt64ByPath(&node, "max_output_tokens"),
+		getNodeInt64ByPath(&node, "max_completion_tokens"),
+		getNodeInt64ByPath(&node, "max_tokens"),
+		getNodeInt64ByPath(&node, "generationConfig", "maxOutputTokens"),
+		getNodeInt64ByPath(&node, "generation_config", "max_output_tokens"),
+	} {
+		if value > 0 {
+			return value
+		}
+	}
+
+	return 0
+}
+
+func getNodeInt64ByPath(node *ast.Node, path ...string) int64 {
+	if node == nil {
+		return 0
+	}
+
+	current := node
+	for _, key := range path {
+		current = current.Get(key)
+		if current == nil || !current.Exists() {
+			return 0
+		}
+	}
+
+	value, err := current.Int64()
+	if err != nil || value <= 0 {
+		return 0
+	}
+
+	return value
+}
+
+func priceHasBillableAmount(price model.Price) bool {
+	switch {
+	case price.PerRequestPrice > 0,
+		price.InputPrice > 0,
+		price.ImageInputPrice > 0,
+		price.AudioInputPrice > 0,
+		price.OutputPrice > 0,
+		price.ImageOutputPrice > 0,
+		price.ThinkingModeOutputPrice > 0,
+		price.CachedPrice > 0,
+		price.CacheCreationPrice > 0,
+		price.WebSearchPrice > 0:
+		return true
+	default:
+		for _, conditionalPrice := range price.ConditionalPrices {
+			if priceHasBillableAmount(conditionalPrice.Price) {
+				return true
+			}
+		}
+
+		return false
+	}
+}
+
+func finalizeWalletReservation(c *gin.Context, code int, amount float64) {
+	reservation := middleware.GetWalletReservationIfExists(c)
+	if reservation == nil || reservation.Status != model.AppWalletReservationStatusHeld {
+		return
+	}
+
+	reason := fmt.Sprintf("request finished with status %d", code)
+
+	var (
+		updatedReservation *model.AppWalletReservation
+		err                error
+	)
+
+	if amount > 0 {
+		_, updatedReservation, err = model.SettleAppUserReservation(reservation.ID, amount, reason)
+	} else {
+		_, updatedReservation, err = model.ReleaseAppUserReservation(
+			reservation.ID,
+			reason+" and no charge",
+		)
+	}
+	if err != nil {
+		log := common.GetLogger(c)
+		log.Errorf("wallet reservation finalize failed: %+v", err)
+
+		reason := fmt.Sprintf(
+			"wallet settlement failed: %s; reserved_amount=%f; actual_amount=%f",
+			err.Error(),
+			reservation.ReservedAmount,
+			amount,
+		)
+
+		if failedReservation, failErr := model.FailAppUserReservation(reservation.ID, amount, reason); failErr != nil {
+			log.Errorf("wallet reservation mark failed failed: %+v", failErr)
+			reservation.Status = model.AppWalletReservationStatusFailed
+			reservation.ActualAmount = amount
+			reservation.Reason = reason
+			middleware.SetWalletReservation(c, reservation)
+		} else {
+			middleware.SetWalletReservation(c, failedReservation)
+		}
+
+		if createErr := model.CreateConsumeError(
+			middleware.GetRequestID(c),
+			middleware.GetRequestAt(c),
+			middleware.GetGroup(c).ID,
+			middleware.GetToken(c).Name,
+			reservation.Model,
+			reason,
+			amount,
+			middleware.GetToken(c).ID,
+		); createErr != nil {
+			log.Errorf("failed to create wallet settlement consume error: %+v", createErr)
+		}
+
+		return
+	}
+
+	middleware.SetWalletReservation(c, updatedReservation)
+}
+
+func releaseWalletReservationOnAbort(c *gin.Context) {
+	reservation := middleware.GetWalletReservationIfExists(c)
+	if reservation == nil || reservation.Status != model.AppWalletReservationStatusHeld {
+		return
+	}
+
+	_, updatedReservation, err := model.ReleaseAppUserReservation(
+		reservation.ID,
+		"request aborted before final settlement",
+	)
+	if err != nil {
+		log := common.GetLogger(c)
+		log.Errorf("wallet reservation release on abort failed: %+v", err)
+
+		reservation.Status = model.AppWalletReservationStatusFailed
+		reservation.Reason = err.Error()
+		middleware.SetWalletReservation(c, reservation)
+		return
+	}
+
+	middleware.SetWalletReservation(c, updatedReservation)
 }
 
 type retryState struct {

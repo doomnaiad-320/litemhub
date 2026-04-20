@@ -25,13 +25,14 @@ func updateGroupLocalCache(id string, update func(*GroupCache) bool) {
 }
 
 type GroupCache struct {
-	ID            string                   `json:"-"              redis:"-"`
-	Status        int                      `json:"status"         redis:"st"`
-	UsedAmount    float64                  `json:"used_amount"    redis:"ua"`
-	RPMRatio      float64                  `json:"rpm_ratio"      redis:"rpm_r"`
-	TPMRatio      float64                  `json:"tpm_ratio"      redis:"tpm_r"`
-	AvailableSets redisStringSlice         `json:"available_sets" redis:"ass"`
-	ModelConfigs  redisGroupModelConfigMap `json:"model_configs"  redis:"mc"`
+	ID              string                   `json:"-"              redis:"-"`
+	Status          int                      `json:"status"         redis:"st"`
+	UsedAmount      float64                  `json:"used_amount"    redis:"ua"`
+	RPMRatio        float64                  `json:"rpm_ratio"      redis:"rpm_r"`
+	TPMRatio        float64                  `json:"tpm_ratio"      redis:"tpm_r"`
+	PriceMultiplier float64                  `json:"price_multiplier" redis:"pm"`
+	AvailableSets   redisStringSlice         `json:"available_sets" redis:"ass"`
+	ModelConfigs    redisGroupModelConfigMap `json:"model_configs"  redis:"mc"`
 
 	BalanceAlertEnabled   bool    `json:"balance_alert_enabled"   redis:"bae"`
 	BalanceAlertThreshold float64 `json:"balance_alert_threshold" redis:"bat"`
@@ -44,6 +45,14 @@ func (g *GroupCache) GetAvailableSets() []string {
 	return g.AvailableSets
 }
 
+func (g *GroupCache) GetPriceMultiplier() float64 {
+	if g.PriceMultiplier <= 0 {
+		return 1
+	}
+
+	return g.PriceMultiplier
+}
+
 func (g *Group) ToGroupCache() *GroupCache {
 	modelConfigs := make(redisGroupModelConfigMap, len(g.GroupModelConfigs))
 	for _, modelConfig := range g.GroupModelConfigs {
@@ -51,13 +60,14 @@ func (g *Group) ToGroupCache() *GroupCache {
 	}
 
 	return &GroupCache{
-		ID:            g.ID,
-		Status:        g.Status,
-		UsedAmount:    g.UsedAmount,
-		RPMRatio:      g.RPMRatio,
-		TPMRatio:      g.TPMRatio,
-		AvailableSets: g.AvailableSets,
-		ModelConfigs:  modelConfigs,
+		ID:              g.ID,
+		Status:          g.Status,
+		UsedAmount:      g.UsedAmount,
+		RPMRatio:        g.RPMRatio,
+		TPMRatio:        g.TPMRatio,
+		PriceMultiplier: g.PriceMultiplier,
+		AvailableSets:   g.AvailableSets,
+		ModelConfigs:    modelConfigs,
 
 		BalanceAlertEnabled:   g.BalanceAlertEnabled,
 		BalanceAlertThreshold: g.BalanceAlertThreshold,

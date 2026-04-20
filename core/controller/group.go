@@ -355,19 +355,26 @@ func UpdateGroupsStatus(c *gin.Context) {
 }
 
 type CreateGroupRequest struct {
-	RPMRatio      float64  `json:"rpm_ratio"`
-	TPMRatio      float64  `json:"tpm_ratio"`
-	AvailableSets []string `json:"available_sets"`
+	RPMRatio        float64  `json:"rpm_ratio"`
+	TPMRatio        float64  `json:"tpm_ratio"`
+	PriceMultiplier float64  `json:"price_multiplier"`
+	AvailableSets   []string `json:"available_sets"`
 
 	BalanceAlertEnabled   bool    `json:"balance_alert_enabled"`
 	BalanceAlertThreshold float64 `json:"balance_alert_threshold"`
 }
 
 func (r *CreateGroupRequest) ToGroup() *model.Group {
+	priceMultiplier := r.PriceMultiplier
+	if priceMultiplier <= 0 {
+		priceMultiplier = 1
+	}
+
 	return &model.Group{
-		RPMRatio:      r.RPMRatio,
-		TPMRatio:      r.TPMRatio,
-		AvailableSets: r.AvailableSets,
+		RPMRatio:        r.RPMRatio,
+		TPMRatio:        r.TPMRatio,
+		PriceMultiplier: priceMultiplier,
+		AvailableSets:   r.AvailableSets,
 
 		BalanceAlertEnabled:   r.BalanceAlertEnabled,
 		BalanceAlertThreshold: r.BalanceAlertThreshold,

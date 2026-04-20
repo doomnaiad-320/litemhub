@@ -5,6 +5,8 @@ const (
 	Group              = "group"
 	Token              = "token"
 	GroupBalance       = "group_balance"
+	WalletUser         = "wallet_user"
+	WalletReservation  = "wallet_reservation"
 	RequestModel       = "request_model"
 	RequestUser        = "request_user"
 	RequestMetadata    = "request_metadata"

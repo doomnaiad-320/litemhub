@@ -6,6 +6,7 @@ import (
 
 func SetRouter(router *gin.Engine) {
 	SetAPIRouter(router)
+	SetUserAPIRouter(router)
 	SetRelayRouter(router)
 	SetMCPRouter(router)
 	SetStaticFileRouter(router)

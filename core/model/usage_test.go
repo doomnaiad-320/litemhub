@@ -351,6 +351,62 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 	}
 }
 
+func TestPrice_ApplyMultiplier(t *testing.T) {
+	price := model.Price{
+		PerRequestPrice:         0.1,
+		InputPrice:              0.2,
+		OutputPrice:             0.3,
+		ThinkingModeOutputPrice: 0.4,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 1000,
+				},
+				Price: model.Price{
+					InputPrice:  1,
+					OutputPrice: 2,
+				},
+			},
+		},
+	}
+
+	scaled := price.ApplyMultiplier(3)
+
+	if scaled.PerRequestPrice != 0.3 {
+		t.Fatalf("expected per request price 0.3, got %v", scaled.PerRequestPrice)
+	}
+
+	if scaled.InputPrice != 0.6 {
+		t.Fatalf("expected input price 0.6, got %v", scaled.InputPrice)
+	}
+
+	if scaled.OutputPrice != 0.9 {
+		t.Fatalf("expected output price 0.9, got %v", scaled.OutputPrice)
+	}
+
+	if scaled.ThinkingModeOutputPrice != 1.2 {
+		t.Fatalf("expected thinking output price 1.2, got %v", scaled.ThinkingModeOutputPrice)
+	}
+
+	if len(scaled.ConditionalPrices) != 1 {
+		t.Fatalf("expected 1 conditional price, got %d", len(scaled.ConditionalPrices))
+	}
+
+	if scaled.ConditionalPrices[0].Price.InputPrice != 3 {
+		t.Fatalf(
+			"expected conditional input price 3, got %v",
+			scaled.ConditionalPrices[0].Price.InputPrice,
+		)
+	}
+
+	if scaled.ConditionalPrices[0].Price.OutputPrice != 6 {
+		t.Fatalf(
+			"expected conditional output price 6, got %v",
+			scaled.ConditionalPrices[0].Price.OutputPrice,
+		)
+	}
+}
+
 func TestPrice_ValidateConditionalPrices_WithTime(t *testing.T) {
 	now := time.Now().Unix()
 	future := now + 3600 // 1 hour from now

@@ -12,6 +12,8 @@ var (
 	DebugSQLEnabled      bool
 	DisableAutoMigrateDB bool
 	AdminKey             string
+	UserJWTSecret        string
+	UserJWTExpireHours   int64
 	WebPath              string
 	DisableWeb           bool
 	DisableWebRoot       bool
@@ -33,6 +35,11 @@ func ReloadEnv() {
 	DebugSQLEnabled = env.Bool("DEBUG_SQL", false)
 	DisableAutoMigrateDB = env.Bool("DISABLE_AUTO_MIGRATE_DB", false)
 	AdminKey = os.Getenv("ADMIN_KEY")
+	UserJWTSecret = os.Getenv("USER_JWT_SECRET")
+	UserJWTExpireHours = env.Int64("USER_JWT_EXPIRE_HOURS", 72)
+	if UserJWTExpireHours <= 0 {
+		UserJWTExpireHours = 72
+	}
 	WebPath = os.Getenv("WEB_PATH")
 	DisableWeb = env.Bool("DISABLE_WEB", false)
 	DisableWebRoot = env.Bool("DISABLE_WEB_ROOT", false)
@@ -66,6 +73,22 @@ func parseOpenIDs(s string) []string {
 	}
 
 	return result
+}
+
+func GetUserJWTSecret() string {
+	if UserJWTSecret != "" {
+		return UserJWTSecret
+	}
+
+	if AdminKey != "" {
+		return AdminKey
+	}
+
+	if InternalToken != "" {
+		return InternalToken
+	}
+
+	return ""
 }
 
 func init() {

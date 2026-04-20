@@ -59,8 +59,50 @@ type Price struct {
 	ConditionalPrices []ConditionalPrice `gorm:"serializer:fastjson;type:text" json:"conditional_prices,omitempty"`
 }
 
+func (p Price) ApplyMultiplier(multiplier float64) Price {
+	if multiplier <= 0 || multiplier == 1 {
+		return p
+	}
+
+	p.PerRequestPrice = scaleZeroNullFloat64(p.PerRequestPrice, multiplier)
+	p.InputPrice = scaleZeroNullFloat64(p.InputPrice, multiplier)
+	p.ImageInputPrice = scaleZeroNullFloat64(p.ImageInputPrice, multiplier)
+	p.AudioInputPrice = scaleZeroNullFloat64(p.AudioInputPrice, multiplier)
+	p.OutputPrice = scaleZeroNullFloat64(p.OutputPrice, multiplier)
+	p.ImageOutputPrice = scaleZeroNullFloat64(p.ImageOutputPrice, multiplier)
+	p.ThinkingModeOutputPrice = scaleZeroNullFloat64(p.ThinkingModeOutputPrice, multiplier)
+	p.CachedPrice = scaleZeroNullFloat64(p.CachedPrice, multiplier)
+	p.CacheCreationPrice = scaleZeroNullFloat64(p.CacheCreationPrice, multiplier)
+	p.WebSearchPrice = scaleZeroNullFloat64(p.WebSearchPrice, multiplier)
+
+	if len(p.ConditionalPrices) > 0 {
+		scaled := make([]ConditionalPrice, len(p.ConditionalPrices))
+		for i, conditionalPrice := range p.ConditionalPrices {
+			scaled[i] = ConditionalPrice{
+				Condition: conditionalPrice.Condition,
+				Price:     conditionalPrice.Price.ApplyMultiplier(multiplier),
+			}
+		}
+		p.ConditionalPrices = scaled
+	}
+
+	return p
+}
+
 func normalizeServiceTier(serviceTier string) string {
 	return strings.ToLower(strings.TrimSpace(serviceTier))
+}
+
+func scaleZeroNullFloat64(value ZeroNullFloat64, multiplier float64) ZeroNullFloat64 {
+	if value == 0 || multiplier <= 0 || multiplier == 1 {
+		return value
+	}
+
+	return ZeroNullFloat64(
+		decimal.NewFromFloat(float64(value)).
+			Mul(decimal.NewFromFloat(multiplier)).
+			InexactFloat64(),
+	)
 }
 
 func isAllowedServiceTier(serviceTier string) bool {

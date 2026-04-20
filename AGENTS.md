@@ -1,0 +1,17 @@
+# Agent Instructions
+
+## Git Workflow
+
+- Before any Git sync, push, merge, or rebase task, read `docs/git-workflow.md`.
+- Keep `main` as the clean upstream sync branch for `upstream/main`.
+- Do not develop on `main`.
+- Use `local-dev` for local/custom development work.
+- Push only `local-dev` to `origin` unless the user explicitly asks to push another branch.
+- Do not push `main` to `origin` unless explicitly requested.
+- Do not commit runtime/local files such as `aiproxy.db`.
+- Do not touch unknown user files such as `t.md` unless explicitly requested.
+- Do not run destructive Git commands such as `git reset --hard`, `git clean`, or force-push unless the user explicitly approves.
+
+## Project Notes
+
+- User wallet and prepaid billing design is documented in `docs/user-wallet-mvp.md`.

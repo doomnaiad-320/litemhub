@@ -14,6 +14,7 @@ import {
     LogOut,
     MessageCircle,
     Trophy,
+    User,
     Users,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -65,6 +66,12 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             display: true,
         },
         {
+            title: t("sidebar.appUsers"),
+            icon: User,
+            href: ROUTES.APP_USERS,
+            display: true,
+        },
+        {
             title: t("sidebar.consumptionRanking"),
             icon: Trophy,
             href: ROUTES.CONSUMPTION_RANKING,
@@ -102,6 +109,7 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
 interface SidebarDisplayConfig {
     monitor?: boolean
     group?: boolean
+    appUsers?: boolean
     consumptionRanking?: boolean
     key?: boolean
     channel?: boolean
@@ -130,6 +138,7 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
         // Determine which config property based on path name
         let configKey: keyof SidebarDisplayConfig = "monitor"
         if (item.href === ROUTES.GROUP) configKey = "group"
+        if (item.href === ROUTES.APP_USERS) configKey = "appUsers"
         if (item.href === ROUTES.CONSUMPTION_RANKING) configKey = "consumptionRanking"
         if (item.href === ROUTES.KEY) configKey = "key"
         if (item.href === ROUTES.CHANNEL) configKey = "channel"
@@ -149,7 +158,7 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
 
     const handleLogout = () => {
         logout()
-        navigate("/login")
+        navigate(ROUTES.ADMIN_LOGIN)
     }
 
     return (

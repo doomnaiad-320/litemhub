@@ -103,13 +103,20 @@ func OpenSQLite(sqlitePath string) (*gorm.DB, error) {
 
 	dsn := fmt.Sprintf("%s?_busy_timeout=%d", sqlitePath, common.SQLiteBusyTimeout)
 
-	return gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		PrepareStmt:                              true, // precompile SQL
 		TranslateError:                           true,
 		Logger:                                   newDBLogger(),
 		DisableForeignKeyConstraintWhenMigrating: false,
 		IgnoreRelationshipsWhenMigrating:         false,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	configureSQLiteConns(db)
+
+	return db, nil
 }
 
 func InitDB() error {
@@ -142,6 +149,12 @@ func migrateDB() error {
 	err := DB.AutoMigrate(
 		&Channel{},
 		&ChannelTest{},
+		&AppUser{},
+		&AppUserWallet{},
+		&AppRechargeLog{},
+		&AppWalletReservation{},
+		&AppWalletLog{},
+		&AppUserGroup{},
 		&Token{},
 		&PublicMCP{},
 		&GroupModelConfig{},
@@ -301,9 +314,24 @@ func setDBConns(db *gorm.DB) {
 		return
 	}
 
+	if db.Dialector.Name() == "sqlite" {
+		configureSQLiteConns(db)
+		return
+	}
+
 	sqlDB.SetMaxIdleConns(int(env.Int64("SQL_MAX_IDLE_CONNS", 100)))
 	sqlDB.SetMaxOpenConns(int(env.Int64("SQL_MAX_OPEN_CONNS", 1000)))
 	sqlDB.SetConnMaxLifetime(time.Second * time.Duration(env.Int64("SQL_MAX_LIFETIME", 60)))
+}
+
+func configureSQLiteConns(db *gorm.DB) {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return
+	}
+
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetMaxOpenConns(1)
 }
 
 func closeDB(db *gorm.DB) error {

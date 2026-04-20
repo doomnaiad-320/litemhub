@@ -139,7 +139,10 @@ func TokenAuth(c *gin.Context) {
 
 	modelCaches := model.LoadModelCaches()
 
-	var group model.GroupCache
+	var (
+		group      model.GroupCache
+		walletUser *model.AppUser
+	)
 	if useInternalToken {
 		group = model.GroupCache{
 			Status:        model.GroupStatusInternal,
@@ -160,6 +163,26 @@ func TokenAuth(c *gin.Context) {
 		group = *groupCache
 	}
 
+	if !useInternalToken && token.OwnerUserID != 0 {
+		user, err := model.GetAppUserByID(token.OwnerUserID)
+		if err != nil {
+			AbortLogWithMessage(c, http.StatusUnauthorized, "token owner not found")
+			return
+		}
+
+		if user.Status != model.AppUserStatusEnabled {
+			AbortLogWithMessage(c, http.StatusForbidden, "token owner is disabled")
+			return
+		}
+
+		if group.Status != model.GroupStatusEnabled {
+			AbortLogWithMessage(c, http.StatusForbidden, "group is not available")
+			return
+		}
+
+		walletUser = user
+	}
+
 	c.Header("Group", group.ID)
 
 	SetLogGroupFields(log.Data, group)
@@ -175,6 +198,9 @@ func TokenAuth(c *gin.Context) {
 	c.Set(Group, group)
 	c.Set(Token, token)
 	c.Set(ModelCaches, modelCaches)
+	if walletUser != nil {
+		c.Set(WalletUser, *walletUser)
+	}
 
 	c.Next()
 }

@@ -5,6 +5,7 @@ import { authApi } from '@/api/services'
 import { useAuthStore } from '@/store/auth'
 import { toast } from 'sonner'
 import { ApiError } from '@/api/index'
+import { ROUTES } from '@/routes/constants'
 
 export function useLoginMutation() {
     const navigate = useNavigate()
@@ -12,7 +13,7 @@ export function useLoginMutation() {
     const { login } = useAuthStore()
 
     // get redirect url from location
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.MONITOR
 
     return useMutation({
         mutationFn: async (token: string) => {

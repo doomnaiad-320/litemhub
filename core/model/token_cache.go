@@ -27,14 +27,15 @@ func updateTokenLocalCache(key string, update func(*TokenCache) bool) {
 }
 
 type TokenCache struct {
-	Group      string           `json:"group"       redis:"g"`
-	Key        string           `json:"-"           redis:"-"`
-	Name       string           `json:"name"        redis:"n"`
-	Subnets    redisStringSlice `json:"subnets"     redis:"s"`
-	Models     redisStringSlice `json:"models"      redis:"m"`
-	ID         int              `json:"id"          redis:"i"`
-	Status     int              `json:"status"      redis:"st"`
-	UsedAmount float64          `json:"used_amount" redis:"u"`
+	Group       string           `json:"group"       redis:"g"`
+	Key         string           `json:"-"           redis:"-"`
+	Name        string           `json:"name"        redis:"n"`
+	Subnets     redisStringSlice `json:"subnets"     redis:"s"`
+	Models      redisStringSlice `json:"models"      redis:"m"`
+	ID          int              `json:"id"          redis:"i"`
+	Status      int              `json:"status"      redis:"st"`
+	OwnerUserID int              `json:"owner_user_id,omitempty" redis:"oui"`
+	UsedAmount  float64          `json:"used_amount" redis:"u"`
 
 	Quota                  float64   `json:"quota"                     redis:"q"`
 	PeriodQuota            float64   `json:"period_quota"              redis:"pq"`
@@ -127,14 +128,15 @@ func (t *TokenCache) Range(fn func(model string) bool) {
 
 func (t *Token) ToTokenCache() *TokenCache {
 	return &TokenCache{
-		ID:         t.ID,
-		Group:      t.GroupID,
-		Key:        t.Key,
-		Name:       string(t.Name),
-		Models:     t.Models,
-		Subnets:    t.Subnets,
-		Status:     t.Status,
-		UsedAmount: t.UsedAmount,
+		ID:          t.ID,
+		Group:       t.GroupID,
+		Key:         t.Key,
+		Name:        string(t.Name),
+		Models:      t.Models,
+		Subnets:     t.Subnets,
+		Status:      t.Status,
+		OwnerUserID: t.OwnerUserID,
+		UsedAmount:  t.UsedAmount,
 
 		Quota:                  t.Quota,
 		PeriodQuota:            t.PeriodQuota,

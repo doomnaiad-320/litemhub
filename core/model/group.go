@@ -15,6 +15,10 @@ const (
 	ErrGroupNotFound = "group"
 )
 
+var (
+	ErrGroupUnavailable = errors.New("group is not available")
+)
+
 const (
 	GroupStatusEnabled  = 1
 	GroupStatusDisabled = 2
@@ -31,6 +35,7 @@ type Group struct {
 	Status                 int                     `json:"status"                   gorm:"default:1;index"`
 	RPMRatio               float64                 `json:"rpm_ratio,omitempty"      gorm:"index"`
 	TPMRatio               float64                 `json:"tpm_ratio,omitempty"      gorm:"index"`
+	PriceMultiplier        float64                 `json:"price_multiplier,omitempty" gorm:"default:1;index"`
 	UsedAmount             float64                 `json:"used_amount"              gorm:"index"`
 	RequestCount           int                     `json:"request_count"            gorm:"index"`
 	AvailableSets          []string                `json:"available_sets,omitempty" gorm:"serializer:fastjson;type:text"`
@@ -116,6 +121,16 @@ func GetGroups(
 	return groups, total, err
 }
 
+func GetEnabledGroups() (groups []*Group, err error) {
+	err = DB.
+		Where("status = ?", GroupStatusEnabled).
+		Order("id asc").
+		Find(&groups).
+		Error
+
+	return groups, err
+}
+
 func GetGroupByID(id string, preloadGroupModelConfigs bool) (*Group, error) {
 	if id == "" {
 		return nil, errors.New("group id is empty")
@@ -131,6 +146,19 @@ func GetGroupByID(id string, preloadGroupModelConfigs bool) (*Group, error) {
 	err := tx.First(&group).Error
 
 	return &group, HandleNotFound(err, ErrGroupNotFound)
+}
+
+func EnsureGroupEnabled(id string) (*Group, error) {
+	group, err := GetGroupByID(id, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if group.Status != GroupStatusEnabled {
+		return nil, ErrGroupUnavailable
+	}
+
+	return group, nil
 }
 
 func DeleteGroupByID(id string) (err error) {
@@ -191,6 +219,7 @@ type UpdateGroupRequest struct {
 	Status                int       `json:"status"`
 	RPMRatio              *float64  `json:"rpm_ratio,omitempty"`
 	TPMRatio              *float64  `json:"tpm_ratio,omitempty"`
+	PriceMultiplier       *float64  `json:"price_multiplier,omitempty"`
 	AvailableSets         *[]string `json:"available_sets,omitempty"`
 	BalanceAlertEnabled   *bool     `json:"balance_alert_enabled"`
 	BalanceAlertThreshold *float64  `json:"balance_alert_threshold"`
@@ -225,6 +254,12 @@ func UpdateGroup(id string, update UpdateGroupRequest) (group *Group, err error)
 		group.TPMRatio = *update.TPMRatio
 
 		selects = append(selects, "tpm_ratio")
+	}
+
+	if update.PriceMultiplier != nil {
+		group.PriceMultiplier = *update.PriceMultiplier
+
+		selects = append(selects, "price_multiplier")
 	}
 
 	if update.AvailableSets != nil {

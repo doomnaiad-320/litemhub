@@ -13,6 +13,14 @@ import LogPage from "@/pages/log/page"
 import MCPPage from "@/pages/mcp/page"
 import GroupPage from "@/pages/group/page"
 import ConsumptionRankingPage from "@/pages/consumption-ranking/page"
+import AppUserPage from "@/pages/app-user/page"
+import UserPortalLandingPage from "@/pages/user-portal/landing"
+import UserPortalDashboardPage from "@/pages/user-portal/dashboard"
+import UserPortalGroupsPage from "@/pages/user-portal/groups"
+import UserPortalKeysPage from "@/pages/user-portal/keys"
+import UserPortalLogsPage from "@/pages/user-portal/logs"
+import { UserPortalProtectedRoute } from "@/feature/user-portal/components/UserPortalProtectedRoute"
+import { UserPortalLayout } from "@/components/layout/UserPortalLayout"
 
 // import layout component directly
 import { RootLayout } from "@/components/layout/RootLayOut"
@@ -20,6 +28,8 @@ import { LoadingFallback } from "@/components/common/LoadingFallBack"
 
 // lazy load login page
 const LoginPage = lazy(() => import("@/pages/auth/login"))
+const UserPortalLoginPage = lazy(() => import("@/pages/user-portal/login"))
+const UserPortalRegisterPage = lazy(() => import("@/pages/user-portal/register"))
 
 // lazy load component wrapper
 const lazyLoad = (Component: React.ComponentType) => (
@@ -35,7 +45,10 @@ export function useRoutes(): RouteObject[] {
 
     // auth routes
     const authRoutes: RouteObject[] = [
-        { path: "/login", element: lazyLoad(LoginPage) },
+        { path: "/", element: <UserPortalLandingPage /> },
+        { path: ROUTES.ADMIN_LOGIN, element: lazyLoad(LoginPage) },
+        { path: ROUTES.USER_LOGIN, element: lazyLoad(UserPortalLoginPage) },
+        { path: ROUTES.USER_REGISTER, element: lazyLoad(UserPortalRegisterPage) },
     ]
 
     // app routes
@@ -44,10 +57,6 @@ export function useRoutes(): RouteObject[] {
         children: [{
             element: <RootLayout />,
             children: [
-                {
-                    path: "/",
-                    element: <Navigate to={`${ROUTES.MONITOR}`} replace />
-                },
                 {
                     path: ROUTES.MONITOR,
                     element: <MonitorPage />,
@@ -59,6 +68,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.CONSUMPTION_RANKING,
                     element: <ConsumptionRankingPage />,
+                },
+                {
+                    path: ROUTES.APP_USERS,
+                    element: <AppUserPage />,
                 },
                 {
                     path: ROUTES.LEGACY_GROUP_RANKING,
@@ -88,5 +101,30 @@ export function useRoutes(): RouteObject[] {
         }]
     }
 
-    return [...authRoutes, appRoutes]
+    const portalRoutes: RouteObject = {
+        element: <UserPortalProtectedRoute />,
+        children: [{
+            element: <UserPortalLayout />,
+            children: [
+                {
+                    path: ROUTES.USER_DASHBOARD,
+                    element: <UserPortalDashboardPage />,
+                },
+                {
+                    path: ROUTES.USER_GROUPS,
+                    element: <UserPortalGroupsPage />,
+                },
+                {
+                    path: ROUTES.USER_KEYS,
+                    element: <UserPortalKeysPage />,
+                },
+                {
+                    path: ROUTES.USER_LOGS,
+                    element: <UserPortalLogsPage />,
+                },
+            ],
+        }],
+    }
+
+    return [...authRoutes, appRoutes, portalRoutes]
 }
