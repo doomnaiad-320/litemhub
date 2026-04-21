@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { ExpandedLogContent } from './ExpandedLogContent'
 import { toast } from 'sonner'
 import type { LogRecord } from '@/types/log'
+import type { LogDetailScope } from '@/feature/log/hooks'
 
 const columnHelper = createColumnHelper<LogRecord>()
 
@@ -28,6 +29,7 @@ interface LogTableProps {
     onPageChange: (page: number) => void
     onPageSizeChange: (pageSize: number) => void
     onOpenGroupLog?: (group: string, tokenName?: string) => void
+    detailScope?: LogDetailScope
 }
 
 // 使用一个单独的组件来处理每行的展开内容，这样每一行都有自己的state
@@ -40,6 +42,7 @@ export function LogTable({
     onPageChange,
     onPageSizeChange,
     onOpenGroupLog,
+    detailScope = 'admin',
 }: LogTableProps) {
     const { t } = useTranslation()
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
@@ -92,7 +95,7 @@ export function LogTable({
                     if (!value) return <div className="text-sm text-muted-foreground">-</div>
                     return (
                         <div
-                            className={`text-sm font-medium ${clickableCell}`}
+                            className={`text-sm font-medium ${onOpenGroupLog ? clickableCell : ''}`}
                             onClick={() => onOpenGroupLog?.(value)}
                         >
                             {value}
@@ -109,7 +112,7 @@ export function LogTable({
                     if (!value) return <div className="font-medium text-muted-foreground">-</div>
                     return (
                         <div
-                            className={`font-medium ${clickableCell}`}
+                            className={`font-medium ${onOpenGroupLog ? clickableCell : ''}`}
                             onClick={() => group && onOpenGroupLog?.(group, value)}
                         >
                             {value}
@@ -308,7 +311,7 @@ export function LogTable({
                                             {expandedRows.has(row.original.id) && (
                                                 <tr>
                                                     <td colSpan={columns.length} className="p-0">
-                                                        <ExpandedLogContent log={row.original} />
+                                                        <ExpandedLogContent log={row.original} scope={detailScope} />
                                                     </td>
                                                 </tr>
                                             )}

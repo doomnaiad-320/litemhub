@@ -2,19 +2,37 @@ import { format } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-    useReactTable,
     getCoreRowModel,
     type ColumnDef,
+    useReactTable,
 } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
+import { LogTable } from '@/feature/log/components/LogTable'
 import { cn } from '@/lib/utils'
 import type { UserPortalWalletLog } from '@/types/user-portal'
-import { useUserPortalWalletLogs } from '@/feature/user-portal/hooks'
+import {
+    useUserPortalModelLogs,
+    useUserPortalWalletLogs,
+} from '@/feature/user-portal/hooks'
 
 const formatMoney = (amount?: number) => `$${(amount || 0).toFixed(4)}`
+
+const formatDateTime = (value?: string | number) => {
+    if (!value) {
+        return '-'
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        return '-'
+    }
+
+    return format(date, 'yyyy-MM-dd HH:mm')
+}
 
 const getLogBadgeClass = (type: string) => {
     switch (type) {
@@ -34,14 +52,20 @@ const getLogBadgeClass = (type: string) => {
 export default function UserPortalLogsPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string) => string
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(20)
+    const [modelPage, setModelPage] = useState(1)
+    const [modelPageSize, setModelPageSize] = useState(20)
+    const [walletPage, setWalletPage] = useState(1)
+    const [walletPageSize, setWalletPageSize] = useState(20)
 
-    const { data, isLoading } = useUserPortalWalletLogs(page, pageSize, true)
-    const logs = data?.wallet_logs || []
-    const total = data?.total || 0
+    const { data: modelData, isLoading: isModelLoading } = useUserPortalModelLogs(modelPage, modelPageSize, true)
+    const modelLogs = modelData?.logs || []
+    const modelTotal = modelData?.total || 0
 
-    const columns: ColumnDef<UserPortalWalletLog>[] = useMemo(() => [
+    const { data: walletData, isLoading: isWalletLoading } = useUserPortalWalletLogs(walletPage, walletPageSize, true)
+    const walletLogs = walletData?.wallet_logs || []
+    const walletTotal = walletData?.total || 0
+
+    const walletColumns: ColumnDef<UserPortalWalletLog>[] = useMemo(() => [
         {
             accessorKey: 'type',
             header: () => <div className="py-3.5 font-medium">{t('portal.logs.type')}</div>,
@@ -79,15 +103,15 @@ export default function UserPortalLogsPage() {
             header: () => <div className="py-3.5 font-medium">{t('portal.logs.createdAt')}</div>,
             cell: ({ row }) => (
                 <div className="text-sm text-muted-foreground">
-                    {format(new Date(row.original.created_at), 'yyyy-MM-dd HH:mm')}
+                    {formatDateTime(row.original.created_at)}
                 </div>
             ),
         },
     ], [t])
 
-    const table = useReactTable({
-        data: logs,
-        columns,
+    const walletTable = useReactTable({
+        data: walletLogs,
+        columns: walletColumns,
         getCoreRowModel: getCoreRowModel(),
     })
 
@@ -101,35 +125,67 @@ export default function UserPortalLogsPage() {
                 </div>
             </section>
 
-            <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                <CardHeader>
-                    <CardTitle>{t('portal.logs.list')}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                    <div className="px-6 pb-5">
-                        <DataTable
-                            table={table}
-                            columns={columns}
-                            isLoading={isLoading}
-                            loadingStyle="skeleton"
-                            fixedHeader={true}
-                            showScrollShadows={false}
-                        />
-                    </div>
-                    <div className="border-t border-border/60 px-3">
-                        <ServerPagination
-                            page={page}
-                            pageSize={pageSize}
-                            total={total}
-                            onPageChange={setPage}
-                            onPageSizeChange={(size) => {
-                                setPageSize(size)
-                                setPage(1)
-                            }}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <Tabs defaultValue="model" className="space-y-4">
+                <TabsList className="rounded-2xl bg-white/70 p-1 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] dark:bg-white/5">
+                    <TabsTrigger value="model" className="rounded-xl px-5">{t('portal.logs.modelTab')}</TabsTrigger>
+                    <TabsTrigger value="wallet" className="rounded-xl px-5">{t('portal.logs.walletTab')}</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="model" className="mt-0">
+                    <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
+                        <CardHeader>
+                            <CardTitle>{t('portal.logs.modelList')}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-6 pb-6">
+                            <LogTable
+                                data={modelLogs}
+                                total={modelTotal}
+                                loading={isModelLoading}
+                                page={modelPage}
+                                pageSize={modelPageSize}
+                                onPageChange={setModelPage}
+                                onPageSizeChange={(size) => {
+                                    setModelPageSize(size)
+                                    setModelPage(1)
+                                }}
+                                detailScope="user"
+                            />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="wallet" className="mt-0">
+                    <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
+                        <CardHeader>
+                            <CardTitle>{t('portal.logs.walletList')}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-0 pb-0">
+                            <div className="px-6 pb-5">
+                                <DataTable
+                                    table={walletTable}
+                                    columns={walletColumns}
+                                    isLoading={isWalletLoading}
+                                    loadingStyle="skeleton"
+                                    fixedHeader={true}
+                                    showScrollShadows={false}
+                                />
+                            </div>
+                            <div className="border-t border-border/60 px-3">
+                                <ServerPagination
+                                    page={walletPage}
+                                    pageSize={walletPageSize}
+                                    total={walletTotal}
+                                    onPageChange={setWalletPage}
+                                    onPageSizeChange={(size) => {
+                                        setWalletPageSize(size)
+                                        setWalletPage(1)
+                                    }}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

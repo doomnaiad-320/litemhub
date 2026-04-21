@@ -14,6 +14,7 @@ const invalidatePortalQueries = (queryClient: ReturnType<typeof useQueryClient>)
     queryClient.invalidateQueries({ queryKey: ['userPortalMe'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalWallet'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalWalletLogs'] })
+    queryClient.invalidateQueries({ queryKey: ['userPortalModelLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalGroups'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalKeys'] })
 }
@@ -88,6 +89,14 @@ export const useUserPortalWalletLogs = (page: number, perPage: number, enabled =
     return useQuery({
         queryKey: ['userPortalWalletLogs', page, perPage],
         queryFn: () => userPortalApi.getWalletLogs(page, perPage),
+        enabled,
+    })
+}
+
+export const useUserPortalModelLogs = (page: number, perPage: number, enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalModelLogs', page, perPage],
+        queryFn: () => userPortalApi.getModelLogs(page, perPage),
         enabled,
     })
 }

@@ -60,6 +60,7 @@ type Log struct {
 	UpstreamID       EmptyNullString `gorm:"type:varchar(256)"                                              json:"upstream_id,omitempty"`
 	ID               int             `gorm:"primaryKey"                                                     json:"id"`
 	TokenID          int             `gorm:"index"                                                          json:"token_id,omitempty"`
+	OwnerUserID      int             `gorm:"index"                                                          json:"owner_user_id,omitempty"`
 	ChannelID        int             `                                                                      json:"channel,omitempty"`
 	Code             int             `gorm:"index"                                                          json:"code,omitempty"`
 	Mode             int             `                                                                      json:"mode,omitempty"`
@@ -95,6 +96,8 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_creat ON logs (group_id, model, created_at DESC)",
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_creat ON logs (group_id, token_name, model, created_at DESC)",
+			// used by user portal logs
+			"CREATE INDEX IF NOT EXISTS idx_owner_user_creat ON logs (owner_user_id, created_at DESC)",
 		}
 	} else {
 		indexes = []string{
@@ -113,6 +116,8 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_creat ON logs (group_id, model, created_at DESC) INCLUDE (code)",
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_creat ON logs (group_id, token_name, model, created_at DESC) INCLUDE (code)",
+			// used by user portal logs
+			"CREATE INDEX IF NOT EXISTS idx_owner_user_creat ON logs (owner_user_id, created_at DESC) INCLUDE (code)",
 		}
 	}
 
@@ -194,6 +199,50 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 		Where("logs.group_id = ?", group).
 		Where("log_id = ?", logID).
 		First(&detail).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &detail, nil
+}
+
+func getAppUserTokenIDs(userID int) ([]int, error) {
+	var tokenIDs []int
+
+	err := DB.
+		Model(&Token{}).
+		Where("owner_user_id = ?", userID).
+		Pluck("id", &tokenIDs).Error
+
+	return tokenIDs, err
+}
+
+func applyAppUserLogScope(tx *gorm.DB, userID int, tokenIDs []int) *gorm.DB {
+	if len(tokenIDs) == 0 {
+		return tx.Where("owner_user_id = ?", userID)
+	}
+
+	return tx.Where("(owner_user_id = ? OR token_id IN ?)", userID, tokenIDs)
+}
+
+func GetAppUserLogDetail(userID, logID int) (*RequestDetail, error) {
+	if userID <= 0 {
+		return nil, errors.New("invalid user id")
+	}
+
+	tokenIDs, err := getAppUserTokenIDs(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var detail RequestDetail
+
+	tx := LogDB.
+		Model(&RequestDetail{}).
+		Joins("JOIN logs ON logs.id = request_details.log_id").
+		Where("request_details.log_id = ?", logID)
+
+	err = applyAppUserLogScope(tx, userID, tokenIDs).First(&detail).Error
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +381,7 @@ func RecordConsumeLog(
 	modelName string,
 	tokenID int,
 	tokenName string,
+	ownerUserID int,
 	endpoint string,
 	content string,
 	mode int,
@@ -375,6 +425,7 @@ func RecordConsumeLog(
 		Code:             code,
 		TokenID:          tokenID,
 		TokenName:        tokenName,
+		OwnerUserID:      ownerUserID,
 		Model:            modelName,
 		Mode:             mode,
 		IP:               EmptyNullString(ip),
@@ -589,6 +640,204 @@ func getLogs(
 	}
 
 	return total, logs, nil
+}
+
+func buildAppUserLogsQuery(
+	userID int,
+	tokenIDs []int,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+	modelName string,
+	requestID string,
+	upstreamID string,
+	tokenID int,
+	tokenName string,
+	codeType CodeType,
+	code int,
+	user string,
+) *gorm.DB {
+	tx := applyAppUserLogScope(LogDB.Model(&Log{}), userID, tokenIDs)
+
+	if requestID != "" {
+		tx = tx.Where("request_id = ?", requestID)
+	}
+
+	if upstreamID != "" {
+		tx = tx.Where("upstream_id = ?", upstreamID)
+	}
+
+	if modelName != "" {
+		tx = tx.Where("model = ?", modelName)
+	}
+
+	if tokenName != "" {
+		tx = tx.Where("token_name = ?", tokenName)
+	}
+
+	switch {
+	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
+		tx = tx.Where("created_at BETWEEN ? AND ?", startTimestamp, endTimestamp)
+	case !startTimestamp.IsZero():
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	case !endTimestamp.IsZero():
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+
+	switch codeType {
+	case CodeTypeSuccess:
+		tx = tx.Where("code = 200")
+	case CodeTypeError:
+		tx = tx.Where("code != 200")
+	default:
+		if code != 0 {
+			tx = tx.Where("code = ?", code)
+		}
+	}
+
+	if tokenID != 0 {
+		tx = tx.Where("token_id = ?", tokenID)
+	}
+
+	if user != "" {
+		tx = tx.Where("user = ?", user)
+	}
+
+	return tx
+}
+
+func getAppUserLogs(
+	userID int,
+	tokenIDs []int,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+	modelName string,
+	requestID string,
+	upstreamID string,
+	tokenID int,
+	tokenName string,
+	order string,
+	codeType CodeType,
+	code int,
+	withBody bool,
+	user string,
+	page int,
+	perPage int,
+) (int64, []*Log, error) {
+	var (
+		total int64
+		logs  []*Log
+	)
+
+	g := new(errgroup.Group)
+
+	g.Go(func() error {
+		return buildAppUserLogsQuery(
+			userID,
+			tokenIDs,
+			startTimestamp,
+			endTimestamp,
+			modelName,
+			requestID,
+			upstreamID,
+			tokenID,
+			tokenName,
+			codeType,
+			code,
+			user,
+		).Count(&total).Error
+	})
+
+	g.Go(func() error {
+		query := buildAppUserLogsQuery(
+			userID,
+			tokenIDs,
+			startTimestamp,
+			endTimestamp,
+			modelName,
+			requestID,
+			upstreamID,
+			tokenID,
+			tokenName,
+			codeType,
+			code,
+			user,
+		)
+		if withBody {
+			query = query.Preload("RequestDetail")
+		} else {
+			query = query.Preload("RequestDetail", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "log_id")
+			})
+		}
+
+		limit, offset := toLimitOffset(page, perPage)
+
+		return query.
+			Order(getLogOrder(order)).
+			Limit(limit).
+			Offset(offset).
+			Find(&logs).Error
+	})
+
+	if err := g.Wait(); err != nil {
+		return 0, nil, err
+	}
+
+	return total, logs, nil
+}
+
+func GetAppUserLogs(
+	userID int,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+	modelName string,
+	requestID string,
+	upstreamID string,
+	tokenID int,
+	tokenName string,
+	order string,
+	codeType CodeType,
+	code int,
+	withBody bool,
+	user string,
+	page int,
+	perPage int,
+) (*GetLogsResult, error) {
+	if userID <= 0 {
+		return nil, errors.New("invalid user id")
+	}
+
+	tokenIDs, err := getAppUserTokenIDs(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	total, logs, err := getAppUserLogs(
+		userID,
+		tokenIDs,
+		startTimestamp,
+		endTimestamp,
+		modelName,
+		requestID,
+		upstreamID,
+		tokenID,
+		tokenName,
+		order,
+		codeType,
+		code,
+		withBody,
+		user,
+		page,
+		perPage,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetLogsResult{
+		Logs:  logs,
+		Total: total,
+	}, nil
 }
 
 func GetLogs(

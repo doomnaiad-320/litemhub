@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { logApi } from '@/api/log'
+import { userPortalApi } from '@/api/user-portal'
 import { LogFilters } from '@/types/log'
+
+export type LogDetailScope = 'admin' | 'user'
 
 // 获取日志数据
 export const useLogs = (filters?: LogFilters) => {
@@ -21,12 +24,14 @@ export const useLogs = (filters?: LogFilters) => {
 }
 
 // 获取日志详情
-export const useLogDetail = (logId: number | null) => {
+export const useLogDetail = (logId: number | null, scope: LogDetailScope = 'admin') => {
     const query = useQuery({
-        queryKey: ['logDetail', logId],
+        queryKey: [scope === 'user' ? 'userPortalModelLogDetail' : 'logDetail', logId],
         queryFn: () => {
             if (!logId) return null
-            return logApi.getLogDetail(logId)
+            return scope === 'user'
+                ? userPortalApi.getModelLogDetail(logId)
+                : logApi.getLogDetail(logId)
         },
         // 仅在有logId时启用查询
         enabled: !!logId,

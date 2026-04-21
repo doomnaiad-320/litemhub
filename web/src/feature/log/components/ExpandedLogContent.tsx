@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
 import { JsonViewer } from './JsonViewer'
-import { useLogDetail } from '@/feature/log/hooks'
+import { useLogDetail, type LogDetailScope } from '@/feature/log/hooks'
 import type { LogRecord, LogRequestDetail } from '@/types/log'
 import { channelApi } from '@/api/channel'
 import { useChannelTypeMetas } from '@/feature/channel/hooks'
@@ -20,9 +20,16 @@ const formatPrice = (price: number, unit: number): string => {
     return price.toString()
 }
 
-export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
+export const ExpandedLogContent = ({
+    log,
+    scope = 'admin',
+}: {
+    log: LogRecord
+    scope?: LogDetailScope
+}) => {
     const { t } = useTranslation()
-    const { data: typeMetas } = useChannelTypeMetas()
+    const isAdminScope = scope === 'admin'
+    const { data: typeMetas } = useChannelTypeMetas(isAdminScope)
     const [channelInfo, setChannelInfo] = useState<{ name: string; type: number } | null>(null)
     const [channelDialogOpen, setChannelDialogOpen] = useState(false)
     const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
@@ -44,13 +51,13 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
     }
 
     useEffect(() => {
-        if (!log.channel) return
+        if (!isAdminScope || !log.channel) return
         channelApi.getChannelBatchInfo([log.channel])
             .then(infos => {
                 if (infos.length > 0) setChannelInfo({ name: infos[0].name, type: infos[0].type })
             })
             .catch(() => {})
-    }, [log.channel])
+    }, [isAdminScope, log.channel])
 
     const needsDetail = !!log.request_detail
     const [requestDetail, setRequestDetail] = useState<LogRequestDetail | null>(null)
@@ -59,7 +66,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
         data: logDetail,
         isLoading: isLoadingDetail,
         error: logDetailError
-    } = useLogDetail(needsDetail ? log.id : null)
+    } = useLogDetail(needsDetail ? log.id : null, scope)
 
     useEffect(() => {
         if (logDetail) {
@@ -170,14 +177,18 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div className="flex items-center gap-1 min-w-0">
                             <span className="font-medium">{t('log.channel')}:</span>
                             {log.channel ? (
-                                <ChannelLabel
-                                    id={log.channel}
-                                    info={channelInfo || undefined}
-                                    typeName={channelInfo ? typeMetas?.[channelInfo.type]?.name : undefined}
-                                    compact
-                                    className="max-w-full"
-                                    onClick={() => openChannelEdit(log.channel)}
-                                />
+                                isAdminScope ? (
+                                    <ChannelLabel
+                                        id={log.channel}
+                                        info={channelInfo || undefined}
+                                        typeName={channelInfo ? typeMetas?.[channelInfo.type]?.name : undefined}
+                                        compact
+                                        className="max-w-full"
+                                        onClick={() => openChannelEdit(log.channel)}
+                                    />
+                                ) : (
+                                    <span className="font-mono text-xs">{log.channel}</span>
+                                )
                             ) : '-'}
                         </div>
                         <div><span className="font-medium">{t('log.mode')}:</span> {t(`modeType.${log.mode}`, { defaultValue: log.mode?.toString() || '-' })}</div>
@@ -331,7 +342,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                 </div>
             )}
 
-            {editingChannel && (
+            {isAdminScope && editingChannel && (
                 <ChannelDialog
                     open={channelDialogOpen}
                     onOpenChange={setChannelDialogOpen}

@@ -27,6 +27,10 @@ func SetUserAPIRouter(router *gin.Engine) {
 		walletRouter.GET("", controller.GetCurrentUserWallet)
 		walletRouter.GET("/logs", controller.GetCurrentUserWalletLogs)
 
+		logsRouter := protectedUserAPI.Group("/logs")
+		logsRouter.GET("", controller.GetCurrentUserModelLogs)
+		logsRouter.GET("/detail/:log_id", controller.GetCurrentUserModelLogDetail)
+
 		keysRouter := protectedUserAPI.Group("/keys")
 		keysRouter.GET("", controller.GetCurrentUserKeys)
 		keysRouter.POST("", controller.CreateCurrentUserKey)

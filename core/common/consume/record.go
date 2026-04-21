@@ -43,6 +43,7 @@ func recordConsume(
 		meta.OriginModel,
 		meta.Token.ID,
 		meta.Token.Name,
+		meta.Token.OwnerUserID,
 		meta.Endpoint,
 		content,
 		int(meta.Mode),

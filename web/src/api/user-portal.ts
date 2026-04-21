@@ -1,12 +1,14 @@
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { ENV } from '@/utils/env'
 import { ApiError, type APIResponse } from './index'
+import type { LogRequestDetail } from '@/types/log'
 import type {
     UserPortalAuthResponse,
     UserPortalCreateKeyRequest,
     UserPortalGroupsResponse,
     UserPortalKeysResponse,
     UserPortalLoginRequest,
+    UserPortalModelLogsResponse,
     UserPortalRegisterRequest,
     UserPortalUpdateKeyRequest,
     UserPortalUser,
@@ -106,6 +108,17 @@ export const userPortalApi = {
             p: page,
             per_page: perPage,
         })
+    },
+
+    getModelLogs: async (page: number, perPage: number) => {
+        return get<UserPortalModelLogsResponse>('logs', {
+            p: page,
+            per_page: perPage,
+        })
+    },
+
+    getModelLogDetail: async (logId: number) => {
+        return get<LogRequestDetail>(`logs/detail/${logId}`)
     },
 
     getGroups: async () => {

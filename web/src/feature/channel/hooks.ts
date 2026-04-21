@@ -7,10 +7,11 @@ import { ChannelCreateRequest, ChannelUpdateRequest, ChannelStatusRequest } from
 import { toast } from 'sonner'
 
 // 获取渠道类型元数据
-export const useChannelTypeMetas = () => {
+export const useChannelTypeMetas = (enabled = true) => {
     const query = useQuery({
         queryKey: ['channelTypeMetas'],
         queryFn: channelApi.getTypeMetas,
+        enabled,
     })
 
     return {

@@ -59,7 +59,7 @@ export interface LogRecord {
   channel: number
   code: number
   content: string
-  created_at: string
+  created_at: string | number
   endpoint: string
   group: string
   id: number
@@ -68,12 +68,12 @@ export interface LogRecord {
   mode: number
   model: string
   price: LogPrice
-  request_at: string
+  request_at: string | number
   request_detail: LogRequestDetail
   request_id: string
   prompt_cache_key?: string
   upstream_id: string
-  retry_at: string
+  retry_at: string | number
   retry_times: number
   service_tier?: string
   token_id: number

@@ -1,4 +1,5 @@
 import type { Token } from './token'
+import type { LogRecord } from './log'
 
 export interface UserPortalUser {
     id: number
@@ -41,6 +42,11 @@ export interface UserPortalWalletLog {
 
 export interface UserPortalWalletLogsResponse {
     wallet_logs: UserPortalWalletLog[]
+    total: number
+}
+
+export interface UserPortalModelLogsResponse {
+    logs: LogRecord[]
     total: number
 }
 

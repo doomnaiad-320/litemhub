@@ -308,6 +308,54 @@ func GetLogDetail(c *gin.Context) {
 	middleware.SuccessResponse(c, log)
 }
 
+func GetCurrentUserModelLogs(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	page, perPage := utils.ParsePageParams(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
+	params := parseCommonParams(c)
+
+	result, err := model.GetAppUserLogs(
+		user.ID,
+		startTime,
+		endTime,
+		params.modelName,
+		params.requestID,
+		params.upstreamID,
+		params.tokenID,
+		params.tokenName,
+		params.order,
+		model.CodeType(params.codeType),
+		params.code,
+		params.includeDetail,
+		params.user,
+		page,
+		perPage,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, result)
+}
+
+func GetCurrentUserModelLogDetail(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	logID, _ := strconv.Atoi(c.Param("log_id"))
+	if logID <= 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid log id")
+		return
+	}
+
+	log, err := model.GetAppUserLogDetail(user.ID, logID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, log)
+}
+
 // GetGroupLogDetail godoc
 //
 //	@Summary		Get group log detail

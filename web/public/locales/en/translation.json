@@ -1312,7 +1312,7 @@
       "noKeys": "You have not created any keys yet.",
       "groupHint": "Check group multipliers and available models",
       "keyHint": "Create and copy your own keys",
-      "logHint": "Review recharge, reserve, settle, and other wallet logs"
+      "logHint": "Review model requests and wallet logs"
     },
     "groups": {
       "badge": "Groups and Multipliers",
@@ -1347,10 +1347,26 @@
       "copyFailed": "Copy failed"
     },
     "logs": {
-      "badge": "Wallet Logs",
-      "title": "Balance Logs",
-      "description": "Review recharge, reserve, settle, release, and other wallet records for reconciliation and troubleshooting.",
+      "badge": "Requests and Logs",
+      "title": "Log Center",
+      "description": "Review your own model request logs and wallet records, including models, token usage, charged amount, and balance changes.",
       "list": "Log List",
+      "modelTab": "Model Requests",
+      "walletTab": "Wallet Logs",
+      "modelList": "Model Request Logs",
+      "walletList": "Wallet Log List",
+      "status": "Status",
+      "success": "Success",
+      "failed": "Failed",
+      "model": "Model",
+      "group": "Group",
+      "key": "Key",
+      "tokens": "Token Usage",
+      "inputTokens": "Input",
+      "outputTokens": "Output",
+      "totalTokens": "Total",
+      "usedAmount": "Used Amount",
+      "requestId": "Request ID",
       "type": "Type",
       "amount": "Amount",
       "balance": "Balance Change",
