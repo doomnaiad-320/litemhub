@@ -8,6 +8,7 @@ import type {
     UserPortalKeysResponse,
     UserPortalLoginRequest,
     UserPortalRegisterRequest,
+    UserPortalUpdateKeyRequest,
     UserPortalUser,
     UserPortalWalletLogsResponse,
     UserPortalWalletResponse,
@@ -73,6 +74,11 @@ const post = async <T>(url: string, data?: unknown) => {
     return response.data.data as T
 }
 
+const put = async <T>(url: string, data?: unknown) => {
+    const response: AxiosResponse<APIResponse<T>> = await userApiClient.put(url, data)
+    return response.data.data as T
+}
+
 const del = async <T>(url: string) => {
     const response: AxiosResponse<APIResponse<T>> = await userApiClient.delete(url)
     return response.data.data as T
@@ -120,6 +126,10 @@ export const userPortalApi = {
 
     createKey: async (data: UserPortalCreateKeyRequest) => {
         return post('keys', data)
+    },
+
+    updateKey: async (id: number, data: UserPortalUpdateKeyRequest) => {
+        return put(`keys/${id}`, data)
     },
 
     deleteKey: async (id: number) => {

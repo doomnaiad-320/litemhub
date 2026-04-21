@@ -114,8 +114,16 @@ export const channelApi = {
             `/api/channel/${id}/test?${params.toString()}`,
             { withCredentials: true }
         )
+        let completed = false
 
         eventSource.onmessage = (event) => {
+            if (event.data === '[DONE]') {
+                completed = true
+                eventSource.close()
+                onComplete()
+                return
+            }
+
             try {
                 const result = JSON.parse(event.data) as ChannelTestResult
                 onResult(result)
@@ -125,6 +133,10 @@ export const channelApi = {
         }
 
         eventSource.onerror = (error) => {
+            if (completed || eventSource.readyState === EventSource.CLOSED) {
+                return
+            }
+
             console.error('SSE error:', error)
             onError(new Error('测试连接失败'))
             eventSource.close()
@@ -282,8 +294,16 @@ export const channelApi = {
             `/api/channels/test?${params.toString()}`,
             { withCredentials: true }
         )
+        let completed = false
 
         eventSource.onmessage = (event) => {
+            if (event.data === '[DONE]') {
+                completed = true
+                eventSource.close()
+                onComplete()
+                return
+            }
+
             try {
                 const result = JSON.parse(event.data) as ChannelTestResult
                 onResult(result)
@@ -293,6 +313,10 @@ export const channelApi = {
         }
 
         eventSource.onerror = (error) => {
+            if (completed || eventSource.readyState === EventSource.CLOSED) {
+                return
+            }
+
             console.error('SSE error:', error)
             onError(new Error('测试连接失败'))
             eventSource.close()

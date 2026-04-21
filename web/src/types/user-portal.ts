@@ -78,3 +78,7 @@ export interface UserPortalCreateKeyRequest {
     subnets?: string[]
     models?: string[]
 }
+
+export interface UserPortalUpdateKeyRequest {
+    group: string
+}

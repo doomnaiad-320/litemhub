@@ -30,6 +30,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 		keysRouter := protectedUserAPI.Group("/keys")
 		keysRouter.GET("", controller.GetCurrentUserKeys)
 		keysRouter.POST("", controller.CreateCurrentUserKey)
+		keysRouter.PUT("/:id", controller.UpdateCurrentUserKey)
 		keysRouter.DELETE("/:id", controller.DeleteCurrentUserKey)
 	}
 }

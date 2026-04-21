@@ -47,6 +47,7 @@ export interface Group {
     status: GroupStatus
     rpm_ratio: number
     tpm_ratio: number
+    price_multiplier: number
     used_amount: number
     request_count: number
     available_sets: string[]
@@ -90,6 +91,7 @@ export interface GroupConsumptionRankingResponse {
 export interface GroupCreateRequest {
     rpm_ratio?: number
     tpm_ratio?: number
+    price_multiplier?: number
     available_sets?: string[]
     balance_alert_enabled?: boolean
     balance_alert_threshold?: number
@@ -100,6 +102,7 @@ export interface GroupUpdateRequest {
     status?: GroupStatus
     rpm_ratio?: number
     tpm_ratio?: number
+    price_multiplier?: number
     available_sets?: string[]
     balance_alert_enabled?: boolean
     balance_alert_threshold?: number

@@ -21,6 +21,10 @@ type CreateAppUserKeyRequest struct {
 	Models  []string `json:"models"`
 }
 
+type UpdateAppUserKeyRequest struct {
+	Group string `json:"group"`
+}
+
 type UserGroupOptionResponse struct {
 	Group           string   `json:"group"`
 	PriceMultiplier float64  `json:"price_multiplier"`
@@ -250,4 +254,75 @@ func DeleteCurrentUserKey(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, nil)
+}
+
+func UpdateCurrentUserKey(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid key id")
+		return
+	}
+
+	req := UpdateAppUserKeyRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
+		return
+	}
+
+	req.Group = strings.TrimSpace(req.Group)
+	if req.Group == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
+		return
+	}
+
+	currentToken, err := model.GetAppUserTokenByID(user.ID, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	groupOption, err := buildUserGroupOptionResponse(req.Group)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+
+		return
+	}
+
+	if len(groupOption.Models) == 0 {
+		middleware.ErrorResponse(c, http.StatusForbidden, "selected group has no available models")
+		return
+	}
+
+	if _, err := normalizeRequestedGroupModels(currentToken.Models, groupOption.Models); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	token, err := model.UpdateAppUserTokenGroupByID(user.ID, id, req.Group)
+	if err != nil {
+		switch {
+		case errors.Is(err, model.ErrGroupUnavailable):
+			middleware.ErrorResponse(c, http.StatusForbidden, err.Error())
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+
+		return
+	}
+
+	middleware.SuccessResponse(c, buildTokenResponse(token))
 }

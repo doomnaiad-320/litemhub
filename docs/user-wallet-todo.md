@@ -39,6 +39,7 @@
 - [x] 用户能查看自己的 Key 列表
 - [x] 用户创建 Key 时必须选择一个 group
 - [x] 用户创建 Key 时选择的 group 会固定绑定到该 key
+- [x] 用户可以修改自己 Key 绑定的 group
 - [x] 用户创建 Key 时如传 `models`，必须是该 group 下的模型子集
 - [x] 用户 Key 能请求现有 `/v1/*` 模型接口
 - [x] 直接复用现有 group / price / override_price / 倍率配置
@@ -57,6 +58,8 @@
 - [x] 管理员能启用 / 禁用用户
 - [x] 管理员能给用户充值入账
 - [x] 管理员能查看用户钱包和钱包流水
+- [x] 管理员能创建 group 并配置倍率
+- [x] 管理员能创建 channel 并绑定到一个 group
 
 本期暂不需要：
 
@@ -167,9 +170,11 @@
 - [x] 新增用户可选分组列表接口：`GET /user-api/groups`
 - [x] 新增用户 Key 列表接口：`GET /user-api/keys`
 - [x] 新增用户创建 Key 接口：`POST /user-api/keys`
+- [x] 新增用户修改 Key 分组接口：`PUT /user-api/keys/:id`
 - [x] 新增用户删除 Key 接口：`DELETE /user-api/keys/:id`
 - [x] 创建 Key 时校验 group 存在且处于启用状态
 - [x] 用户分组列表返回 group 倍率与该 group 下模型列表
+- [x] 修改 Key 分组时校验新 group 仍覆盖当前 key 已限制的模型
 - [x] 创建 Key 时如传 `models`，需校验属于该 group
 - [x] 创建 Key 时写入 `token.owner_user_id`
 - [x] 创建 Key 后，token 固定绑定所选 group
@@ -179,8 +184,24 @@
 
 - 用户能看到当前所有可选 group，以及每个 group 的倍率和模型列表。
 - 用户能在指定 group 下创建 Key。
+- 用户能把自己的 Key 切换到另一个可用 group。
 - 新 Key 能正常调用现有 `/v1/*` 模型接口。
 - 用户不能操作其他用户的 Key。
+
+## M5.1：组别与渠道绑定
+
+- [x] 管理端 group 表单展示 `price_multiplier`
+- [x] 管理端 group 列表展示倍率
+- [x] 创建/更新 group 时自动将 `available_sets` 固定同步为 `[group.id]`
+- [x] 管理端 channel 表单改为单选 `group`
+- [x] 创建/更新 channel 时自动将 `sets` 固定同步为 `[group.id]`
+- [x] channel 列表展示绑定 group，而不是底层 sets
+
+验收标准：
+
+- 管理员创建组别时只需要关心组名和倍率。
+- 管理员创建渠道时只需要选择一个组别。
+- 用户选择某个组别创建 key 后，请求只会落到该组别绑定的渠道。
 
 ## M6：模型调用预占与结算
 

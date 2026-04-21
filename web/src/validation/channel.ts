@@ -9,7 +9,7 @@ export const channelCreateSchema = z.object({
     proxy_url: z.string().optional(),
     models: z.array(z.string()).min(0),
     model_mapping: z.record(z.string(), z.string()).optional(),
-    sets: z.array(z.string()).optional(),
+    group: z.string().trim().min(1, '组别不能为空'),
     priority: z.number().int().min(0).max(1000000).optional(),
     skip_tls_verify: z.boolean().optional(),
     enabled_no_permission_ban: z.boolean().optional(),

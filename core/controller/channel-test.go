@@ -355,6 +355,11 @@ func TestChannelModels(c *gin.Context) {
 	successResponseBody := c.Query("success_body") == "true"
 	isStream := c.Query("stream") == "true"
 
+	if isStream {
+		render.WriteSSEContentType(c.Writer)
+		c.Writer.Flush()
+	}
+
 	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}
 	hasError := atomic.Bool{}
@@ -429,7 +434,10 @@ func TestChannelModels(c *gin.Context) {
 			Success: true,
 			Data:    results,
 		})
+		return
 	}
+
+	render.OpenaiDone(c)
 }
 
 // TestAllChannels godoc
@@ -472,6 +480,11 @@ func TestAllChannels(c *gin.Context) {
 	returnSuccess := c.Query("return_success") == "true"
 	successResponseBody := c.Query("success_body") == "true"
 	isStream := c.Query("stream") == "true"
+
+	if isStream {
+		render.WriteSSEContentType(c.Writer)
+		c.Writer.Flush()
+	}
 
 	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}
@@ -547,7 +560,10 @@ func TestAllChannels(c *gin.Context) {
 			Success: true,
 			Data:    results,
 		})
+		return
 	}
+
+	render.OpenaiDone(c)
 }
 
 func tryTestChannel(channelID int, modelName string) bool {

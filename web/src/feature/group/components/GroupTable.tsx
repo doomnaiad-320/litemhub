@@ -182,35 +182,13 @@ export function GroupTable() {
             ),
         },
         {
-            accessorKey: 'available_sets',
-            header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("group.availableSets")}</div>,
+            accessorKey: 'price_multiplier',
+            header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("group.priceMultiplier")}</div>,
             cell: ({ row }) => {
-                const availableSets = row.original.available_sets || []
                 return (
-                    <button
-                        type="button"
-                        className="flex max-w-[280px] flex-wrap gap-1 text-left"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            openEditDialog(row.original)
-                        }}
-                    >
-                        {availableSets.length === 0 ? (
-                            <Badge variant="secondary" className="cursor-pointer">
-                                default
-                            </Badge>
-                        ) : (
-                            availableSets.map((item) => (
-                                <Badge
-                                    key={`${row.original.id}-${item}`}
-                                    variant="secondary"
-                                    className="max-w-full cursor-pointer break-all"
-                                >
-                                    {item}
-                                </Badge>
-                            ))
-                        )}
-                    </button>
+                    <div className="font-mono">
+                        x{(row.original.price_multiplier || 1).toFixed(2)}
+                    </div>
                 )
             },
         },

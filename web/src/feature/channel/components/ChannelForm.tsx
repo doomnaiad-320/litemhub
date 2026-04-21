@@ -13,9 +13,17 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { channelCreateSchema } from '@/validation/channel'
 import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannel, useTestChannelPreviewAll, useChannelDefaultModels } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
+import { useGroups } from '@/feature/group/hooks'
 import { useTranslation } from 'react-i18next'
 import { ChannelCreateForm } from '@/validation/channel'
 import { ModelDialog } from '@/feature/model/components/ModelDialog'
@@ -43,7 +51,7 @@ type ComparableChannelPayload = {
     proxy_url: string
     models: string[]
     model_mapping: Record<string, string>
-    sets: string[]
+    group: string
     priority: number
     skip_tls_verify: boolean
     enabled_no_permission_ban: boolean
@@ -81,7 +89,7 @@ const normalizeChannelPayload = (
     proxy_url: payload.proxy_url ?? '',
     models: payload.models ?? [],
     model_mapping: payload.model_mapping ?? {},
-    sets: payload.sets ?? [],
+    group: payload.group ?? '',
     priority: payload.priority ?? DEFAULT_PRIORITY,
     skip_tls_verify: payload.skip_tls_verify ?? false,
     enabled_no_permission_ban: payload.enabled_no_permission_ban ?? false,
@@ -105,7 +113,7 @@ interface ChannelFormProps {
         proxy_url?: string
         models: string[]
         model_mapping?: Record<string, string>
-        sets?: string[]
+        group?: string
         priority?: number
         skip_tls_verify?: boolean
         enabled_no_permission_ban?: boolean
@@ -128,7 +136,7 @@ export function ChannelForm({
         proxy_url: '',
         models: [],
         model_mapping: {},
-        sets: [],
+        group: '',
         priority: 10,
         skip_tls_verify: false,
         enabled_no_permission_ban: false,
@@ -155,6 +163,7 @@ export function ChannelForm({
 
     // 获取所有模型
     const { data: models, isLoading: isModelsLoading } = useModels()
+    const { data: groupsData } = useGroups(1, 1000)
 
     // API hooks
     const {
@@ -278,7 +287,7 @@ export function ChannelForm({
             proxy_url: data.proxy_url || '',
             models: effectiveUseDefault ? [] : (data.models || []),
             model_mapping: effectiveUseDefault ? {} : (data.model_mapping || {}),
-            sets: data.sets || [],
+            group: data.group,
             priority: data.priority,
             skip_tls_verify: data.skip_tls_verify ?? false,
             enabled_no_permission_ban: data.enabled_no_permission_ban ?? false,
@@ -369,7 +378,7 @@ export function ChannelForm({
             proxy_url: formData.proxy_url || '',
             models: effectiveUseDefault ? [] : (formData.models || []),
             model_mapping: effectiveUseDefault ? {} : (formData.model_mapping || {}),
-            sets: formData.sets || [],
+            group: formData.group || '',
             priority: formData.priority,
             skip_tls_verify: formData.skip_tls_verify ?? false,
             enabled_no_permission_ban: formData.enabled_no_permission_ban ?? false,
@@ -386,7 +395,7 @@ export function ChannelForm({
             proxy_url: channel.proxy_url || '',
             models: channel.models || [],
             model_mapping: channel.model_mapping || {},
-            sets: channel.sets || [],
+            group: channel.group || channel.sets?.[0] || '',
             priority: channel.priority,
             skip_tls_verify: channel.skip_tls_verify ?? false,
             enabled_no_permission_ban: channel.enabled_no_permission_ban ?? false,
@@ -517,7 +526,7 @@ export function ChannelForm({
             {/* 分组字段骨架 */}
             <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-[72px] w-full rounded-md" />
+                <Skeleton className="h-9 w-full rounded-md" />
             </div>
 
             {/* 密钥字段骨架 */}
@@ -829,8 +838,10 @@ export function ChannelForm({
                                                             dropdownItems={allModels}
                                                             selectedItems={field.value || []}
                                                             setSelectedItems={(modelsOrFunction) => {
-                                                                // Ensure we're working with array
-                                                                const models = Array.isArray(modelsOrFunction) ? modelsOrFunction : []
+                                                                const nextModels = typeof modelsOrFunction === 'function'
+                                                                    ? modelsOrFunction(field.value || [])
+                                                                    : modelsOrFunction
+                                                                const models = Array.isArray(nextModels) ? nextModels : []
 
                                                                 // Now we can use includes safely
                                                                 if (models.includes(t('model.dialog.createDescription'))) {
@@ -842,7 +853,7 @@ export function ChannelForm({
                                                                 }
                                                             }}
                                                             handleFilteredDropdownItems={handleModelFilteredDropdownItems}
-                                                            handleDropdownItemDisplay={(item) => {
+                                                            handleDropdownItemDisplay={(item: string) => {
                                                                 // 为"创建新模型"选项添加特殊样式
                                                                 if (item === t('model.dialog.createDescription')) {
                                                                     return (
@@ -873,7 +884,7 @@ export function ChannelForm({
                                                                     </div>
                                                                 )
                                                             }}
-                                                            handleSelectedItemDisplay={(item) => {
+                                                            handleSelectedItemDisplay={(item: string) => {
                                                                 const pair = getChannelModelMetric(runtimeMetrics, channelId, item)
                                                                 const modelMetric = runtimeMetrics?.models?.[item]
                                                                 const metric = pair || modelMetric
@@ -924,31 +935,28 @@ export function ChannelForm({
                             {/* 分组字段 */}
                             <FormField
                                 control={form.control}
-                                name="sets"
+                                name="group"
                                 render={({ field }) => {
                                     return (
                                         <FormItem>
+                                            <FormLabel>{t("channel.dialog.group")}</FormLabel>
                                             <FormControl>
-                                                <MultiSelectCombobox<string>
-                                                    dropdownItems={[]}
-                                                    selectedItems={field.value || []}
-                                                    setSelectedItems={(sets) => {
-                                                        field.onChange(sets)
-                                                    }}
-                                                    handleFilteredDropdownItems={(dropdownItems, selectedItems, inputValue) => {
-                                                        // 允许用户创建新的分组
-                                                        if (inputValue && !selectedItems.includes(inputValue) && !dropdownItems.includes(inputValue)) {
-                                                            return [inputValue, ...dropdownItems]
-                                                        }
-                                                        return dropdownItems
-                                                    }}
-                                                    handleDropdownItemDisplay={(item) => item}
-                                                    handleSelectedItemDisplay={(item) => item}
-                                                    allowUserCreatedItems={true}
-                                                    placeholder={t("channel.dialog.setsPlaceholder")}
-                                                    label={t("channel.dialog.sets")}
-                                                />
+                                                <Select value={field.value || ''} onValueChange={field.onChange}>
+                                                    <SelectTrigger className="h-9">
+                                                        <SelectValue placeholder={t("channel.dialog.groupPlaceholder")} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {(groupsData?.groups || []).map((group) => (
+                                                            <SelectItem key={group.id} value={group.id}>
+                                                                {group.id} (x{(group.price_multiplier || 1).toFixed(2)})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </FormControl>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {t("channel.dialog.groupHelp")}
+                                            </p>
                                             <FormMessage />
                                         </FormItem>
                                     )

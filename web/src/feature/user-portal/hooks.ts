@@ -5,6 +5,7 @@ import type {
     UserPortalCreateKeyRequest,
     UserPortalLoginRequest,
     UserPortalRegisterRequest,
+    UserPortalUpdateKeyRequest,
 } from '@/types/user-portal'
 import { userPortalApi } from '@/api/user-portal'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
@@ -134,6 +135,22 @@ export const useUserPortalDeleteKey = () => {
         },
         onError: (error: unknown) => {
             const message = error instanceof Error ? error.message : '删除 Key 失败'
+            toast.error(message)
+        },
+    })
+}
+
+export const useUserPortalUpdateKey = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number, data: UserPortalUpdateKeyRequest }) => userPortalApi.updateKey(id, data),
+        onSuccess: () => {
+            invalidatePortalQueries(queryClient)
+            toast.success('Key 分组已更新')
+        },
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '更新 Key 分组失败'
             toast.error(message)
         },
     })

@@ -111,3 +111,44 @@ func DeleteAppUserTokenByID(userID, id int) (err error) {
 
 	return HandleUpdateResult(result, ErrTokenNotFound)
 }
+
+func UpdateAppUserTokenGroupByID(userID, id int, groupID string) (token *Token, err error) {
+	if userID == 0 {
+		return nil, errors.New("user id is empty")
+	}
+
+	if id == 0 {
+		return nil, errors.New("id is empty")
+	}
+
+	if groupID == "" {
+		return nil, errors.New("group is empty")
+	}
+
+	if _, err := EnsureGroupEnabled(groupID); err != nil {
+		return nil, err
+	}
+
+	token = &Token{ID: id}
+	defer func() {
+		if err == nil && token.Key != "" {
+			if err := CacheDeleteToken(token.Key); err != nil {
+				log.Error("delete token from cache failed: " + err.Error())
+			}
+		}
+	}()
+
+	result := appUserTokenQuery(userID).
+		Clauses(clause.Returning{}).
+		Where("id = ?", id).
+		Updates(&Token{GroupID: groupID})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	result = appUserTokenQuery(userID).
+		Where("id = ?", id).
+		First(token)
+
+	return token, HandleUpdateResult(result, ErrTokenNotFound)
+}

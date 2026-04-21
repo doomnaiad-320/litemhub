@@ -31,9 +31,6 @@ export default function UserPortalGroupsPage() {
                         <CardHeader className="flex flex-row items-start justify-between gap-4">
                             <div>
                                 <CardTitle className="text-xl">{group.group}</CardTitle>
-                                <div className="mt-2 text-sm text-muted-foreground">
-                                    {t('portal.groups.sets')}: {group.available_sets.join(', ') || '-'}
-                                </div>
                             </div>
                             <Badge variant="outline" className="border-transparent bg-primary/12 px-3 py-1 text-primary">
                                 x{group.price_multiplier.toFixed(2)}

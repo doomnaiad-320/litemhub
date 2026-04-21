@@ -411,6 +411,7 @@ func CreateGroup(c *gin.Context) {
 	g := req.ToGroup()
 
 	g.ID = group
+	g.AvailableSets = []string{group}
 	if err := model.CreateGroup(g); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -447,6 +448,8 @@ func UpdateGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
+	req.AvailableSets = &[]string{group}
 
 	g, err := model.UpdateGroup(group, req)
 	if err != nil {

@@ -127,10 +127,33 @@
 - key 继续复用现有 `token`
 - group 继续作为模型权限、路由和价格配置边界
 - 用户创建 key 时必须选择一个 group，key 与该 group 绑定
+- 用户后续可以修改自己 key 绑定的 group，但若该 key 已限制模型，则新 group 也必须覆盖这些模型
 - 本期不新增“模型归属 group”的管理功能，直接复用现有 group 配置结果
 - 钱包余额归属于用户，不归属于 group
 - 用户实际消费金额由“请求命中的价格规则”决定
 - 管理端不需要查看用户自助创建的 key；现有后台 token 列表应默认过滤这类 key
+
+### 5.3 管理端组别与渠道规则
+
+本期产品层面统一采用以下规则：
+
+1. 管理员先创建 `group`
+2. `group` 必须配置 `price_multiplier`
+3. 管理员创建 `channel` 时必须选择一个 `group`
+4. 该 `channel` 只服务于被绑定的 `group`
+5. 用户创建 key 时选择某个 `group`
+6. 该 key 只能请求该 `group` 下的模型与渠道
+
+实现上仍复用底层 `sets` 机制，但产品层不再要求管理员手工维护：
+
+- `group.available_sets` 固定同步为 `[group.id]`
+- `channel.sets` 固定同步为 `[group.id]`
+
+也就是说：
+
+- 管理端看到的是“组别”
+- 底层路由继续使用 `available_sets` / `sets`
+- 两者通过 `group.id` 自动对齐
 
 ---
 

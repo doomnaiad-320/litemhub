@@ -9,7 +9,7 @@ import {
     getCoreRowModel,
     type ColumnDef,
 } from '@tanstack/react-table'
-import { Copy, Plus, Trash2 } from 'lucide-react'
+import { Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -39,11 +39,15 @@ import {
 } from '@/components/ui/select'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
-import { useUserPortalCreateKey, useUserPortalDeleteKey, useUserPortalGroups, useUserPortalKeys } from '@/feature/user-portal/hooks'
+import { useUserPortalCreateKey, useUserPortalDeleteKey, useUserPortalGroups, useUserPortalKeys, useUserPortalUpdateKey } from '@/feature/user-portal/hooks'
 import type { Token } from '@/types/token'
 
 interface CreateKeyFormValues {
     name: string
+    group: string
+}
+
+interface UpdateKeyGroupFormValues {
     group: string
 }
 
@@ -54,11 +58,14 @@ export default function UserPortalKeysPage() {
     const [pageSize, setPageSize] = useState(10)
     const [groupFilter, setGroupFilter] = useState<string>('all')
     const [dialogOpen, setDialogOpen] = useState(false)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [editingKey, setEditingKey] = useState<Token | null>(null)
 
     const { data: groupsData } = useUserPortalGroups(true)
     const { data, isLoading } = useUserPortalKeys(page, pageSize, groupFilter === 'all' ? undefined : groupFilter, true)
     const createKeyMutation = useUserPortalCreateKey()
     const deleteKeyMutation = useUserPortalDeleteKey()
+    const updateKeyMutation = useUserPortalUpdateKey()
 
     const groups = groupsData?.groups || []
     const keys = data?.keys || []
@@ -73,6 +80,17 @@ export default function UserPortalKeysPage() {
         resolver: zodResolver(schema),
         defaultValues: {
             name: '',
+            group: '',
+        },
+    })
+
+    const editSchema = useMemo(() => z.object({
+        group: z.string().trim().min(1, t('portal.keys.groupRequired')),
+    }), [t])
+
+    const editForm = useForm<UpdateKeyGroupFormValues>({
+        resolver: zodResolver(editSchema),
+        defaultValues: {
             group: '',
         },
     })
@@ -99,6 +117,28 @@ export default function UserPortalKeysPage() {
         } catch {
             toast.error(t('portal.keys.copyFailed'))
         }
+    }
+
+    const openEditDialog = (token: Token) => {
+        setEditingKey(token)
+        editForm.reset({ group: token.group })
+        setEditDialogOpen(true)
+    }
+
+    const onSubmitEdit = (values: UpdateKeyGroupFormValues) => {
+        if (!editingKey) {
+            return
+        }
+
+        updateKeyMutation.mutate({
+            id: editingKey.id,
+            data: { group: values.group },
+        }, {
+            onSuccess: () => {
+                setEditDialogOpen(false)
+                setEditingKey(null)
+            },
+        })
     }
 
     const columns: ColumnDef<Token>[] = useMemo(() => [
@@ -143,15 +183,24 @@ export default function UserPortalKeysPage() {
             id: 'actions',
             cell: ({ row }) => (
                 <div className="flex justify-end">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            deleteKeyMutation.mutate(row.original.id)
-                        }}
-                    >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(row.original)}
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                deleteKeyMutation.mutate(row.original.id)
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
                 </div>
             ),
         },
@@ -280,6 +329,54 @@ export default function UserPortalKeysPage() {
                                     </Button>
                                     <Button type="submit" disabled={createKeyMutation.isPending}>
                                         {createKeyMutation.isPending ? t('portal.keys.creating') : t('portal.keys.create')}
+                                    </Button>
+                                </div>
+                            </form>
+                        </Form>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
+                    <DialogHeader className="border-b border-border/60 bg-muted/30 px-6 py-5">
+                        <DialogTitle className="text-xl">{t('portal.keys.editTitle')}</DialogTitle>
+                        <DialogDescription>{t('portal.keys.editDescription')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="px-6 py-6">
+                        <Form {...editForm}>
+                            <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-5">
+                                <FormField
+                                    control={editForm.control}
+                                    name="group"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('portal.keys.group')}</FormLabel>
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-11 rounded-2xl">
+                                                        <SelectValue placeholder={t('portal.keys.groupPlaceholder')} />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {groups.map((group) => (
+                                                        <SelectItem key={group.group} value={group.group}>
+                                                            {group.group} (x{group.price_multiplier.toFixed(2)})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                                        {t('portal.common.cancel')}
+                                    </Button>
+                                    <Button type="submit" disabled={updateKeyMutation.isPending}>
+                                        {updateKeyMutation.isPending ? t('portal.keys.updating') : t('portal.keys.update')}
                                     </Button>
                                 </div>
                             </form>

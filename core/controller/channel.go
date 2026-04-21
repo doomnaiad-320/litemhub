@@ -34,6 +34,7 @@ func ChannelTypeMetas(c *gin.Context) {
 
 type ChannelResponse struct {
 	*model.Channel
+	Group      string    `json:"group,omitempty"`
 	AccessedAt time.Time `json:"accessed_at,omitempty"`
 }
 
@@ -47,12 +48,14 @@ func (c *ChannelResponse) MarshalJSON() ([]byte, error) {
 
 	return sonic.Marshal(&struct {
 		*Alias
+		Group            string `json:"group,omitempty"`
 		CreatedAt        int64 `json:"created_at"`
 		BalanceUpdatedAt int64 `json:"balance_updated_at"`
 		LastTestErrorAt  int64 `json:"last_test_error_at"`
 		AccessedAt       int64 `json:"accessed_at,omitempty"`
 	}{
 		Alias:            (*Alias)(c.Channel),
+		Group:            c.Group,
 		CreatedAt:        c.CreatedAt.UnixMilli(),
 		BalanceUpdatedAt: c.BalanceUpdatedAt.UnixMilli(),
 		LastTestErrorAt:  c.LastTestErrorAt.UnixMilli(),
@@ -65,8 +68,17 @@ func buildChannelResponse(channel *model.Channel) *ChannelResponse {
 
 	return &ChannelResponse{
 		Channel:    channel,
+		Group:      firstChannelGroup(channel.Sets),
 		AccessedAt: lastRequestAt,
 	}
+}
+
+func firstChannelGroup(sets []string) string {
+	if len(sets) == 0 {
+		return ""
+	}
+
+	return sets[0]
 }
 
 func buildChannelResponses(channels []*model.Channel) []*ChannelResponse {
@@ -272,6 +284,7 @@ type AddChannelRequest struct {
 	Type                    model.ChannelType    `json:"type"`
 	Priority                int32                `json:"priority"`
 	Status                  int                  `json:"status"`
+	Group                   string               `json:"group"`
 	Sets                    []string             `json:"sets"`
 	EnabledAutoBalanceCheck bool                 `json:"enabled_auto_balance_check"`
 	SkipTLSVerify           bool                 `json:"skip_tls_verify"`
@@ -312,6 +325,12 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		}
 	}
 
+	if r.Group != "" {
+		if _, err := model.GetGroupByID(r.Group, false); err != nil {
+			return nil, err
+		}
+	}
+
 	return &model.Channel{
 		Type:                    r.Type,
 		Name:                    r.Name,
@@ -323,13 +342,22 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		Priority:                r.Priority,
 		Status:                  r.Status,
 		Configs:                 r.Configs,
-		Sets:                    slices.Clone(r.Sets),
+		Sets:                    buildChannelSets(r.Group, r.Sets),
 		EnabledAutoBalanceCheck: r.EnabledAutoBalanceCheck,
 		SkipTLSVerify:           r.SkipTLSVerify,
 		EnabledNoPermissionBan:  r.EnabledNoPermissionBan,
 		WarnErrorRate:           r.WarnErrorRate,
 		MaxErrorRate:            r.MaxErrorRate,
 	}, nil
+}
+
+func buildChannelSets(group string, sets []string) []string {
+	group = strings.TrimSpace(group)
+	if group != "" {
+		return []string{group}
+	}
+
+	return slices.Clone(sets)
 }
 
 func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {

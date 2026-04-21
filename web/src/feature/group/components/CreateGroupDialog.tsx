@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Loader2 } from 'lucide-react'
-import { MultiSelectCombobox } from '@/components/select/MultiSelectCombobox'
 import { useCreateGroup, useUpdateGroup } from '../hooks'
 import type { Group } from '@/types/group'
 
@@ -29,9 +28,9 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
     const { createGroup, isLoading } = useCreateGroup()
     const { updateGroup, isLoading: isUpdating } = useUpdateGroup()
     const [groupName, setGroupName] = useState('')
-    const [availableSets, setAvailableSets] = useState<string[]>([])
     const [rpmRatio, setRpmRatio] = useState<number | undefined>(undefined)
     const [tpmRatio, setTpmRatio] = useState<number | undefined>(undefined)
+    const [priceMultiplier, setPriceMultiplier] = useState<number | undefined>(1)
     const [balanceAlertEnabled, setBalanceAlertEnabled] = useState(false)
     const [balanceAlertThreshold, setBalanceAlertThreshold] = useState<number | undefined>(undefined)
 
@@ -45,18 +44,18 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
 
         if (group) {
             setGroupName(group.id)
-            setAvailableSets(group.available_sets || [])
             setRpmRatio(group.rpm_ratio || undefined)
             setTpmRatio(group.tpm_ratio || undefined)
+            setPriceMultiplier(group.price_multiplier || 1)
             setBalanceAlertEnabled(group.balance_alert_enabled)
             setBalanceAlertThreshold(group.balance_alert_threshold || undefined)
             return
         }
 
         setGroupName('')
-        setAvailableSets([])
         setRpmRatio(undefined)
         setTpmRatio(undefined)
+        setPriceMultiplier(1)
         setBalanceAlertEnabled(false)
         setBalanceAlertThreshold(undefined)
     }, [open, group])
@@ -65,9 +64,9 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
         e.preventDefault()
         if (!groupName.trim()) return
         const payload = {
-            available_sets: availableSets,
             rpm_ratio: rpmRatio ?? 0,
             tpm_ratio: tpmRatio ?? 0,
+            price_multiplier: priceMultiplier ?? 1,
             balance_alert_enabled: balanceAlertEnabled,
             balance_alert_threshold: balanceAlertThreshold ?? 0,
         }
@@ -92,9 +91,9 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
             {
                 onSuccess: () => {
                     setGroupName('')
-                    setAvailableSets([])
                     setRpmRatio(undefined)
                     setTpmRatio(undefined)
+                    setPriceMultiplier(1)
                     setBalanceAlertEnabled(false)
                     setBalanceAlertThreshold(undefined)
                     onOpenChange(false)
@@ -106,9 +105,9 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
     const handleOpenChange = (open: boolean) => {
         if (!open) {
             setGroupName('')
-            setAvailableSets([])
             setRpmRatio(undefined)
             setTpmRatio(undefined)
+            setPriceMultiplier(1)
             setBalanceAlertEnabled(false)
             setBalanceAlertThreshold(undefined)
         }
@@ -151,6 +150,21 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
                                 />
                             </div>
                             <div className="space-y-2">
+                                <Label htmlFor="group-price-multiplier">{t('group.dialog.priceMultiplier')}</Label>
+                                <Input
+                                    id="group-price-multiplier"
+                                    type="number"
+                                    min={0.01}
+                                    step="0.01"
+                                    placeholder={t('group.dialog.priceMultiplierPlaceholder')}
+                                    value={priceMultiplier ?? ''}
+                                    onChange={(e) => setPriceMultiplier(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                                    disabled={loading}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
                                 <Label htmlFor="group-tpm-ratio">{t('group.dialog.tpmRatio')}</Label>
                                 <Input
                                     id="group-tpm-ratio"
@@ -163,24 +177,6 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
                                     disabled={loading}
                                 />
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <MultiSelectCombobox<string>
-                                dropdownItems={[]}
-                                selectedItems={availableSets}
-                                setSelectedItems={setAvailableSets}
-                                handleFilteredDropdownItems={(dropdownItems, selectedItems, inputValue) => {
-                                    if (inputValue && !selectedItems.includes(inputValue) && !dropdownItems.includes(inputValue)) {
-                                        return [inputValue, ...dropdownItems]
-                                    }
-                                    return dropdownItems
-                                }}
-                                handleDropdownItemDisplay={(item) => item}
-                                handleSelectedItemDisplay={(item) => item}
-                                allowUserCreatedItems={true}
-                                placeholder={t('group.dialog.availableSetsPlaceholder')}
-                                label={t('group.dialog.availableSets')}
-                            />
                         </div>
                         <div className="flex items-center justify-between rounded-lg border p-3">
                             <Label htmlFor="group-balance-alert">{t('group.dialog.balanceAlertEnabled')}</Label>

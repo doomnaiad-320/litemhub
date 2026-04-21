@@ -20,6 +20,7 @@ export interface Channel {
     max_error_rate?: number
     balance?: number
     used_amount?: number
+    group?: string
     sets?: string[]
     configs?: Record<string, unknown> | null
 }
@@ -60,6 +61,7 @@ export interface ChannelCreateRequest {
     proxy_url?: string
     models: string[]
     model_mapping?: Record<string, string>
+    group?: string
     sets?: string[]
     priority?: number
     skip_tls_verify?: boolean
@@ -77,6 +79,7 @@ export interface ChannelUpdateRequest {
     proxy_url?: string
     models: string[]
     model_mapping?: Record<string, string>
+    group?: string
     sets?: string[]
     priority?: number
     skip_tls_verify?: boolean
