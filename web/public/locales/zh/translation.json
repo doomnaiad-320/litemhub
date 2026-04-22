@@ -1285,14 +1285,23 @@
       "cancel": "取消"
     },
     "dashboard": {
-      "welcome": "用户门户",
-      "description": "在这里查看当前钱包余额、已开放分组、最近创建的 Key，并快速进入模型调用准备流程。",
+      "welcome": "钱包",
+      "title": "账户钱包",
+      "description": "这里展示余额、历史消耗、充值入口和钱包流水，便于快速确认账户资金状态。",
+      "currentAccount": "当前账号",
       "toGroups": "查看分组",
       "toKeys": "管理 Key",
       "toLogs": "查看日志",
+      "balanceTitle": "余额",
       "available": "可用余额",
       "frozen": "冻结余额",
+      "frozenHint": "冻结中：{{amount}}",
       "total": "总余额",
+      "historicalConsumed": "历史消耗",
+      "historicalHint": "按已完成结算的模型调用累计。",
+      "rechargeTitle": "充值",
+      "rechargeDescription": "在线充值后续接入支付接口。当前阶段如需充值，请由管理员后台手动入账。",
+      "rechargeSoon": "后期开启",
       "groups": "可用分组",
       "latestKeys": "最近创建的 Key",
       "viewAll": "查看全部",
@@ -1300,7 +1309,7 @@
       "noKeys": "你还没有创建任何 Key。",
       "groupHint": "查看分组倍率和可用模型",
       "keyHint": "创建并复制用户自己的 Key",
-      "logHint": "查看模型请求和钱包流水"
+      "logHint": "查看模型请求日志"
     },
     "groups": {
       "badge": "分组与倍率",
@@ -1335,10 +1344,10 @@
       "copyFailed": "复制失败"
     },
     "logs": {
-      "badge": "请求与流水",
-      "title": "日志中心",
-      "description": "查看当前账号自己的模型请求日志和钱包流水，用于核对每次调用的模型、Token 用量、消费金额和余额变化。",
-      "list": "日志列表",
+      "badge": "模型请求",
+      "title": "请求日志",
+      "description": "只查看当前账号自己的模型请求日志，用于核对每次调用的模型、Token 用量、消费金额和请求详情。",
+      "list": "请求日志列表",
       "modelTab": "模型请求",
       "walletTab": "钱包流水",
       "modelList": "模型请求日志",

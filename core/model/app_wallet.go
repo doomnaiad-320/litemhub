@@ -125,6 +125,21 @@ func GetAppUserWalletByUserID(userID int) (*AppUserWallet, error) {
 	return &wallet, HandleNotFound(err, ErrAppUserWalletNotFound)
 }
 
+func GetAppWalletHistoricalConsumed(userID int) (float64, error) {
+	if userID == 0 {
+		return 0, errors.New("user id is empty")
+	}
+
+	var total float64
+	err := DB.
+		Model(&AppWalletLog{}).
+		Where("user_id = ? AND type = ?", userID, AppWalletLogTypeSettle).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&total).Error
+
+	return total, err
+}
+
 func GetAppUserWalletsByUserIDs(userIDs []int) (map[int]*AppUserWallet, error) {
 	if len(userIDs) == 0 {
 		return map[int]*AppUserWallet{}, nil

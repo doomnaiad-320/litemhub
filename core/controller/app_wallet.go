@@ -14,11 +14,12 @@ import (
 )
 
 type AppWalletResponse struct {
-	UserID           int     `json:"user_id"`
-	AvailableBalance float64 `json:"available_balance"`
-	FrozenBalance    float64 `json:"frozen_balance"`
-	CreatedAt        int64   `json:"created_at"`
-	UpdatedAt        int64   `json:"updated_at"`
+	UserID             int     `json:"user_id"`
+	AvailableBalance   float64 `json:"available_balance"`
+	FrozenBalance      float64 `json:"frozen_balance"`
+	HistoricalConsumed float64 `json:"historical_consumed"`
+	CreatedAt          int64   `json:"created_at"`
+	UpdatedAt          int64   `json:"updated_at"`
 }
 
 type AppWalletLogResponse struct {
@@ -72,13 +73,14 @@ type UpdateAppUserStatusRequest struct {
 	Status int `json:"status"`
 }
 
-func buildAppWalletResponse(wallet *model.AppUserWallet) *AppWalletResponse {
+func buildAppWalletResponse(wallet *model.AppUserWallet, historicalConsumed float64) *AppWalletResponse {
 	return &AppWalletResponse{
-		UserID:           wallet.UserID,
-		AvailableBalance: wallet.AvailableBalance,
-		FrozenBalance:    wallet.FrozenBalance,
-		CreatedAt:        wallet.CreatedAt.UnixMilli(),
-		UpdatedAt:        wallet.UpdatedAt.UnixMilli(),
+		UserID:             wallet.UserID,
+		AvailableBalance:   wallet.AvailableBalance,
+		FrozenBalance:      wallet.FrozenBalance,
+		HistoricalConsumed: historicalConsumed,
+		CreatedAt:          wallet.CreatedAt.UnixMilli(),
+		UpdatedAt:          wallet.UpdatedAt.UnixMilli(),
 	}
 }
 
@@ -179,8 +181,14 @@ func GetCurrentUserWallet(c *gin.Context) {
 		return
 	}
 
+	historicalConsumed, err := model.GetAppWalletHistoricalConsumed(user.ID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	middleware.SuccessResponse(c, gin.H{
-		"wallet": buildAppWalletResponse(wallet),
+		"wallet": buildAppWalletResponse(wallet, historicalConsumed),
 	})
 }
 
@@ -477,8 +485,14 @@ func GetAppUserWallet(c *gin.Context) {
 		return
 	}
 
+	historicalConsumed, err := model.GetAppWalletHistoricalConsumed(userID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	middleware.SuccessResponse(c, gin.H{
-		"wallet": buildAppWalletResponse(wallet),
+		"wallet": buildAppWalletResponse(wallet, historicalConsumed),
 	})
 }
 
@@ -546,8 +560,14 @@ func RechargeAppUserBalance(c *gin.Context) {
 		return
 	}
 
+	historicalConsumed, err := model.GetAppWalletHistoricalConsumed(userID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	middleware.SuccessResponse(c, gin.H{
-		"wallet":       buildAppWalletResponse(wallet),
+		"wallet":       buildAppWalletResponse(wallet, historicalConsumed),
 		"recharge_log": rechargeLog,
 	})
 }

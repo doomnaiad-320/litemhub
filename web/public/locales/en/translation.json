@@ -1297,14 +1297,23 @@
       "cancel": "Cancel"
     },
     "dashboard": {
-      "welcome": "User Portal",
-      "description": "Check wallet balances, available groups, recent keys, and move directly into the model access workflow.",
+      "welcome": "Wallet",
+      "title": "Account Wallet",
+      "description": "Balance, historical usage, the recharge entry, and wallet logs are shown here for a quick account funds check.",
+      "currentAccount": "Current Account",
       "toGroups": "View Groups",
       "toKeys": "Manage Keys",
       "toLogs": "View Logs",
+      "balanceTitle": "Balance",
       "available": "Available Balance",
       "frozen": "Frozen Balance",
+      "frozenHint": "Frozen: {{amount}}",
       "total": "Total Balance",
+      "historicalConsumed": "Historical Usage",
+      "historicalHint": "Accumulated from settled model requests.",
+      "rechargeTitle": "Recharge",
+      "rechargeDescription": "Online recharge will be connected later. For now, recharge manually from the admin console.",
+      "rechargeSoon": "Coming Later",
       "groups": "Available Groups",
       "latestKeys": "Recent Keys",
       "viewAll": "View All",
@@ -1312,7 +1321,7 @@
       "noKeys": "You have not created any keys yet.",
       "groupHint": "Check group multipliers and available models",
       "keyHint": "Create and copy your own keys",
-      "logHint": "Review model requests and wallet logs"
+      "logHint": "Review model request logs"
     },
     "groups": {
       "badge": "Groups and Multipliers",
@@ -1347,10 +1356,10 @@
       "copyFailed": "Copy failed"
     },
     "logs": {
-      "badge": "Requests and Logs",
-      "title": "Log Center",
-      "description": "Review your own model request logs and wallet records, including models, token usage, charged amount, and balance changes.",
-      "list": "Log List",
+      "badge": "Model Requests",
+      "title": "Request Logs",
+      "description": "Review only your own model request logs, including models, token usage, charged amount, and request details.",
+      "list": "Request Log List",
       "modelTab": "Model Requests",
       "walletTab": "Wallet Logs",
       "modelList": "Model Request Logs",

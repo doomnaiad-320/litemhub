@@ -20,6 +20,7 @@ export interface UserPortalWallet {
     user_id: number
     available_balance: number
     frozen_balance: number
+    historical_consumed: number
     created_at: number
     updated_at: number
 }
