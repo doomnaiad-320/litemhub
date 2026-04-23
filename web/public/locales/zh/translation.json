@@ -1349,6 +1349,7 @@
       "usageBilling": "按量付费",
       "pricing": "价格",
       "basePricing": "基础价格",
+      "selectedGroupPricing": "当前分组价格",
       "groupPricing": "分组价格",
       "detailDescription": "默认展示 1 倍率基础价格，右侧展示各分组倍率后的明细。",
       "groupColumn": "分组",

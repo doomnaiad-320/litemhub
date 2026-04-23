@@ -1361,6 +1361,7 @@
       "usageBilling": "Usage Based",
       "pricing": "Pricing",
       "basePricing": "Base Pricing",
+      "selectedGroupPricing": "Selected Group Pricing",
       "groupPricing": "Group Pricing",
       "detailDescription": "The card shows 1x base pricing. The right panel shows per-group pricing after multiplier.",
       "groupColumn": "Group",

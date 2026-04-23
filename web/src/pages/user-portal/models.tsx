@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
@@ -174,6 +173,29 @@ const buildImagePriceEntries = (
     }
 
     return entries
+}
+
+const hasPriceData = (accessGroup?: ModelAccessGroup) => {
+    if (!accessGroup) {
+        return false
+    }
+
+    const price = accessGroup.price
+    const hasStructuredPrice = !!price && [
+        price.input_price,
+        price.output_price,
+        price.per_request_price,
+        price.cached_price,
+        price.cache_creation_price,
+        price.image_input_price,
+        price.image_output_price,
+        price.audio_input_price,
+        price.thinking_mode_output_price,
+        price.web_search_price,
+    ].some((value) => value != null)
+
+    return hasStructuredPrice
+        || buildImagePriceEntries(accessGroup.imagePrices, accessGroup.imageQualityPrices).length > 0
 }
 
 const scalePriceNumber = (value: number | undefined, multiplier: number) => {
@@ -371,35 +393,33 @@ export default function UserPortalModelsPage() {
         [modelCards],
     )
 
-    const getCompactPriceEntries = (accessGroup: ModelAccessGroup) => {
+    const buildPriceEntries = (accessGroup?: ModelAccessGroup) => {
+        if (!accessGroup) {
+            return []
+        }
+
         const price = accessGroup.price
         const entries: Array<{ label: string, value: string }> = []
 
-        if (price) {
-            const candidates: Array<{ key: string, value: string | null }> = [
-                { key: 'input', value: formatPriceValue(price.input_price, price.input_price_unit) },
-                { key: 'output', value: formatPriceValue(price.output_price, price.output_price_unit) },
-                { key: 'request', value: price.per_request_price != null ? formatPriceNumber(price.per_request_price) : null },
-                { key: 'cached', value: formatPriceValue(price.cached_price, price.cached_price_unit) },
-                { key: 'cacheCreate', value: formatPriceValue(price.cache_creation_price, price.cache_creation_price_unit) },
-                { key: 'imageInput', value: formatPriceValue(price.image_input_price, price.image_input_price_unit) },
-                { key: 'imageOutput', value: formatPriceValue(price.image_output_price, price.image_output_price_unit) },
-                { key: 'audioInput', value: formatPriceValue(price.audio_input_price, price.audio_input_price_unit) },
-                { key: 'thinkingOutput', value: formatPriceValue(price.thinking_mode_output_price, price.thinking_mode_output_price_unit) },
-                { key: 'webSearch', value: formatPriceValue(price.web_search_price, price.web_search_price_unit) },
-            ]
+        const prioritizedCandidates: Array<{ key: string, value: string | null }> = [
+            { key: 'input', value: formatPriceValue(price?.input_price, price?.input_price_unit) },
+            { key: 'output', value: formatPriceValue(price?.output_price, price?.output_price_unit) },
+            { key: 'request', value: price?.per_request_price != null ? formatPriceNumber(price.per_request_price) : null },
+            { key: 'imageInput', value: formatPriceValue(price?.image_input_price, price?.image_input_price_unit) },
+            { key: 'imageOutput', value: formatPriceValue(price?.image_output_price, price?.image_output_price_unit) },
+            { key: 'audioInput', value: formatPriceValue(price?.audio_input_price, price?.audio_input_price_unit) },
+        ]
 
-            candidates.forEach((candidate) => {
-                if (!candidate.value) {
-                    return
-                }
+        prioritizedCandidates.forEach((candidate) => {
+            if (!candidate.value) {
+                return
+            }
 
-                entries.push({
-                    label: t(`portal.models.price.${candidate.key}`),
-                    value: candidate.value,
-                })
+            entries.push({
+                label: t(`portal.models.price.${candidate.key}`),
+                value: candidate.value,
             })
-        }
+        })
 
         if (entries.length > 0) {
             return entries
@@ -412,12 +432,14 @@ export default function UserPortalModelsPage() {
     }
 
     const getBaseAccessGroup = (item: ModelCardItem) => {
-        const exactBase = item.accessGroups.find((group) => Math.abs(group.priceMultiplier - 1) < 0.0001)
+        const exactBase = item.accessGroups.find((group) => (
+            Math.abs(group.priceMultiplier - 1) < 0.0001 && hasPriceData(group)
+        ))
         if (exactBase) {
             return exactBase
         }
 
-        const pricedGroup = item.accessGroups.find((group) => group.price || group.imagePrices || group.imageQualityPrices)
+        const pricedGroup = item.accessGroups.find((group) => hasPriceData(group))
         if (!pricedGroup) {
             return undefined
         }
@@ -432,12 +454,19 @@ export default function UserPortalModelsPage() {
     }
 
     const getBasePriceEntries = (item: ModelCardItem) => {
-        const baseAccessGroup = getBaseAccessGroup(item)
-        if (!baseAccessGroup) {
-            return []
+        return buildPriceEntries(getBaseAccessGroup(item))
+    }
+
+    const getPreviewAccessGroup = (item: ModelCardItem) => {
+        if (groupFilter === '__all__') {
+            return getBaseAccessGroup(item)
         }
 
-        return getCompactPriceEntries(baseAccessGroup)
+        return item.accessGroups.find((group) => hasPriceData(group)) || item.accessGroups[0]
+    }
+
+    const getPreviewPriceEntries = (item: ModelCardItem) => {
+        return buildPriceEntries(getPreviewAccessGroup(item))
     }
 
     const getGroupPricingTableData = (accessGroup: ModelAccessGroup) => {
@@ -644,13 +673,12 @@ export default function UserPortalModelsPage() {
                         <Skeleton className="h-40 rounded-xl" />
                     </>
                 ) : filteredModels.length > 0 ? filteredModels.map((item) => {
-                    const priceEntries = getBasePriceEntries(item)
+                    const previewAccessGroup = getPreviewAccessGroup(item)
+                    const priceEntries = getPreviewPriceEntries(item)
                     const visiblePriceEntries = priceEntries.slice(0, 4)
                     const hiddenPriceCount = Math.max(0, priceEntries.length - visiblePriceEntries.length)
                     const previewCapabilities = item.capabilities.slice(0, 3)
                     const hiddenCapabilityCount = Math.max(0, item.capabilities.length - previewCapabilities.length)
-                    const previewGroups = item.accessGroups.slice(0, 2)
-                    const hiddenGroupCount = Math.max(0, item.accessGroups.length - previewGroups.length)
 
                     return (
                         <Card
@@ -687,7 +715,7 @@ export default function UserPortalModelsPage() {
                                         <CardTitle className="break-all text-sm leading-5">{item.model}</CardTitle>
                                     </div>
                                     <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[10px]">
-                                        1x
+                                        x{(previewAccessGroup?.priceMultiplier || 1).toFixed(2)}
                                     </Badge>
                                 </div>
                             </CardHeader>
@@ -721,7 +749,7 @@ export default function UserPortalModelsPage() {
                                 <div className="space-y-1.5 rounded-xl border border-border/50 bg-muted/15 p-2">
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                            {t('portal.models.basePricing')}
+                                            {groupFilter === '__all__' ? t('portal.models.basePricing') : t('portal.models.selectedGroupPricing')}
                                         </div>
                                         <div className="text-[10px] text-muted-foreground">
                                             {t('portal.models.usageBilling')}
@@ -748,36 +776,6 @@ export default function UserPortalModelsPage() {
                                         <div className="text-[11px] text-muted-foreground">-</div>
                                     )}
                                 </div>
-
-                                <div className="flex flex-wrap gap-1">
-                                    {previewGroups.map((group) => (
-                                        <Button
-                                            key={`${item.model}-${group.group}`}
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className={cn(
-                                                'h-5 rounded-full px-2 text-[10px] font-normal',
-                                                groupFilter === group.group && 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
-                                            )}
-                                            onClick={(event) => {
-                                                event.stopPropagation()
-                                                setGroupFilter(group.group)
-                                            }}
-                                        >
-                                            {group.group}
-                                            <span className="ml-1 text-muted-foreground">x{group.priceMultiplier.toFixed(2)}</span>
-                                        </Button>
-                                    ))}
-                                    {hiddenGroupCount > 0 && (
-                                        <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px] font-normal">
-                                            +{hiddenGroupCount}
-                                        </Badge>
-                                    )}
-                                </div>
-                                <CardDescription className="text-[11px] text-muted-foreground">
-                                    {t('portal.models.groupCount', { count: item.accessGroups.length })}
-                                </CardDescription>
                             </CardContent>
                         </Card>
                     )
