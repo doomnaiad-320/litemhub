@@ -2,6 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import {
+    Blocks,
     ChevronLeft,
     ChevronRight,
     CreditCard,
@@ -10,6 +11,7 @@ import {
     ScrollText,
     Wallet,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -24,18 +26,20 @@ interface PortalNavItem {
     icon: React.ComponentType<{ className?: string }>
 }
 
-const portalNavItems: PortalNavItem[] = [
-    { label: '钱包', href: ROUTES.USER_DASHBOARD, icon: Wallet },
-    { label: 'Key', href: ROUTES.USER_KEYS, icon: KeyRound },
-    { label: '日志', href: ROUTES.USER_LOGS, icon: ScrollText },
-]
-
 export function UserPortalLayout() {
     const [collapsed, setCollapsed] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
+    const { t: rawT } = useTranslation()
+    const t = rawT as (key: string) => string
     const logout = useUserPortalAuthStore((state) => state.logout)
     const user = useUserPortalAuthStore((state) => state.user)
+    const portalNavItems: PortalNavItem[] = [
+        { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
+        { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
+        { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
+        { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
+    ]
 
     const currentFirstLevelPath = `/${location.pathname.split('/')[1]}`
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
@@ -83,7 +87,7 @@ export function UserPortalLayout() {
                             </div>
                             <div>
                                 <div className="text-xs font-medium text-white/70">AI Proxy</div>
-                                <div className="text-base font-semibold text-white">用户控制台</div>
+                                <div className="text-base font-semibold text-white">{t('portal.nav.console')}</div>
                             </div>
                         </div>
                     </div>
@@ -155,7 +159,7 @@ export function UserPortalLayout() {
                     {!collapsed && (
                         <>
                             <div className="rounded-xl bg-white/10 px-4 py-3 text-white backdrop-blur-sm">
-                                <div className="text-xs text-white/70">当前账号</div>
+                                <div className="text-xs text-white/70">{t('portal.nav.currentAccount')}</div>
                                 <div className="truncate text-sm font-medium">{account}</div>
                             </div>
                             <div className="flex items-center justify-between gap-2">
@@ -187,11 +191,11 @@ export function UserPortalLayout() {
                                         collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
                                     )}
                                 >
-                                    退出
+                                    {t('portal.nav.logout')}
                                 </span>
                             </Button>
                         </TooltipTrigger>
-                        {collapsed && <TooltipContent side="right">退出</TooltipContent>}
+                        {collapsed && <TooltipContent side="right">{t('portal.nav.logout')}</TooltipContent>}
                     </Tooltip>
                 </div>
             </aside>

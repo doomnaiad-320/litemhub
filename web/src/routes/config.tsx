@@ -16,6 +16,7 @@ import ConsumptionRankingPage from "@/pages/consumption-ranking/page"
 import AppUserPage from "@/pages/app-user/page"
 import UserPortalLandingPage from "@/pages/user-portal/landing"
 import UserPortalDashboardPage from "@/pages/user-portal/dashboard"
+import UserPortalModelsPage from "@/pages/user-portal/models"
 import UserPortalGroupsPage from "@/pages/user-portal/groups"
 import UserPortalKeysPage from "@/pages/user-portal/keys"
 import UserPortalLogsPage from "@/pages/user-portal/logs"
@@ -109,6 +110,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.USER_DASHBOARD,
                     element: <UserPortalDashboardPage />,
+                },
+                {
+                    path: ROUTES.USER_MODELS,
+                    element: <UserPortalModelsPage />,
                 },
                 {
                     path: ROUTES.USER_GROUPS,

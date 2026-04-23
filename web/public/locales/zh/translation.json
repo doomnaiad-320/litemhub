@@ -1284,6 +1284,15 @@
     "common": {
       "cancel": "取消"
     },
+    "nav": {
+      "console": "用户控制台",
+      "models": "模型",
+      "wallet": "钱包",
+      "keys": "Key",
+      "logs": "日志",
+      "currentAccount": "当前账号",
+      "logout": "退出"
+    },
     "dashboard": {
       "welcome": "钱包",
       "title": "账户钱包",
@@ -1310,6 +1319,21 @@
       "groupHint": "查看分组倍率和可用模型",
       "keyHint": "创建并复制用户自己的 Key",
       "logHint": "查看模型请求日志"
+    },
+    "models": {
+      "badge": "模型目录",
+      "title": "可用模型",
+      "description": "这里按模型维度展示当前可用能力。每个模型会列出可访问它的分组，便于你在创建 Key 时快速选择合适的组别。",
+      "billingFormula": "实际扣费 = 模型基础价格 × 你为 Key 选择的分组倍率。",
+      "totalModels": "模型总数",
+      "totalGroups": "可用分组",
+      "maxMultiplier": "最高倍率",
+      "searchPlaceholder": "搜索模型、厂商、分组或集合",
+      "groupCount": "可通过 {{count}} 个分组访问",
+      "highestMultiplier": "最高倍率",
+      "accessGroups": "可访问分组",
+      "emptyTitle": "没有找到匹配的模型",
+      "emptyDescription": "你可以尝试更换搜索关键词，或者先到后台启用更多模型和分组。"
     },
     "groups": {
       "badge": "分组与倍率",

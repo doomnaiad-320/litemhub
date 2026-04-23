@@ -1296,6 +1296,15 @@
     "common": {
       "cancel": "Cancel"
     },
+    "nav": {
+      "console": "User Console",
+      "models": "Models",
+      "wallet": "Wallet",
+      "keys": "Keys",
+      "logs": "Logs",
+      "currentAccount": "Current Account",
+      "logout": "Logout"
+    },
     "dashboard": {
       "welcome": "Wallet",
       "title": "Account Wallet",
@@ -1322,6 +1331,21 @@
       "groupHint": "Check group multipliers and available models",
       "keyHint": "Create and copy your own keys",
       "logHint": "Review model request logs"
+    },
+    "models": {
+      "badge": "Model Catalog",
+      "title": "Available Models",
+      "description": "Browse the current model inventory from a model-first view. Each model lists the groups that can access it, making it easier to choose the right group before creating a key.",
+      "billingFormula": "Actual billing = base model price × the multiplier of the group selected for your key.",
+      "totalModels": "Models",
+      "totalGroups": "Available Groups",
+      "maxMultiplier": "Max Multiplier",
+      "searchPlaceholder": "Search by model, provider, group, or set",
+      "groupCount": "Accessible in {{count}} groups",
+      "highestMultiplier": "Highest Multiplier",
+      "accessGroups": "Accessible Groups",
+      "emptyTitle": "No matching models found",
+      "emptyDescription": "Try a different search term, or enable more models and groups from the admin console first."
     },
     "groups": {
       "badge": "Groups and Multipliers",
