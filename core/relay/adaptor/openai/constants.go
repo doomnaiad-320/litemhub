@@ -190,6 +190,16 @@ var ModelList = []model.ModelConfig{
 			OutputPrice:     0.04,
 		},
 	},
+	{
+		Model: "gpt-image-2",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:      0.005,
+			ImageInputPrice: 0.008,
+			OutputPrice:     0.03,
+		},
+	},
 
 	{
 		Model: "whisper-1",

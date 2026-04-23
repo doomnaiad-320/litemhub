@@ -20,6 +20,36 @@ const formatPrice = (price: number, unit: number): string => {
     return price.toString()
 }
 
+const HIDDEN_REQUEST_FIELDS = new Set(['message', 'messages'])
+
+const sanitizeRequestBodyForDisplay = (body: string | null) => {
+    if (!body) {
+        return null
+    }
+
+    try {
+        return sanitizeObjectForDisplay(JSON.parse(body))
+    } catch {
+        return body
+    }
+}
+
+const sanitizeObjectForDisplay = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeObjectForDisplay(item))
+    }
+
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value)
+                .filter(([key]) => !HIDDEN_REQUEST_FIELDS.has(key))
+                .map(([key, item]) => [key, sanitizeObjectForDisplay(item)]),
+        )
+    }
+
+    return value
+}
+
 export const ExpandedLogContent = ({
     log,
     scope = 'admin',
@@ -76,6 +106,7 @@ export const ExpandedLogContent = ({
 
     const requestBody = needsDetail && requestDetail ? requestDetail.request_body : null
     const responseBody = needsDetail && requestDetail ? requestDetail.response_body : null
+    const sanitizedRequestBody = sanitizeRequestBodyForDisplay(requestBody)
     const requestTruncated = needsDetail && requestDetail ? requestDetail.request_body_truncated : false
     const responseTruncated = needsDetail && requestDetail ? requestDetail.response_body_truncated : false
     const isLoadingData = needsDetail && isLoadingDetail
@@ -294,10 +325,10 @@ export const ExpandedLogContent = ({
                             <div className="text-sm text-red-500 p-2 border rounded">
                                 {t('log.failed')}
                             </div>
-                        ) : requestBody ? (
+                        ) : sanitizedRequestBody ? (
                             <>
                                 <JsonViewer
-                                    src={requestBody}
+                                    src={sanitizedRequestBody}
                                     collapsed={1}
                                     name="request"
                                 />

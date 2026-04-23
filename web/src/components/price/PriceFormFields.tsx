@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -24,9 +25,15 @@ function PriceField({ label, unitLabel, value, unitValue, onValueChange, onUnitC
     unitLabel?: string
     value?: number
     unitValue?: number
-    onValueChange: (v: number) => void
-    onUnitChange?: (v: number) => void
+    onValueChange: (v?: number) => void
+    onUnitChange?: (v?: number) => void
 }) {
+    const [draftValue, setDraftValue] = useState(value !== undefined ? String(value) : '')
+
+    useEffect(() => {
+        setDraftValue(value !== undefined ? String(value) : '')
+    }, [value])
+
     return (
         <div className={unitLabel ? "grid grid-cols-2 gap-2" : ""}>
             <div className="space-y-1">
@@ -35,8 +42,40 @@ function PriceField({ label, unitLabel, value, unitValue, onValueChange, onUnitC
                     type="number"
                     step="any"
                     min={0}
-                    value={value || ''}
-                    onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
+                    value={draftValue}
+                    onChange={(e) => {
+                        const rawValue = e.target.value
+                        setDraftValue(rawValue)
+
+                        if (rawValue === '') {
+                            onValueChange(undefined)
+                            return
+                        }
+
+                        if (rawValue.endsWith('.')) {
+                            return
+                        }
+
+                        const nextValue = parseFloat(rawValue)
+                        if (!Number.isNaN(nextValue)) {
+                            onValueChange(nextValue)
+                        }
+                    }}
+                    onBlur={() => {
+                        if (draftValue === '') {
+                            onValueChange(undefined)
+                            return
+                        }
+
+                        const nextValue = parseFloat(draftValue)
+                        if (Number.isNaN(nextValue)) {
+                            setDraftValue(value !== undefined ? String(value) : '')
+                            return
+                        }
+
+                        setDraftValue(String(nextValue))
+                        onValueChange(nextValue)
+                    }}
                     className="h-8 text-sm"
                 />
             </div>
@@ -48,8 +87,11 @@ function PriceField({ label, unitLabel, value, unitValue, onValueChange, onUnitC
                         step="1"
                         min={0}
                         placeholder="1000"
-                        value={unitValue || ''}
-                        onChange={(e) => onUnitChange(parseInt(e.target.value) || 0)}
+                        value={unitValue ?? ''}
+                        onChange={(e) => {
+                            const rawValue = e.target.value
+                            onUnitChange(rawValue === '' ? undefined : parseInt(rawValue, 10))
+                        }}
                         className="h-8 text-sm"
                     />
                 </div>
@@ -136,8 +178,8 @@ function ConditionFields({ condition, onChange }: {
 function BasePriceFields({ price, onChange }: { price: ModelPrice; onChange: (price: ModelPrice) => void }) {
     const { t } = useTranslation()
 
-    const updateField = (field: keyof ModelPrice, value: number) => {
-        onChange({ ...price, [field]: value || undefined })
+    const updateField = (field: keyof ModelPrice, value?: number) => {
+        onChange({ ...price, [field]: value })
     }
 
     return (

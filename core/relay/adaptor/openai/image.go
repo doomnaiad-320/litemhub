@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -38,6 +39,10 @@ func ConvertImagesRequest(
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if err := applyGPTImageCompatibility(meta.ActualModel, &node); err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
@@ -101,6 +106,10 @@ func ConvertImagesEditsRequest(
 			meta.Set(MetaResponseFormat, value)
 		}
 
+		if shouldSkipImageFormField(meta.ActualModel, key, value) {
+			continue
+		}
+
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
@@ -152,6 +161,72 @@ func ImagesRequestRemoveModel(node *ast.Node) error {
 	}
 
 	return nil
+}
+
+func applyGPTImageCompatibility(model string, node *ast.Node) error {
+	if isGPTImageModel(model) {
+		if err := unsetImageRequestField(node, "response_format"); err != nil {
+			return err
+		}
+	}
+
+	if !isGPTImage2Model(model) {
+		return nil
+	}
+
+	if err := unsetImageRequestField(node, "input_fidelity"); err != nil {
+		return err
+	}
+
+	background, err := node.Get("background").String()
+	if errors.Is(err, ast.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return nil
+	}
+
+	if strings.EqualFold(background, "transparent") {
+		return unsetImageRequestField(node, "background")
+	}
+
+	return nil
+}
+
+func unsetImageRequestField(node *ast.Node, field string) error {
+	_, err := node.Unset(field)
+	if err != nil && !errors.Is(err, ast.ErrNotExist) {
+		return err
+	}
+
+	return nil
+}
+
+func shouldSkipImageFormField(model, key, value string) bool {
+	if isGPTImageModel(model) && key == "response_format" {
+		return true
+	}
+
+	if !isGPTImage2Model(model) {
+		return false
+	}
+
+	switch key {
+	case "input_fidelity":
+		return true
+	case "background":
+		return strings.EqualFold(value, "transparent")
+	default:
+		return false
+	}
+}
+
+func isGPTImageModel(model string) bool {
+	return strings.HasPrefix(model, "gpt-image-")
+}
+
+func isGPTImage2Model(model string) bool {
+	return strings.HasPrefix(model, "gpt-image-2")
 }
 
 func ImagesHandler(

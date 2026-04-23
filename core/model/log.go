@@ -23,6 +23,11 @@ type RequestDetail struct {
 	LogID                 int       `gorm:"index"                json:"log_id"`
 }
 
+var hiddenRequestBodyFields = map[string]struct{}{
+	"message":  {},
+	"messages": {},
+}
+
 func truncateDetailBody(body string, maxSize int64) (string, bool) {
 	switch {
 	case maxSize < 0:
@@ -41,8 +46,55 @@ func truncateDetailBody(body string, maxSize int64) (string, bool) {
 }
 
 func (d *RequestDetail) ApplyBodySizeLimits(requestMaxSize, responseMaxSize int64) {
+	d.SanitizeRequestBody()
 	d.RequestBody, d.RequestBodyTruncated = truncateDetailBody(d.RequestBody, requestMaxSize)
 	d.ResponseBody, d.ResponseBodyTruncated = truncateDetailBody(d.ResponseBody, responseMaxSize)
+}
+
+func (d *RequestDetail) SanitizeRequestBody() {
+	if d == nil || d.RequestBody == "" {
+		return
+	}
+
+	var payload any
+	if err := sonic.UnmarshalString(d.RequestBody, &payload); err != nil {
+		return
+	}
+
+	switch payload.(type) {
+	case map[string]any, []any:
+	default:
+		return
+	}
+
+	requestBody, err := sonic.MarshalString(sanitizeRequestBodyValue(payload))
+	if err != nil {
+		return
+	}
+
+	d.RequestBody = requestBody
+}
+
+func sanitizeRequestBodyValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		sanitized := make(map[string]any, len(typed))
+		for key, item := range typed {
+			if _, hidden := hiddenRequestBodyFields[key]; hidden {
+				continue
+			}
+			sanitized[key] = sanitizeRequestBodyValue(item)
+		}
+		return sanitized
+	case []any:
+		sanitized := make([]any, len(typed))
+		for index, item := range typed {
+			sanitized[index] = sanitizeRequestBodyValue(item)
+		}
+		return sanitized
+	default:
+		return value
+	}
 }
 
 type Log struct {
