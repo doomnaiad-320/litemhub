@@ -25,11 +25,19 @@ type UpdateAppUserKeyRequest struct {
 	Group string `json:"group"`
 }
 
+type UserGroupModelDetailResponse struct {
+	Model              string                        `json:"model"`
+	Price              model.Price                   `json:"price,omitempty"`
+	ImagePrices        map[string]float64            `json:"image_prices,omitempty"`
+	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
+}
+
 type UserGroupOptionResponse struct {
-	Group           string   `json:"group"`
-	PriceMultiplier float64  `json:"price_multiplier"`
-	AvailableSets   []string `json:"available_sets"`
-	Models          []string `json:"models"`
+	Group           string                          `json:"group"`
+	PriceMultiplier float64                         `json:"price_multiplier"`
+	AvailableSets   []string                        `json:"available_sets"`
+	Models          []string                        `json:"models"`
+	ModelDetails    []*UserGroupModelDetailResponse `json:"model_details,omitempty"`
 }
 
 func buildUserGroupOptionResponses(groups []*model.Group) ([]*UserGroupOptionResponse, error) {
@@ -56,12 +64,105 @@ func buildUserGroupOptionResponse(groupID string) (*UserGroupOptionResponse, err
 		return nil, err
 	}
 
+	models := getGroupAvailableModels(groupCache)
+	modelDetails, err := buildUserGroupModelDetails(groupCache, models)
+	if err != nil {
+		return nil, err
+	}
+
 	return &UserGroupOptionResponse{
 		Group:           groupID,
 		PriceMultiplier: groupCache.GetPriceMultiplier(),
 		AvailableSets:   groupCache.GetAvailableSets(),
-		Models:          getGroupAvailableModels(groupCache),
+		Models:          models,
+		ModelDetails:    modelDetails,
 	}, nil
+}
+
+func buildUserGroupModelDetails(groupCache *model.GroupCache, models []string) ([]*UserGroupModelDetailResponse, error) {
+	if groupCache == nil || len(models) == 0 {
+		return nil, nil
+	}
+
+	configs, err := model.GetModelConfigsByModels(models)
+	if err != nil {
+		return nil, err
+	}
+
+	configByModel := make(map[string]model.ModelConfig, len(configs))
+	for _, config := range configs {
+		configByModel[strings.ToLower(config.Model)] = config
+	}
+
+	multiplier := groupCache.GetPriceMultiplier()
+	modelDetails := make([]*UserGroupModelDetailResponse, 0, len(models))
+	for _, modelName := range models {
+		config, ok := configByModel[strings.ToLower(modelName)]
+		if !ok {
+			config = model.NewDefaultModelConfig(modelName)
+		}
+
+		if groupModelConfig, ok := getGroupModelConfig(groupCache, modelName); ok {
+			config = config.LoadFromGroupModelConfig(groupModelConfig)
+		}
+
+		modelDetails = append(modelDetails, &UserGroupModelDetailResponse{
+			Model:              modelName,
+			Price:              config.Price.ApplyMultiplier(multiplier),
+			ImagePrices:        applyPriceMultiplierToImagePrices(config.ImagePrices, multiplier),
+			ImageQualityPrices: applyPriceMultiplierToImageQualityPrices(config.ImageQualityPrices, multiplier),
+		})
+	}
+
+	return modelDetails, nil
+}
+
+func getGroupModelConfig(groupCache *model.GroupCache, modelName string) (model.GroupModelConfig, bool) {
+	if groupCache == nil || len(groupCache.ModelConfigs) == 0 {
+		return model.GroupModelConfig{}, false
+	}
+
+	if groupModelConfig, ok := groupCache.ModelConfigs[modelName]; ok {
+		return groupModelConfig, true
+	}
+
+	for currentModel, groupModelConfig := range groupCache.ModelConfigs {
+		if strings.EqualFold(currentModel, modelName) {
+			return groupModelConfig, true
+		}
+	}
+
+	return model.GroupModelConfig{}, false
+}
+
+func applyPriceMultiplierToImagePrices(imagePrices map[string]float64, multiplier float64) map[string]float64 {
+	if len(imagePrices) == 0 {
+		return nil
+	}
+
+	scaled := make(map[string]float64, len(imagePrices))
+	for size, price := range imagePrices {
+		scaled[size] = price * multiplier
+	}
+
+	return scaled
+}
+
+func applyPriceMultiplierToImageQualityPrices(imageQualityPrices map[string]map[string]float64, multiplier float64) map[string]map[string]float64 {
+	if len(imageQualityPrices) == 0 {
+		return nil
+	}
+
+	scaled := make(map[string]map[string]float64, len(imageQualityPrices))
+	for size, qualityPrices := range imageQualityPrices {
+		if len(qualityPrices) == 0 {
+			continue
+		}
+
+		scaled[size] = applyPriceMultiplierToImagePrices(qualityPrices, multiplier)
+	}
+
+	return scaled
 }
 
 func getGroupAvailableModels(groupCache *model.GroupCache) []string {

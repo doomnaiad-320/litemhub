@@ -1356,6 +1356,20 @@
       "groupCount": "Accessible in {{count}} groups",
       "highestMultiplier": "Highest Multiplier",
       "accessGroups": "Accessible Groups",
+      "infoSection": "Model Info",
+      "billingType": "Billing",
+      "usageBilling": "Usage Based",
+      "pricing": "Pricing",
+      "basePricing": "Base Pricing",
+      "groupPricing": "Group Pricing",
+      "detailDescription": "The card shows 1x base pricing. The right panel shows per-group pricing after multiplier.",
+      "groupColumn": "Group",
+      "inputColumn": "Input",
+      "outputColumn": "Output",
+      "requestColumn": "Request",
+      "otherColumn": "Other",
+      "noPrice": "-",
+      "morePrices": "+{{count}} more",
       "emptyTitle": "No matching models found",
       "emptyDescription": "Try a different search term, or enable more models and groups from the admin console first.",
       "capability": {
@@ -1368,6 +1382,19 @@
         "coding": "Coding",
         "embedding": "Embedding",
         "rerank": "Rerank"
+      },
+      "price": {
+        "input": "Input",
+        "output": "Output",
+        "request": "Request",
+        "cached": "Cache",
+        "cacheCreate": "Cache Create",
+        "imageInput": "Img In",
+        "imageOutput": "Img Out",
+        "audioInput": "Audio In",
+        "thinkingOutput": "Think",
+        "webSearch": "Search",
+        "imageSize": "Image"
       }
     },
     "groups": {

@@ -1344,6 +1344,20 @@
       "groupCount": "可通过 {{count}} 个分组访问",
       "highestMultiplier": "最高倍率",
       "accessGroups": "可访问分组",
+      "infoSection": "模型信息",
+      "billingType": "计费方式",
+      "usageBilling": "按量付费",
+      "pricing": "价格",
+      "basePricing": "基础价格",
+      "groupPricing": "分组价格",
+      "detailDescription": "默认展示 1 倍率基础价格，右侧展示各分组倍率后的明细。",
+      "groupColumn": "分组",
+      "inputColumn": "输入",
+      "outputColumn": "输出",
+      "requestColumn": "按次",
+      "otherColumn": "其他",
+      "noPrice": "-",
+      "morePrices": "+{{count}} 项",
       "emptyTitle": "没有找到匹配的模型",
       "emptyDescription": "你可以尝试更换搜索关键词，或者先到后台启用更多模型和分组。",
       "capability": {
@@ -1356,6 +1370,19 @@
         "coding": "代码",
         "embedding": "向量",
         "rerank": "重排"
+      },
+      "price": {
+        "input": "输入",
+        "output": "输出",
+        "request": "请求",
+        "cached": "缓存",
+        "cacheCreate": "写缓存",
+        "imageInput": "图输",
+        "imageOutput": "图出",
+        "audioInput": "音输",
+        "thinkingOutput": "思考",
+        "webSearch": "搜索",
+        "imageSize": "图片"
       }
     },
     "groups": {

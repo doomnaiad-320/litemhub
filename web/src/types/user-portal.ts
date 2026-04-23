@@ -1,5 +1,6 @@
 import type { Token } from './token'
 import type { LogRecord } from './log'
+import type { ModelPrice } from './model'
 
 export interface UserPortalUser {
     id: number
@@ -51,11 +52,19 @@ export interface UserPortalModelLogsResponse {
     total: number
 }
 
+export interface UserPortalGroupModelOption {
+    model: string
+    price?: ModelPrice
+    image_prices?: Record<string, number>
+    image_quality_prices?: Record<string, Record<string, number>>
+}
+
 export interface UserPortalGroupOption {
     group: string
     price_multiplier: number
     available_sets: string[]
     models: string[]
+    model_details?: UserPortalGroupModelOption[]
 }
 
 export interface UserPortalGroupsResponse {
