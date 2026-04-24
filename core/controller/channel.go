@@ -49,10 +49,10 @@ func (c *ChannelResponse) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(&struct {
 		*Alias
 		Group            string `json:"group,omitempty"`
-		CreatedAt        int64 `json:"created_at"`
-		BalanceUpdatedAt int64 `json:"balance_updated_at"`
-		LastTestErrorAt  int64 `json:"last_test_error_at"`
-		AccessedAt       int64 `json:"accessed_at,omitempty"`
+		CreatedAt        int64  `json:"created_at"`
+		BalanceUpdatedAt int64  `json:"balance_updated_at"`
+		LastTestErrorAt  int64  `json:"last_test_error_at"`
+		AccessedAt       int64  `json:"accessed_at,omitempty"`
 	}{
 		Alias:            (*Alias)(c.Channel),
 		Group:            c.Group,
@@ -331,6 +331,17 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		}
 	}
 
+	for _, set := range r.Sets {
+		set = strings.TrimSpace(set)
+		if set == "" {
+			continue
+		}
+
+		if _, err := model.GetGroupByID(set, false); err != nil {
+			return nil, err
+		}
+	}
+
 	return &model.Channel{
 		Type:                    r.Type,
 		Name:                    r.Name,
@@ -357,7 +368,23 @@ func buildChannelSets(group string, sets []string) []string {
 		return []string{group}
 	}
 
-	return slices.Clone(sets)
+	normalizedSets := make([]string, 0, len(sets))
+	seen := make(map[string]struct{}, len(sets))
+	for _, set := range sets {
+		set = strings.TrimSpace(set)
+		if set == "" {
+			continue
+		}
+
+		if _, ok := seen[set]; ok {
+			continue
+		}
+
+		seen[set] = struct{}{}
+		normalizedSets = append(normalizedSets, set)
+	}
+
+	return normalizedSets
 }
 
 func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {

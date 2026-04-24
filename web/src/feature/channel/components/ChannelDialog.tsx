@@ -52,7 +52,9 @@ export function ChannelDialog({
             proxy_url: channel.proxy_url,
             models: channel.models || [],
             model_mapping: channel.model_mapping || {},
-            group: channel.group || channel.sets?.[0] || '',
+            sets: channel.sets && channel.sets.length > 0
+                ? channel.sets
+                : (channel.group ? [channel.group] : []),
             priority: channel.priority,
             skip_tls_verify: channel.skip_tls_verify ?? false,
             enabled_no_permission_ban: channel.enabled_no_permission_ban ?? false,
@@ -70,7 +72,7 @@ export function ChannelDialog({
             proxy_url: '',
             models: [],
             model_mapping: {},
-            group: '',
+            sets: [],
             priority: 10,
             skip_tls_verify: false,
             enabled_no_permission_ban: false,

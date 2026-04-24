@@ -61,6 +61,7 @@ export interface UserPortalGroupModelOption {
 
 export interface UserPortalGroupOption {
     group: string
+    description?: string
     price_multiplier: number
     available_sets: string[]
     models: string[]

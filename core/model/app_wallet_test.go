@@ -45,6 +45,63 @@ func TestReserveAndSettleAppUserReservation(t *testing.T) {
 		require.Len(t, logs, 2)
 		require.Equal(t, model.AppWalletLogTypeReserve, logs[0].Type)
 		require.Equal(t, model.AppWalletLogTypeSettle, logs[1].Type)
+
+		rechargeLogs, total, err := model.GetAppWalletLogsByTypes(
+			user.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeRecharge},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 0, total)
+		require.Empty(t, rechargeLogs)
+	})
+}
+
+func TestGetAppWalletLogsByTypes(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		createTestAppWallet(t, user.ID, 10)
+
+		_, _, err := model.RechargeAppUserBalance(model.AppUserRechargeParams{
+			UserID: user.ID,
+			Amount: 5,
+			Remark: "manual top-up",
+		})
+		require.NoError(t, err)
+
+		_, reservation, err := model.ReserveAppUserBalance(model.AppUserReserveBalanceParams{
+			RequestID: "req-filter-wallet-logs",
+			UserID:    user.ID,
+			TokenID:   101,
+			GroupID:   "g1",
+			Model:     "gpt-4.1",
+			Amount:    2,
+			Remark:    "test reserve",
+		})
+		require.NoError(t, err)
+
+		_, _, err = model.SettleAppUserReservation(reservation.ID, 1.5, "test settle")
+		require.NoError(t, err)
+
+		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 3, total)
+		require.Len(t, logs, 3)
+
+		rechargeLogs, total, err := model.GetAppWalletLogsByTypes(
+			user.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeRecharge},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, total)
+		require.Len(t, rechargeLogs, 1)
+		require.Equal(t, model.AppWalletLogTypeRecharge, rechargeLogs[0].Type)
+		require.Equal(t, 5.0, rechargeLogs[0].Amount)
 	})
 }
 

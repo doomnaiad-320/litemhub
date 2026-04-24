@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { useCreateGroup, useUpdateGroup } from '../hooks'
 import type { Group } from '@/types/group'
@@ -28,6 +29,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
     const { createGroup, isLoading } = useCreateGroup()
     const { updateGroup, isLoading: isUpdating } = useUpdateGroup()
     const [groupName, setGroupName] = useState('')
+    const [description, setDescription] = useState('')
     const [rpmRatio, setRpmRatio] = useState<number | undefined>(undefined)
     const [tpmRatio, setTpmRatio] = useState<number | undefined>(undefined)
     const [priceMultiplier, setPriceMultiplier] = useState<number | undefined>(1)
@@ -44,6 +46,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
 
         if (group) {
             setGroupName(group.id)
+            setDescription(group.description || '')
             setRpmRatio(group.rpm_ratio || undefined)
             setTpmRatio(group.tpm_ratio || undefined)
             setPriceMultiplier(group.price_multiplier || 1)
@@ -53,6 +56,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
         }
 
         setGroupName('')
+        setDescription('')
         setRpmRatio(undefined)
         setTpmRatio(undefined)
         setPriceMultiplier(1)
@@ -64,6 +68,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
         e.preventDefault()
         if (!groupName.trim()) return
         const payload = {
+            description: description.trim(),
             rpm_ratio: rpmRatio ?? 0,
             tpm_ratio: tpmRatio ?? 0,
             price_multiplier: priceMultiplier ?? 1,
@@ -91,6 +96,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
             {
                 onSuccess: () => {
                     setGroupName('')
+                    setDescription('')
                     setRpmRatio(undefined)
                     setTpmRatio(undefined)
                     setPriceMultiplier(1)
@@ -105,6 +111,7 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
     const handleOpenChange = (open: boolean) => {
         if (!open) {
             setGroupName('')
+            setDescription('')
             setRpmRatio(undefined)
             setTpmRatio(undefined)
             setPriceMultiplier(1)
@@ -133,6 +140,17 @@ export function CreateGroupDialog({ open, onOpenChange, group = null }: CreateGr
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
                                 disabled={loading || isEdit}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="group-description">{t('group.dialog.description')}</Label>
+                            <Textarea
+                                id="group-description"
+                                placeholder={t('group.dialog.descriptionPlaceholder')}
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                disabled={loading}
+                                rows={3}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">

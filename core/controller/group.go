@@ -355,6 +355,7 @@ func UpdateGroupsStatus(c *gin.Context) {
 }
 
 type CreateGroupRequest struct {
+	Description     string   `json:"description"`
 	RPMRatio        float64  `json:"rpm_ratio"`
 	TPMRatio        float64  `json:"tpm_ratio"`
 	PriceMultiplier float64  `json:"price_multiplier"`
@@ -371,6 +372,7 @@ func (r *CreateGroupRequest) ToGroup() *model.Group {
 	}
 
 	return &model.Group{
+		Description:     strings.TrimSpace(r.Description),
 		RPMRatio:        r.RPMRatio,
 		TPMRatio:        r.TPMRatio,
 		PriceMultiplier: priceMultiplier,

@@ -28,6 +28,7 @@ const (
 type Group struct {
 	CreatedAt              time.Time               `json:"created_at"`
 	ID                     string                  `json:"id"                       gorm:"size:64;primaryKey"`
+	Description            string                  `json:"description,omitempty"      gorm:"type:text"`
 	Tokens                 []Token                 `json:"-"                        gorm:"foreignKey:GroupID"`
 	GroupModelConfigs      []GroupModelConfig      `json:"-"                        gorm:"foreignKey:GroupID"`
 	PublicMCPReusingParams []PublicMCPReusingParam `json:"-"                        gorm:"foreignKey:GroupID"`
@@ -217,6 +218,7 @@ func DeleteGroupsByIDs(ids []string) (err error) {
 
 type UpdateGroupRequest struct {
 	Status                int       `json:"status"`
+	Description           *string   `json:"description,omitempty"`
 	RPMRatio              *float64  `json:"rpm_ratio,omitempty"`
 	TPMRatio              *float64  `json:"tpm_ratio,omitempty"`
 	PriceMultiplier       *float64  `json:"price_multiplier,omitempty"`
@@ -244,6 +246,12 @@ func UpdateGroup(id string, update UpdateGroupRequest) (group *Group, err error)
 	}()
 
 	selects := []string{}
+	if update.Description != nil {
+		group.Description = strings.TrimSpace(*update.Description)
+
+		selects = append(selects, "description")
+	}
+
 	if update.RPMRatio != nil {
 		group.RPMRatio = *update.RPMRatio
 
@@ -394,9 +402,9 @@ func SearchGroup(
 	}
 
 	if !common.UsingSQLite {
-		tx = tx.Where("id ILIKE ? OR available_sets ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		tx = tx.Where("id ILIKE ? OR description ILIKE ? OR available_sets ILIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	} else {
-		tx = tx.Where("id LIKE ? OR available_sets LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		tx = tx.Where("id LIKE ? OR description LIKE ? OR available_sets LIKE ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
 	err = tx.Count(&total).Error

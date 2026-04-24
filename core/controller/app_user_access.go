@@ -34,6 +34,7 @@ type UserGroupModelDetailResponse struct {
 
 type UserGroupOptionResponse struct {
 	Group           string                          `json:"group"`
+	Description     string                          `json:"description,omitempty"`
 	PriceMultiplier float64                         `json:"price_multiplier"`
 	AvailableSets   []string                        `json:"available_sets"`
 	Models          []string                        `json:"models"`
@@ -72,6 +73,7 @@ func buildUserGroupOptionResponse(groupID string) (*UserGroupOptionResponse, err
 
 	return &UserGroupOptionResponse{
 		Group:           groupID,
+		Description:     groupCache.Description,
 		PriceMultiplier: groupCache.GetPriceMultiplier(),
 		AvailableSets:   groupCache.GetAvailableSets(),
 		Models:          models,

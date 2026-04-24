@@ -188,7 +188,9 @@ export function ChannelTable() {
                 proxy_url: channel.proxy_url,
                 models: channel.models,
                 model_mapping: channel.model_mapping || undefined,
-                group: channel.group || channel.sets?.[0],
+                sets: channel.sets && channel.sets.length > 0
+                    ? channel.sets
+                    : (channel.group ? [channel.group] : undefined),
                 priority: channel.priority,
                 skip_tls_verify: channel.skip_tls_verify,
                 enabled_no_permission_ban: channel.enabled_no_permission_ban,
@@ -224,7 +226,9 @@ export function ChannelTable() {
             proxy_url: channel.proxy_url,
             models: channel.models,
             model_mapping: channel.model_mapping || undefined,
-            group: channel.group || channel.sets?.[0],
+            sets: channel.sets && channel.sets.length > 0
+                ? channel.sets
+                : (channel.group ? [channel.group] : undefined),
             priority: channel.priority,
             skip_tls_verify: channel.skip_tls_verify,
             enabled_no_permission_ban: channel.enabled_no_permission_ban,
@@ -394,20 +398,25 @@ export function ChannelTable() {
             accessorKey: 'group',
             header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("channel.group")}</div>,
             cell: ({ row }) => {
-                const group = row.original.group || row.original.sets?.[0]
-                if (!group) return <div className="text-muted-foreground text-xs">-</div>;
+                const groups = row.original.sets && row.original.sets.length > 0
+                    ? row.original.sets
+                    : (row.original.group ? [row.original.group] : [])
+                if (groups.length === 0) return <div className="text-muted-foreground text-xs">-</div>;
 
                 return (
                     <div
                         className={cn("flex flex-wrap gap-1", "cursor-pointer")}
                         onClick={() => openUpdateDialog(row.original)}
                     >
-                        <Badge
-                            variant="secondary"
-                            className="text-xs py-0 px-2 hover:bg-secondary/80"
-                        >
-                            {group}
-                        </Badge>
+                        {groups.map((group) => (
+                            <Badge
+                                key={`${row.original.id}-${group}`}
+                                variant="secondary"
+                                className="text-xs py-0 px-2 hover:bg-secondary/80"
+                            >
+                                {group}
+                            </Badge>
+                        ))}
                     </div>
                 );
             }

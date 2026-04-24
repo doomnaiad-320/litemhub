@@ -61,7 +61,6 @@ export interface ChannelCreateRequest {
     proxy_url?: string
     models: string[]
     model_mapping?: Record<string, string>
-    group?: string
     sets?: string[]
     priority?: number
     skip_tls_verify?: boolean
@@ -79,7 +78,6 @@ export interface ChannelUpdateRequest {
     proxy_url?: string
     models: string[]
     model_mapping?: Record<string, string>
-    group?: string
     sets?: string[]
     priority?: number
     skip_tls_verify?: boolean

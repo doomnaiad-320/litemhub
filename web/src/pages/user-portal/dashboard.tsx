@@ -7,13 +7,11 @@ import {
     type ColumnDef,
     useReactTable,
 } from '@tanstack/react-table'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
-import { cn } from '@/lib/utils'
 import type { UserPortalWalletLog } from '@/types/user-portal'
 import {
     useUserPortalWallet,
@@ -36,21 +34,6 @@ const formatDateTime = (value?: string | number) => {
     return format(date, 'yyyy-MM-dd HH:mm')
 }
 
-const getWalletLogBadgeClass = (type: string) => {
-    switch (type) {
-        case 'recharge':
-            return 'border-transparent bg-primary/12 text-primary'
-        case 'reserve':
-            return 'border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-        case 'settle':
-            return 'border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-        case 'release':
-            return 'border-transparent bg-slate-200 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300'
-        default:
-            return 'border-transparent bg-muted text-muted-foreground'
-    }
-}
-
 export default function UserPortalDashboardPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
@@ -66,15 +49,6 @@ export default function UserPortalDashboardPage() {
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
 
     const walletLogColumns: ColumnDef<UserPortalWalletLog>[] = useMemo(() => [
-        {
-            accessorKey: 'type',
-            header: () => <div className="py-3.5 font-medium">{t('portal.logs.type')}</div>,
-            cell: ({ row }) => (
-                <Badge variant="outline" className={cn(getWalletLogBadgeClass(row.original.type))}>
-                    {row.original.type}
-                </Badge>
-            ),
-        },
         {
             accessorKey: 'amount',
             header: () => <div className="py-3.5 font-medium">{t('portal.logs.amount')}</div>,
@@ -197,7 +171,7 @@ export default function UserPortalDashboardPage() {
 
             <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
                 <CardHeader>
-                    <CardTitle>{t('portal.logs.walletList')}</CardTitle>
+                    <CardTitle>{t('portal.logs.rechargeList')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                     <div className="px-6 pb-5">

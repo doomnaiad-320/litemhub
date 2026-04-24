@@ -197,7 +197,13 @@ func GetCurrentUserWalletLogs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	order := c.DefaultQuery("order", "")
 
-	logs, total, err := model.GetAppWalletLogs(user.ID, page, perPage, order)
+	logs, total, err := model.GetAppWalletLogsByTypes(
+		user.ID,
+		page,
+		perPage,
+		order,
+		[]string{model.AppWalletLogTypeRecharge},
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

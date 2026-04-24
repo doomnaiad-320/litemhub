@@ -44,6 +44,7 @@ export interface GroupModelConfig {
 // Group response from API
 export interface Group {
     id: string
+    description?: string
     status: GroupStatus
     rpm_ratio: number
     tpm_ratio: number
@@ -89,6 +90,7 @@ export interface GroupConsumptionRankingResponse {
 
 // Group create request
 export interface GroupCreateRequest {
+    description?: string
     rpm_ratio?: number
     tpm_ratio?: number
     price_multiplier?: number
@@ -100,6 +102,7 @@ export interface GroupCreateRequest {
 // Group update request
 export interface GroupUpdateRequest {
     status?: GroupStatus
+    description?: string
     rpm_ratio?: number
     tpm_ratio?: number
     price_multiplier?: number

@@ -1,3 +1,5 @@
 **/.vscode
 **/__debug_bin*
 **/.DS_Store
+**/.gocache
+**/node_modules

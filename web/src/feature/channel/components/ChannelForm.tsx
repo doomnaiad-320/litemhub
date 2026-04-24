@@ -13,13 +13,6 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import { channelCreateSchema } from '@/validation/channel'
 import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannel, useTestChannelPreviewAll, useChannelDefaultModels } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
@@ -51,7 +44,7 @@ type ComparableChannelPayload = {
     proxy_url: string
     models: string[]
     model_mapping: Record<string, string>
-    group: string
+    sets: string[]
     priority: number
     skip_tls_verify: boolean
     enabled_no_permission_ban: boolean
@@ -89,7 +82,7 @@ const normalizeChannelPayload = (
     proxy_url: payload.proxy_url ?? '',
     models: payload.models ?? [],
     model_mapping: payload.model_mapping ?? {},
-    group: payload.group ?? '',
+    sets: [...(payload.sets ?? [])].sort((left, right) => left.localeCompare(right)),
     priority: payload.priority ?? DEFAULT_PRIORITY,
     skip_tls_verify: payload.skip_tls_verify ?? false,
     enabled_no_permission_ban: payload.enabled_no_permission_ban ?? false,
@@ -113,7 +106,7 @@ interface ChannelFormProps {
         proxy_url?: string
         models: string[]
         model_mapping?: Record<string, string>
-        group?: string
+        sets?: string[]
         priority?: number
         skip_tls_verify?: boolean
         enabled_no_permission_ban?: boolean
@@ -136,7 +129,7 @@ export function ChannelForm({
         proxy_url: '',
         models: [],
         model_mapping: {},
-        group: '',
+        sets: [],
         priority: 10,
         skip_tls_verify: false,
         enabled_no_permission_ban: false,
@@ -287,7 +280,7 @@ export function ChannelForm({
             proxy_url: data.proxy_url || '',
             models: effectiveUseDefault ? [] : (data.models || []),
             model_mapping: effectiveUseDefault ? {} : (data.model_mapping || {}),
-            group: data.group,
+            sets: data.sets || [],
             priority: data.priority,
             skip_tls_verify: data.skip_tls_verify ?? false,
             enabled_no_permission_ban: data.enabled_no_permission_ban ?? false,
@@ -378,7 +371,7 @@ export function ChannelForm({
             proxy_url: formData.proxy_url || '',
             models: effectiveUseDefault ? [] : (formData.models || []),
             model_mapping: effectiveUseDefault ? {} : (formData.model_mapping || {}),
-            group: formData.group || '',
+            sets: formData.sets || [],
             priority: formData.priority,
             skip_tls_verify: formData.skip_tls_verify ?? false,
             enabled_no_permission_ban: formData.enabled_no_permission_ban ?? false,
@@ -395,7 +388,9 @@ export function ChannelForm({
             proxy_url: channel.proxy_url || '',
             models: channel.models || [],
             model_mapping: channel.model_mapping || {},
-            group: channel.group || channel.sets?.[0] || '',
+            sets: channel.sets && channel.sets.length > 0
+                ? channel.sets
+                : (channel.group ? [channel.group] : []),
             priority: channel.priority,
             skip_tls_verify: channel.skip_tls_verify ?? false,
             enabled_no_permission_ban: channel.enabled_no_permission_ban ?? false,
@@ -935,24 +930,42 @@ export function ChannelForm({
                             {/* 分组字段 */}
                             <FormField
                                 control={form.control}
-                                name="group"
+                                name="sets"
                                 render={({ field }) => {
+                                    const groupOptions = (groupsData?.groups || []).map((group) => group.id)
+                                    const groupMultiplierMap = new Map(
+                                        (groupsData?.groups || []).map((group) => [group.id, group.price_multiplier || 1]),
+                                    )
+
                                     return (
                                         <FormItem>
                                             <FormLabel>{t("channel.dialog.group")}</FormLabel>
                                             <FormControl>
-                                                <Select value={field.value || ''} onValueChange={field.onChange}>
-                                                    <SelectTrigger className="h-9">
-                                                        <SelectValue placeholder={t("channel.dialog.groupPlaceholder")} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {(groupsData?.groups || []).map((group) => (
-                                                            <SelectItem key={group.id} value={group.id}>
-                                                                {group.id} (x{(group.price_multiplier || 1).toFixed(2)})
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <MultiSelectCombobox<string>
+                                                    dropdownItems={groupOptions}
+                                                    selectedItems={field.value || []}
+                                                    setSelectedItems={(groupsOrFunction) => {
+                                                        const nextGroups = typeof groupsOrFunction === 'function'
+                                                            ? groupsOrFunction(field.value || [])
+                                                            : groupsOrFunction
+                                                        field.onChange(Array.isArray(nextGroups) ? nextGroups : [])
+                                                    }}
+                                                    handleFilteredDropdownItems={(dropdownItems, selectedItems, inputValue) => {
+                                                        const lowerCasedInputValue = inputValue.toLowerCase()
+                                                        return dropdownItems.filter((item) => (
+                                                            !selectedItems.includes(item)
+                                                            && item.toLowerCase().includes(lowerCasedInputValue)
+                                                        ))
+                                                    }}
+                                                    handleDropdownItemDisplay={(item) => (
+                                                        <span>{item} (x{(groupMultiplierMap.get(item) || 1).toFixed(2)})</span>
+                                                    )}
+                                                    handleSelectedItemDisplay={(item) => (
+                                                        <span>{item} (x{(groupMultiplierMap.get(item) || 1).toFixed(2)})</span>
+                                                    )}
+                                                    placeholder={t("channel.dialog.groupPlaceholder")}
+                                                    label={t("channel.dialog.group")}
+                                                />
                                             </FormControl>
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 {t("channel.dialog.groupHelp")}

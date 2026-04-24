@@ -26,6 +26,7 @@ func updateGroupLocalCache(id string, update func(*GroupCache) bool) {
 
 type GroupCache struct {
 	ID              string                   `json:"-"              redis:"-"`
+	Description     string                   `json:"description"    redis:"desc"`
 	Status          int                      `json:"status"         redis:"st"`
 	UsedAmount      float64                  `json:"used_amount"    redis:"ua"`
 	RPMRatio        float64                  `json:"rpm_ratio"      redis:"rpm_r"`
@@ -61,6 +62,7 @@ func (g *Group) ToGroupCache() *GroupCache {
 
 	return &GroupCache{
 		ID:              g.ID,
+		Description:     g.Description,
 		Status:          g.Status,
 		UsedAmount:      g.UsedAmount,
 		RPMRatio:        g.RPMRatio,

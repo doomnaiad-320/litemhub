@@ -163,11 +163,31 @@ func GetAppWalletLogs(userID, page, perPage int, order string) (
 	total int64,
 	err error,
 ) {
+	return getAppWalletLogs(userID, page, perPage, order, nil)
+}
+
+func GetAppWalletLogsByTypes(userID, page, perPage int, order string, logTypes []string) (
+	logs []*AppWalletLog,
+	total int64,
+	err error,
+) {
+	return getAppWalletLogs(userID, page, perPage, order, logTypes)
+}
+
+func getAppWalletLogs(userID, page, perPage int, order string, logTypes []string) (
+	logs []*AppWalletLog,
+	total int64,
+	err error,
+) {
 	if userID == 0 {
 		return nil, 0, errors.New("user id is empty")
 	}
 
 	tx := DB.Model(&AppWalletLog{}).Where("user_id = ?", userID)
+	if len(logTypes) > 0 {
+		tx = tx.Where("type IN ?", logTypes)
+	}
+
 	if err = tx.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
