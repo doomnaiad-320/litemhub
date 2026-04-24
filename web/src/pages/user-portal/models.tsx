@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
-    CardHeader,
-    CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -36,6 +34,8 @@ interface ModelCardItem {
 
 const CAPABILITY_ORDER = ['text', 'reasoning', 'vision', 'image', 'audio', 'video', 'coding', 'embedding', 'rerank'] as const
 const DEFAULT_PRICE_UNIT = 1000
+const DISPLAY_TOKEN_PRICE_UNIT = 1_000_000
+const DISPLAY_TOKEN_PRICE_UNIT_LABEL = '1M Tokens'
 
 const inferProvider = (model: string) => {
     const normalized = model.toLowerCase()
@@ -132,6 +132,17 @@ const formatPriceValue = (price?: number, unit?: number) => {
     }
 
     return `${formatPriceNumber(price)} / ${unit || DEFAULT_PRICE_UNIT}`
+}
+
+const formatTokenPriceValue = (price?: number, unit?: number) => {
+    if (price == null) {
+        return null
+    }
+
+    const effectiveUnit = unit || DEFAULT_PRICE_UNIT
+    const normalizedPrice = price * DISPLAY_TOKEN_PRICE_UNIT / effectiveUnit
+
+    return `${formatPriceNumber(normalizedPrice)} / ${DISPLAY_TOKEN_PRICE_UNIT_LABEL}`
 }
 
 const buildImagePriceEntries = (
@@ -402,12 +413,12 @@ export default function UserPortalModelsPage() {
         const entries: Array<{ label: string, value: string }> = []
 
         const prioritizedCandidates: Array<{ key: string, value: string | null }> = [
-            { key: 'input', value: formatPriceValue(price?.input_price, price?.input_price_unit) },
-            { key: 'output', value: formatPriceValue(price?.output_price, price?.output_price_unit) },
+            { key: 'input', value: formatTokenPriceValue(price?.input_price, price?.input_price_unit) },
+            { key: 'output', value: formatTokenPriceValue(price?.output_price, price?.output_price_unit) },
             { key: 'request', value: price?.per_request_price != null ? formatPriceNumber(price.per_request_price) : null },
-            { key: 'imageInput', value: formatPriceValue(price?.image_input_price, price?.image_input_price_unit) },
-            { key: 'imageOutput', value: formatPriceValue(price?.image_output_price, price?.image_output_price_unit) },
-            { key: 'audioInput', value: formatPriceValue(price?.audio_input_price, price?.audio_input_price_unit) },
+            { key: 'imageInput', value: formatTokenPriceValue(price?.image_input_price, price?.image_input_price_unit) },
+            { key: 'imageOutput', value: formatTokenPriceValue(price?.image_output_price, price?.image_output_price_unit) },
+            { key: 'audioInput', value: formatTokenPriceValue(price?.audio_input_price, price?.audio_input_price_unit) },
         ]
 
         prioritizedCandidates.forEach((candidate) => {
@@ -472,20 +483,20 @@ export default function UserPortalModelsPage() {
     const getGroupPricingTableData = (accessGroup: ModelAccessGroup) => {
         const price = accessGroup.price
         const imageEntries = buildImagePriceEntries(accessGroup.imagePrices, accessGroup.imageQualityPrices)
-        const input = formatPriceValue(price?.input_price, price?.input_price_unit)
-            || formatPriceValue(price?.image_input_price, price?.image_input_price_unit)
-            || formatPriceValue(price?.audio_input_price, price?.audio_input_price_unit)
+        const input = formatTokenPriceValue(price?.input_price, price?.input_price_unit)
+            || formatTokenPriceValue(price?.image_input_price, price?.image_input_price_unit)
+            || formatTokenPriceValue(price?.audio_input_price, price?.audio_input_price_unit)
 
-        let output = formatPriceValue(price?.output_price, price?.output_price_unit)
-            || formatPriceValue(price?.image_output_price, price?.image_output_price_unit)
-            || formatPriceValue(price?.thinking_mode_output_price, price?.thinking_mode_output_price_unit)
+        let output = formatTokenPriceValue(price?.output_price, price?.output_price_unit)
+            || formatTokenPriceValue(price?.image_output_price, price?.image_output_price_unit)
+            || formatTokenPriceValue(price?.thinking_mode_output_price, price?.thinking_mode_output_price_unit)
 
         const request = price?.per_request_price != null ? formatPriceNumber(price.per_request_price) : null
 
         const extraEntries: Array<{ label: string, value: string }> = []
         const extraCandidates: Array<{ key: string, value: string | null }> = [
-            { key: 'cached', value: formatPriceValue(price?.cached_price, price?.cached_price_unit) },
-            { key: 'cacheCreate', value: formatPriceValue(price?.cache_creation_price, price?.cache_creation_price_unit) },
+            { key: 'cached', value: formatTokenPriceValue(price?.cached_price, price?.cached_price_unit) },
+            { key: 'cacheCreate', value: formatTokenPriceValue(price?.cache_creation_price, price?.cache_creation_price_unit) },
             { key: 'webSearch', value: formatPriceValue(price?.web_search_price, price?.web_search_price_unit) },
         ]
 
@@ -665,27 +676,36 @@ export default function UserPortalModelsPage() {
                 </CardContent>
             </Card>
 
-            <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <section className="flex flex-wrap gap-3">
                 {isLoading ? (
                     <>
-                        <Skeleton className="h-40 rounded-xl" />
-                        <Skeleton className="h-40 rounded-xl" />
-                        <Skeleton className="h-40 rounded-xl" />
+                        <Skeleton className="h-[104px] w-[280px] rounded-xl" />
+                        <Skeleton className="h-[104px] w-[280px] rounded-xl" />
+                        <Skeleton className="h-[104px] w-[280px] rounded-xl" />
+                        <Skeleton className="h-[104px] w-[280px] rounded-xl" />
                     </>
                 ) : filteredModels.length > 0 ? filteredModels.map((item) => {
                     const previewAccessGroup = getPreviewAccessGroup(item)
                     const priceEntries = getPreviewPriceEntries(item)
-                    const visiblePriceEntries = priceEntries.slice(0, 4)
-                    const hiddenPriceCount = Math.max(0, priceEntries.length - visiblePriceEntries.length)
+                    const inputEntry = priceEntries.find((entry) => entry.label === t('portal.models.price.input'))
+                    const outputEntry = priceEntries.find((entry) => entry.label === t('portal.models.price.output'))
+                    const fallbackEntries = priceEntries.filter((entry) => entry !== inputEntry && entry !== outputEntry)
+                    const primaryEntry = inputEntry || fallbackEntries[0]
+                    const secondaryEntry = outputEntry || (primaryEntry === fallbackEntries[0] ? fallbackEntries[1] : fallbackEntries[0])
+                    const extractNumber = (value?: string) => value ? value.split('/')[0].trim() : null
+                    const primaryValue = extractNumber(primaryEntry?.value)
+                    const secondaryValue = extractNumber(secondaryEntry?.value)
                     const previewCapabilities = item.capabilities.slice(0, 3)
                     const hiddenCapabilityCount = Math.max(0, item.capabilities.length - previewCapabilities.length)
+                    const multiplier = previewAccessGroup?.priceMultiplier ?? 1
+                    const isBaseMultiplier = Math.abs(multiplier - 1) < 0.0001
 
                     return (
-                        <Card
+                        <div
                             key={item.model}
                             role="button"
                             tabIndex={0}
-                            className="gap-0 overflow-hidden border-border/60 bg-background/90 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+                            className="group flex w-[280px] cursor-pointer flex-col gap-2.5 rounded-xl border border-border/60 bg-background px-3.5 py-3 transition-colors hover:border-foreground/40"
                             onClick={() => setSelectedModel(item)}
                             onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
@@ -694,42 +714,41 @@ export default function UserPortalModelsPage() {
                                 }
                             }}
                         >
-                            <CardHeader className="gap-2 px-3.5 py-3">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0 space-y-1.5">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className={cn(
-                                                'h-5 rounded-full px-2 text-[10px]',
-                                                providerFilter === item.provider && 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
-                                            )}
-                                            onClick={(event) => {
-                                                event.stopPropagation()
-                                                setProviderFilter(item.provider)
-                                            }}
-                                        >
-                                            {item.provider}
-                                        </Button>
-                                        <CardTitle className="break-all text-sm leading-5">{item.model}</CardTitle>
-                                    </div>
-                                    <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[10px]">
-                                        x{(previewAccessGroup?.priceMultiplier || 1).toFixed(2)}
-                                    </Badge>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 truncate text-[14px] font-semibold leading-tight" title={item.model}>
+                                    {item.model}
                                 </div>
-                            </CardHeader>
-                            <CardContent className="space-y-2.5 px-3.5 pb-3.5 pt-0">
-                                <div className="flex flex-wrap gap-1">
-                                    {previewCapabilities.map((capability) => (
-                                        <Button
-                                            key={`${item.model}-${capability}`}
+                                <span className={cn(
+                                    'shrink-0 font-mono text-[11px] tabular-nums',
+                                    isBaseMultiplier ? 'text-muted-foreground' : 'text-foreground font-semibold',
+                                )}
+                                >
+                                    ×{multiplier.toFixed(2)}
+                                </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'font-medium transition-colors hover:text-foreground',
+                                        providerFilter === item.provider && 'text-primary hover:text-primary',
+                                    )}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        setProviderFilter(item.provider)
+                                    }}
+                                >
+                                    {item.provider}
+                                </button>
+                                {previewCapabilities.length > 0 && <span className="text-border">·</span>}
+                                {previewCapabilities.map((capability, index) => (
+                                    <span key={`${item.model}-${capability}`} className="flex items-center gap-x-1.5">
+                                        <button
                                             type="button"
-                                            variant="outline"
-                                            size="sm"
                                             className={cn(
-                                                'h-5 rounded-full px-2 text-[10px] font-normal',
-                                                capabilityFilter === capability && 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                                                'transition-colors hover:text-foreground',
+                                                capabilityFilter === capability && 'text-primary hover:text-primary',
                                             )}
                                             onClick={(event) => {
                                                 event.stopPropagation()
@@ -737,50 +756,45 @@ export default function UserPortalModelsPage() {
                                             }}
                                         >
                                             {t(`portal.models.capability.${capability}`)}
-                                        </Button>
-                                    ))}
-                                    {hiddenCapabilityCount > 0 && (
-                                        <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px] font-normal">
-                                            +{hiddenCapabilityCount}
-                                        </Badge>
-                                    )}
-                                </div>
+                                        </button>
+                                        {index < previewCapabilities.length - 1 && <span className="text-border">·</span>}
+                                    </span>
+                                ))}
+                                {hiddenCapabilityCount > 0 && (
+                                    <span className="text-muted-foreground/70">+{hiddenCapabilityCount}</span>
+                                )}
+                            </div>
 
-                                <div className="space-y-1.5 rounded-xl border border-border/50 bg-muted/15 p-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                            {groupFilter === '__all__' ? t('portal.models.basePricing') : t('portal.models.selectedGroupPricing')}
-                                        </div>
-                                        <div className="text-[10px] text-muted-foreground">
-                                            {t('portal.models.usageBilling')}
-                                        </div>
-                                    </div>
-                                    {visiblePriceEntries.length > 0 ? (
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            {visiblePriceEntries.map((entry) => (
-                                                <div
-                                                    key={`${item.model}-${entry.label}`}
-                                                    className="rounded-lg border border-border/40 bg-background/70 px-2 py-1"
-                                                >
-                                                    <div className="text-[10px] text-muted-foreground">{entry.label}</div>
-                                                    <div className="truncate text-[11px] font-medium">{entry.value}</div>
-                                                </div>
-                                            ))}
-                                            {hiddenPriceCount > 0 && (
-                                                <div className="flex items-center justify-center rounded-lg border border-dashed border-border/50 bg-background/40 px-2 py-1 text-[10px] text-muted-foreground">
-                                                    {t('portal.models.morePrices', { count: hiddenPriceCount })}
-                                                </div>
+                            <div className="border-t border-border/50 pt-2.5">
+                                {primaryValue || secondaryValue ? (
+                                    <div className="flex items-baseline justify-between gap-2 font-mono tabular-nums">
+                                        <div className="flex items-baseline gap-1.5">
+                                            {primaryValue && (
+                                                <>
+                                                    <span className="text-[15px] font-semibold text-primary">{primaryValue}</span>
+                                                    <span className="text-[10px] text-muted-foreground">in</span>
+                                                </>
+                                            )}
+                                            {primaryValue && secondaryValue && (
+                                                <span className="px-0.5 text-border">·</span>
+                                            )}
+                                            {secondaryValue && (
+                                                <>
+                                                    <span className="text-[15px] font-semibold text-primary">{secondaryValue}</span>
+                                                    <span className="text-[10px] text-muted-foreground">out</span>
+                                                </>
                                             )}
                                         </div>
-                                    ) : (
-                                        <div className="text-[11px] text-muted-foreground">-</div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                        <span className="text-[10px] text-muted-foreground">/1M</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-[11px] text-muted-foreground">{t('portal.models.noPrice')}</div>
+                                )}
+                            </div>
+                        </div>
                     )
                 }) : (
-                    <Card className="gap-0 border-border/60 bg-background/80 shadow-sm md:col-span-2 xl:col-span-5">
+                    <Card className="w-full gap-0 rounded-xl border-border/60 bg-background shadow-none">
                         <CardContent className="flex min-h-44 flex-col items-center justify-center space-y-3 p-8 text-center">
                             <div className="text-lg font-semibold">{t('portal.models.emptyTitle')}</div>
                             <p className="max-w-xl text-sm text-muted-foreground">{t('portal.models.emptyDescription')}</p>
