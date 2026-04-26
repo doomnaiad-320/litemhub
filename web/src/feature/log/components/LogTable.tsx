@@ -10,6 +10,13 @@ import { ChevronDown, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight } f
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { ExpandedLogContent } from './ExpandedLogContent'
 import { toast } from 'sonner'
 import type { LogRecord } from '@/types/log'
@@ -19,6 +26,7 @@ const columnHelper = createColumnHelper<LogRecord>()
 
 // 点击 group/token_name 时不展开行的列 ID
 const NON_EXPAND_COLUMNS = new Set(['details', 'group', 'token_name', 'model'])
+const RIGHT_ALIGNED_COLUMNS = new Set(['input_tokens', 'output_tokens', 'duration', 'used_amount'])
 
 interface LogTableProps {
     data: LogRecord[]
@@ -46,6 +54,7 @@ export function LogTable({
 }: LogTableProps) {
     const { t } = useTranslation()
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+    const [selectedMobileLog, setSelectedMobileLog] = useState<LogRecord | null>(null)
 
     const toggleRowExpansion = (rowId: number) => {
         const newExpanded = new Set(expandedRows)
@@ -66,6 +75,57 @@ export function LogTable({
     }, [t])
 
     const clickableCell = 'cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors'
+
+    const formatDuration = (log: LogRecord) => {
+        if (!log.request_at || !log.created_at) {
+            return '-'
+        }
+
+        const requestAt = new Date(log.request_at)
+        const createdAt = new Date(log.created_at)
+        const duration = (createdAt.getTime() - requestAt.getTime()) / 1000
+
+        if (Number.isNaN(duration)) {
+            return '-'
+        }
+
+        return `${duration.toFixed(2)}s`
+    }
+
+    const formatCreatedAt = (value?: string | number) => {
+        if (!value) {
+            return '-'
+        }
+
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) {
+            return '-'
+        }
+
+        return format(date, 'yyyy-MM-dd HH:mm:ss')
+    }
+
+    const formatUsedAmount = (log: LogRecord) => `$${Number(log.amount?.used_amount ?? log.used_amount ?? 0).toFixed(4)}`
+
+    const getPriceMultiplier = (log: LogRecord) => {
+        const rawValue = log.metadata?.price_multiplier
+            || log.metadata?.group_multiplier
+            || log.metadata?.multiplier
+        const multiplier = Number(rawValue)
+
+        if (!rawValue || Number.isNaN(multiplier) || multiplier <= 0) {
+            return 'x1'
+        }
+
+        return `x${Number(multiplier.toFixed(4)).toString()}`
+    }
+
+    const renderMobileMetric = (label: string, value: React.ReactNode) => (
+        <div className="min-w-0 text-left">
+            <div className="text-[11px] leading-4 text-muted-foreground">{label}</div>
+            <div className="mt-0.5 truncate font-mono text-[12px] leading-5 text-foreground">{value}</div>
+        </div>
+    )
 
     const columns = useMemo(
         () => [
@@ -160,23 +220,7 @@ export function LogTable({
             columnHelper.display({
                 id: 'duration',
                 header: t('log.duration'),
-                cell: ({ row }) => {
-                    if (!row.original.request_at || !row.original.created_at) {
-                        return (
-                            <div className="text-right font-mono">
-                                -
-                            </div>
-                        )
-                    }
-                    const requestAt = new Date(row.original.request_at)
-                    const createdAt = new Date(row.original.created_at)
-                    const duration = (createdAt.getTime() - requestAt.getTime()) / 1000
-                    return (
-                        <div className="text-right font-mono">
-                            {duration.toFixed(2)}s
-                        </div>
-                    )
-                },
+                cell: ({ row }) => <div className="text-right font-mono">{formatDuration(row.original)}</div>,
                 size: 80,
             }),
             columnHelper.display({
@@ -214,7 +258,7 @@ export function LogTable({
                 header: t('log.time'),
                 cell: (info) => (
                     <div className="text-sm text-muted-foreground">
-                        {info.getValue() ? format(new Date(info.getValue()), 'yyyy-MM-dd HH:mm:ss') : '-'}
+                        {formatCreatedAt(info.getValue())}
                     </div>
                 ),
                 size: 140,
@@ -235,30 +279,98 @@ export function LogTable({
     return (
         <div className="h-full flex flex-col">
             <div className="flex-1 min-h-0">
-                <div className="rounded-lg border border-border bg-card shadow-none h-full overflow-hidden">
+                <div className="space-y-3 md:hidden">
+                    {loading ? (
+                        <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
+                            <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
+                            {t('common.loading')}
+                        </div>
+                    ) : data.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-border/70 bg-card p-6 text-center text-sm text-muted-foreground">
+                            {t('common.noResult')}
+                        </div>
+                    ) : (
+                        data.map((log) => {
+                            const isSuccess = log.code === 200
+
+                            return (
+                                <div key={log.id} className="rounded-xl bg-card p-3 shadow-sm ring-1 ring-border/50">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="truncate font-mono text-[14px] font-semibold leading-5 text-foreground">
+                                                {log.model || '-'}
+                                            </div>
+                                            <div className="mt-1 font-mono text-[11px] leading-4 text-muted-foreground">
+                                                {formatCreatedAt(log.created_at)}
+                                            </div>
+                                        </div>
+                                        <div className={isSuccess ? 'shrink-0 text-[14px] font-medium text-green-500' : 'shrink-0 text-[14px] font-medium text-destructive'}>
+                                            {isSuccess ? t('log.success') : t('log.failed')}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-5 flex items-center justify-between gap-3 text-[12px] leading-4 text-muted-foreground">
+                                        <button
+                                            type="button"
+                                            className={onOpenGroupLog && log.group ? 'min-w-0 truncate text-left transition-colors hover:text-primary' : 'min-w-0 truncate text-left'}
+                                            onClick={() => log.group && onOpenGroupLog?.(log.group, log.token_name || undefined)}
+                                        >
+                                            {t('log.group')}: {log.group || '-'}
+                                        </button>
+                                        <div className="shrink-0 whitespace-nowrap">倍率: {getPriceMultiplier(log)}</div>
+                                        <div className="shrink-0 whitespace-nowrap">消费: {formatUsedAmount(log)}</div>
+                                    </div>
+
+                                    <div className="mt-4 border-t border-border/70" />
+
+                                    <div className="mt-4 grid w-full grid-cols-4 gap-1">
+                                        {renderMobileMetric(t('log.duration'), formatDuration(log))}
+                                        {renderMobileMetric(t('log.ttfb'), `${log.ttfb_milliseconds || 0}ms`)}
+                                        {renderMobileMetric(t('log.inputTokens'), (log.usage?.input_tokens || 0).toLocaleString())}
+                                        {renderMobileMetric(t('log.outputTokens'), (log.usage?.output_tokens || 0).toLocaleString())}
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="mt-5 h-8 w-full rounded-lg text-[14px] font-normal text-muted-foreground hover:text-foreground"
+                                        onClick={() => setSelectedMobileLog(log)}
+                                    >
+                                        {t('log.details')}
+                                    </Button>
+                                </div>
+                            )
+                        })
+                    )}
+                </div>
+                <div className="hidden rounded-lg border border-border bg-card shadow-none h-full overflow-hidden md:block">
                     <div className="overflow-auto h-full">
-                        <table className="w-full table-fixed">
+                        <table className="min-w-[980px] w-full table-fixed">
                             <thead className="sticky top-0 bg-muted/50 backdrop-blur-sm">
                                 <tr className="border-b border-border">
                                     {table.getHeaderGroups().map((headerGroup) =>
-                                        headerGroup.headers.map((header, index) => (
-                                            <th
-                                                key={header.id}
-                                                className={`px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${
-                                                    index === 0 ? 'rounded-tl-lg' : ''
-                                                } ${
-                                                    index === headerGroup.headers.length - 1 ? 'rounded-tr-lg' : ''
-                                                }`}
-                                                style={{ width: header.getSize() }}
-                                            >
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(
-                                                        header.column.columnDef.header,
-                                                        header.getContext()
-                                                    )}
-                                            </th>
-                                        ))
+                                        headerGroup.headers.map((header, index) => {
+                                            const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(header.column.id)
+
+                                            return (
+                                                <th
+                                                    key={header.id}
+                                                    className={`px-4 py-3 ${isRightAligned ? 'text-right' : 'text-left'} text-xs font-medium text-muted-foreground uppercase tracking-wider ${
+                                                        index === 0 ? 'rounded-tl-lg' : ''
+                                                    } ${
+                                                        index === headerGroup.headers.length - 1 ? 'rounded-tr-lg' : ''
+                                                    }`}
+                                                    style={{ width: header.getSize() }}
+                                                >
+                                                    {header.isPlaceholder
+                                                        ? null
+                                                        : flexRender(
+                                                            header.column.columnDef.header,
+                                                            header.getContext()
+                                                        )}
+                                                </th>
+                                            )
+                                        })
                                     )}
                                 </tr>
                             </thead>
@@ -295,18 +407,22 @@ export function LogTable({
                                                     }
                                                 }}
                                             >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <td
-                                                        key={cell.id}
-                                                        className="px-4 py-3 text-sm"
-                                                        style={{ width: cell.column.getSize() }}
-                                                    >
-                                                        {flexRender(
-                                                            cell.column.columnDef.cell,
-                                                            cell.getContext()
-                                                        )}
-                                                    </td>
-                                                ))}
+                                                {row.getVisibleCells().map((cell) => {
+                                                    const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(cell.column.id)
+
+                                                    return (
+                                                        <td
+                                                            key={cell.id}
+                                                            className={`px-4 py-3 text-sm ${isRightAligned ? 'text-right' : ''}`}
+                                                            style={{ width: cell.column.getSize() }}
+                                                        >
+                                                            {flexRender(
+                                                                cell.column.columnDef.cell,
+                                                                cell.getContext()
+                                                            )}
+                                                        </td>
+                                                    )
+                                                })}
                                             </tr>
                                             {expandedRows.has(row.original.id) && (
                                                 <tr>
@@ -326,16 +442,16 @@ export function LogTable({
 
             {/* 分页控制 - 固定在底部 */}
             <div className="flex-shrink-0 pt-4">
-                <div className="flex items-center justify-between px-2">
-                    <div className="flex-1 text-sm text-muted-foreground">
+                <div className="flex flex-col gap-3 px-2 md:flex-row md:items-center md:justify-between">
+                    <div className="text-sm text-muted-foreground md:flex-1">
                         {t('table.pageInfo', {
                             current: page,
                             total: Math.ceil(total / pageSize) || 1
                         })}
                     </div>
-                    <div className="flex items-center space-x-6 lg:space-x-8">
+                    <div className="flex flex-wrap items-center justify-between gap-3 md:justify-end lg:gap-8">
                         <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium">{t('table.rowsPerPage')}</p>
+                            <p className="text-sm font-medium whitespace-nowrap">{t('table.rowsPerPage')}</p>
                             <select
                                 value={pageSize}
                                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
@@ -351,7 +467,7 @@ export function LogTable({
                         <div className="flex items-center space-x-2">
                             <Button
                                 variant="outline"
-                                className="h-8 w-8 p-0"
+                                className="hidden h-8 w-8 p-0 md:inline-flex"
                                 onClick={() => onPageChange(1)}
                                 disabled={page <= 1}
                             >
@@ -375,7 +491,7 @@ export function LogTable({
                             </Button>
                             <Button
                                 variant="outline"
-                                className="h-8 w-8 p-0"
+                                className="hidden h-8 w-8 p-0 md:inline-flex"
                                 onClick={() => onPageChange(Math.ceil(total / pageSize))}
                                 disabled={page >= Math.ceil(total / pageSize)}
                             >
@@ -385,6 +501,21 @@ export function LogTable({
                     </div>
                 </div>
             </div>
+            <Dialog open={!!selectedMobileLog} onOpenChange={(open) => !open && setSelectedMobileLog(null)}>
+                <DialogContent className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+                    <DialogHeader className="border-b border-border/60 px-4 py-4 text-left sm:px-6">
+                        <DialogTitle className="break-all pr-8 font-mono text-base leading-6">
+                            {selectedMobileLog?.model || t('log.details')}
+                        </DialogTitle>
+                        <DialogDescription className="break-all text-xs">
+                            {selectedMobileLog?.request_id || (selectedMobileLog ? `#${selectedMobileLog.id}` : '')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[calc(88dvh-92px)] overflow-y-auto p-3 sm:p-4">
+                        {selectedMobileLog && <ExpandedLogContent log={selectedMobileLog} scope={detailScope} />}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

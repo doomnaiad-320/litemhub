@@ -213,20 +213,20 @@ export default function UserPortalKeysPage() {
     })
 
     return (
-        <div className="space-y-6">
-            <section className="rounded-[32px] border border-white/70 bg-white/78 p-6 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.4)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-4 sm:space-y-6">
+            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-2">
                         <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
-                        <h1 className="text-3xl font-semibold tracking-tight">{t('portal.keys.title')}</h1>
+                        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
                         <p className="max-w-3xl text-muted-foreground">{t('portal.keys.description')}</p>
                     </div>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="grid gap-3 sm:flex sm:flex-wrap">
                         <Select value={groupFilter} onValueChange={(value) => {
                             setGroupFilter(value)
                             setPage(1)
                         }}>
-                            <SelectTrigger className="w-[180px] rounded-2xl">
+                            <SelectTrigger className="w-full rounded-2xl sm:w-[180px]">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -245,12 +245,54 @@ export default function UserPortalKeysPage() {
                 </div>
             </section>
 
-            <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                <CardHeader>
+            <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+                <CardHeader className="p-4 sm:p-6">
                     <CardTitle>{t('portal.keys.list')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
-                    <div className="px-6 pb-5">
+                    <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+                        <div className="space-y-3 md:hidden">
+                            {isLoading ? (
+                                Array.from({ length: 3 }).map((_, index) => (
+                                    <div key={index} className="h-36 rounded-2xl bg-muted/70" />
+                                ))
+                            ) : keys.length > 0 ? (
+                                keys.map((token) => (
+                                    <div key={token.id} className="rounded-2xl border border-border/60 bg-background/75 p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="truncate text-base font-semibold">{token.name}</div>
+                                                <Badge variant="outline" className="mt-2 rounded-full border-border/70 bg-background/80 px-3 py-1">
+                                                    {token.group}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog(token)}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => deleteKeyMutation.mutate(token.id)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex items-center gap-2 rounded-xl bg-muted/70 px-3 py-2">
+                                            <code className="min-w-0 flex-1 truncate text-xs">{token.key}</code>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyToClipboard(token.key)}>
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="mt-3 text-xs text-muted-foreground">
+                                            {format(new Date(token.created_at), 'yyyy-MM-dd HH:mm')}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center text-sm text-muted-foreground">
+                                    {t('table.noData')}
+                                </div>
+                            )}
+                        </div>
+                        <div className="hidden md:block">
                         <DataTable
                             table={table}
                             columns={columns}
@@ -259,6 +301,7 @@ export default function UserPortalKeysPage() {
                             fixedHeader={true}
                             showScrollShadows={false}
                         />
+                        </div>
                     </div>
                     <div className="border-t border-border/60 px-3">
                         <ServerPagination

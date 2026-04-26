@@ -11,11 +11,11 @@ export default function UserPortalGroupsPage() {
     const groups = data?.groups || []
 
     return (
-        <div className="space-y-6">
-            <section className="rounded-[32px] border border-white/70 bg-white/78 p-6 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.4)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-4 sm:space-y-6">
+            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
                 <div className="space-y-2">
                     <div className="text-sm text-primary">{t('portal.groups.badge')}</div>
-                    <h1 className="text-3xl font-semibold tracking-tight">{t('portal.groups.title')}</h1>
+                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.groups.title')}</h1>
                     <p className="max-w-3xl text-muted-foreground">{t('portal.groups.description')}</p>
                 </div>
             </section>

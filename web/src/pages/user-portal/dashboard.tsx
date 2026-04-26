@@ -90,11 +90,11 @@ export default function UserPortalDashboardPage() {
     })
 
     return (
-        <div className="space-y-6">
-            <section className="rounded-[32px] border border-white/70 bg-white/78 p-6 shadow-[0_30px_60px_-40px_rgba(15,23,42,0.4)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:p-8">
-                <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-6">
+            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
+                <div className="space-y-2">
                     <div className="text-sm text-primary">{t('portal.dashboard.welcome')}</div>
-                    <h1 className="text-3xl font-semibold tracking-tight">{t('portal.dashboard.title')}</h1>
+                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.dashboard.title')}</h1>
                     <p className="max-w-2xl text-muted-foreground">
                         {t('portal.dashboard.description')}
                     </p>
@@ -107,21 +107,21 @@ export default function UserPortalDashboardPage() {
             <section className="grid gap-4 xl:grid-cols-3">
                 {isLoading || !wallet ? (
                     <>
-                        <Skeleton className="h-48 rounded-[28px]" />
-                        <Skeleton className="h-48 rounded-[28px]" />
-                        <Skeleton className="h-48 rounded-[28px]" />
+                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
+                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
+                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
                     </>
                 ) : (
                     <>
-                        <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                            <CardHeader>
+                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
                                     <Wallet className="h-4 w-4 text-primary" />
                                     {t('portal.dashboard.balanceTitle')}
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="text-4xl font-semibold tracking-tight">
+                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
+                                <div className="break-all text-3xl font-semibold tracking-tight sm:text-4xl">
                                     {formatMoney(wallet.available_balance)}
                                 </div>
                                 <div className="rounded-2xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
@@ -132,15 +132,15 @@ export default function UserPortalDashboardPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                            <CardHeader>
+                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
                                     <ReceiptText className="h-4 w-4 text-primary" />
                                     {t('portal.dashboard.historicalConsumed')}
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="text-4xl font-semibold tracking-tight">
+                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
+                                <div className="break-all text-3xl font-semibold tracking-tight sm:text-4xl">
                                     {formatMoney(wallet.historical_consumed)}
                                 </div>
                                 <div className="rounded-2xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
@@ -149,15 +149,15 @@ export default function UserPortalDashboardPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                            <CardHeader>
+                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
                                     <CreditCard className="h-4 w-4 text-primary" />
                                     {t('portal.dashboard.rechargeTitle')}
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <p className="min-h-16 text-sm leading-6 text-muted-foreground">
+                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
+                                <p className="text-sm leading-6 text-muted-foreground sm:min-h-16">
                                     {t('portal.dashboard.rechargeDescription')}
                                 </p>
                                 <Button disabled className="w-full rounded-2xl">
@@ -169,12 +169,44 @@ export default function UserPortalDashboardPage() {
                 )}
             </section>
 
-            <Card className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
-                <CardHeader>
+            <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+                <CardHeader className="p-4 sm:p-6">
                     <CardTitle>{t('portal.logs.rechargeList')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
-                    <div className="px-6 pb-5">
+                    <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+                        <div className="space-y-3 md:hidden">
+                            {isWalletLogLoading ? (
+                                Array.from({ length: 3 }).map((_, index) => (
+                                    <Skeleton key={index} className="h-28 rounded-2xl" />
+                                ))
+                            ) : walletLogs.length > 0 ? (
+                                walletLogs.map((log) => (
+                                    <div key={log.id} className="rounded-2xl border border-border/60 bg-background/75 p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <div className="text-xs text-muted-foreground">{t('portal.logs.amount')}</div>
+                                                <div className="font-mono text-lg font-semibold">{formatMoney(log.amount)}</div>
+                                            </div>
+                                            <div className="text-right text-xs text-muted-foreground">
+                                                {formatDateTime(log.created_at)}
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 rounded-xl bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">
+                                            {formatMoney(log.balance_before)} → {formatMoney(log.balance_after)}
+                                        </div>
+                                        {log.remark && (
+                                            <div className="mt-3 break-words text-sm text-muted-foreground">{log.remark}</div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center text-sm text-muted-foreground">
+                                    {t('table.noData')}
+                                </div>
+                            )}
+                        </div>
+                        <div className="hidden md:block">
                         <DataTable
                             table={walletLogTable}
                             columns={walletLogColumns}
@@ -183,6 +215,7 @@ export default function UserPortalDashboardPage() {
                             fixedHeader={true}
                             showScrollShadows={false}
                         />
+                        </div>
                     </div>
                     <div className="border-t border-border/60 px-3">
                         <ServerPagination

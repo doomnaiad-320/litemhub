@@ -27,14 +27,14 @@ export function ServerPagination({
     const totalPages = Math.ceil(total / pageSize) || 1
 
     return (
-        <div className="flex items-center justify-between px-2 py-3">
-            <div className="flex-1 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-3 px-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground sm:flex-1">
                 {t('table.pageInfo', {
                     current: page,
                     total: totalPages
                 })}
             </div>
-            <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end lg:gap-8">
                 <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium whitespace-nowrap">{t('table.rowsPerPage')}</p>
                     <select

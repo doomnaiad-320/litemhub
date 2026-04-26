@@ -3,3 +3,7 @@
 **/.DS_Store
 **/.gocache
 **/node_modules
+.env
+.env.local
+.env.aiproxy.local
+dist/

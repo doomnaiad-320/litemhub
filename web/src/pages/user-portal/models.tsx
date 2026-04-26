@@ -376,7 +376,7 @@ function FilterChip({
       variant="outline"
       size="sm"
       className={cn(
-        "h-9 rounded-xl border-border/60 bg-background px-3 text-sm font-normal shadow-none hover:bg-muted/40",
+        "h-9 shrink-0 rounded-xl border-border/60 bg-background px-3 text-sm font-normal shadow-none hover:bg-muted/40",
         active &&
           "border-primary/40 bg-primary/10 text-primary hover:bg-primary/10",
         className,
@@ -401,7 +401,9 @@ function FilterSection({ children, icon: Icon, label }: FilterSectionProps) {
         <Icon className="h-4 w-4 text-muted-foreground" />
         <span>{label}</span>
       </div>
-      <div className="flex flex-wrap gap-2">{children}</div>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+        {children}
+      </div>
     </div>
   );
 }
@@ -785,11 +787,11 @@ export default function UserPortalModelsPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
-      <Card className="gap-0 overflow-hidden rounded-[28px] border-border/60 bg-background shadow-sm">
-        <CardContent className="space-y-7 px-6 py-6">
+    <div className="w-full space-y-4 sm:space-y-6">
+      <Card className="gap-0 overflow-hidden rounded-[24px] border-border/60 bg-background shadow-sm sm:rounded-[28px]">
+        <CardContent className="space-y-5 px-4 py-4 sm:space-y-7 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div className="relative w-full max-w-[320px]">
+            <div className="relative w-full sm:max-w-[320px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={keyword}
@@ -798,7 +800,7 @@ export default function UserPortalModelsPage() {
                 className="h-11 rounded-2xl border-border/60 bg-background pl-10 shadow-none"
               />
             </div>
-            <div className="flex items-center gap-2 self-end xl:self-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:self-end xl:self-auto">
               <Badge
                 variant="outline"
                 className="rounded-full px-3 py-1 text-xs"
@@ -815,7 +817,7 @@ export default function UserPortalModelsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 rounded-full border-border/60 px-4"
+                  className="h-9 rounded-full border-border/60 px-3 sm:h-10 sm:px-4"
                   onClick={resetFilters}
                 >
                   <RotateCcw className="mr-1 h-3.5 w-3.5" />
@@ -1006,7 +1008,7 @@ export default function UserPortalModelsPage() {
                 role="button"
                 tabIndex={0}
                 aria-label={`${t("portal.models.openDetails")}: ${item.model}`}
-                className="group relative flex min-h-[136px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/95 p-4 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_46px_rgba(15,23,42,0.10)] dark:bg-slate-950/45 dark:shadow-none"
+                className="group relative flex min-h-[126px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_46px_rgba(15,23,42,0.10)] dark:bg-slate-950/45 dark:shadow-none sm:min-h-[136px] sm:p-4"
                 onClick={() => openModelDetails(item)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -1042,7 +1044,7 @@ export default function UserPortalModelsPage() {
                       </button>
                     </div>
                     <div
-                      className="line-clamp-1 font-mono text-[12px] font-semibold tabular-nums text-foreground/90"
+                      className="line-clamp-1 break-all font-mono text-[12px] font-semibold tabular-nums text-foreground/90"
                       title={priceSummary || t("portal.models.noPrice")}
                     >
                       {priceSummary || t("portal.models.noPrice")}
@@ -1102,7 +1104,7 @@ export default function UserPortalModelsPage() {
           })
         ) : (
           <Card className="gap-0 rounded-xl border-border/60 bg-background shadow-none sm:col-span-2 lg:col-span-3 2xl:col-span-5">
-            <CardContent className="flex min-h-44 flex-col items-center justify-center space-y-3 p-8 text-center">
+            <CardContent className="flex min-h-44 flex-col items-center justify-center space-y-3 p-5 text-center sm:p-8">
               <div className="text-lg font-semibold">
                 {t("portal.models.emptyTitle")}
               </div>
@@ -1118,26 +1120,26 @@ export default function UserPortalModelsPage() {
         open={!!selectedModel}
         onOpenChange={(open) => !open && closeModelDetails()}
       >
-        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-3xl">
+        <SheetContent side="right" className="w-full max-w-none gap-0 p-0 sm:max-w-3xl">
           {selectedModel && (
             <>
-              <SheetHeader className="border-b border-border/60 px-6 py-5">
+              <SheetHeader className="border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="space-y-1 pr-8">
-                  <SheetTitle className="text-2xl tracking-tight">
+                  <SheetTitle className="break-all text-xl tracking-tight sm:text-2xl">
                     {selectedModel.model}
                   </SheetTitle>
                   <SheetDescription>{selectedModel.provider}</SheetDescription>
                 </div>
               </SheetHeader>
 
-              <div className="flex-1 overflow-y-auto px-6 py-6">
-                <div className="space-y-6">
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                <div className="space-y-5 sm:space-y-6">
                   <section className="space-y-3">
                     <div className="flex items-center gap-2 text-base font-semibold">
                       <Info className="h-4 w-4 text-muted-foreground" />
                       <span>{t("portal.models.infoSection")}</span>
                     </div>
-                    <div className="rounded-3xl border border-border/60 bg-background/80 p-5">
+                    <div className="rounded-2xl border border-border/60 bg-background/80 p-4 sm:rounded-3xl sm:p-5">
                       <div className="grid gap-4 md:grid-cols-3">
                         <div className="space-y-1">
                           <div className="text-sm text-muted-foreground">
@@ -1188,15 +1190,15 @@ export default function UserPortalModelsPage() {
                         selectedModel.accessGroups[0]?.group
                       }
                       onValueChange={setSelectedPricingGroup}
-                      className="overflow-hidden rounded-3xl border border-border/60 bg-background/80"
+                      className="overflow-hidden rounded-2xl border border-border/60 bg-background/80 sm:rounded-3xl"
                     >
-                      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/10">
+                      <div className="flex flex-col border-b border-border/60 bg-muted/10 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                         <TabsList className="min-h-8 min-w-0 flex-1 justify-start gap-0 overflow-x-auto rounded-none bg-transparent px-0 py-[5px]">
                           {selectedModel.accessGroups.map((group) => (
                             <TabsTrigger
                               key={`${selectedModel.model}-tab-${group.group}`}
                               value={group.group}
-                              className="h-8 rounded-none border-r border-border/60 bg-transparent px-2.5 text-[14px] font-normal shadow-none last:border-r-0 data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-amber-700 data-[state=active]:shadow-none dark:data-[state=active]:text-amber-300"
+                              className="h-8 shrink-0 rounded-none border-r border-border/60 bg-transparent px-2.5 text-[16px] font-normal shadow-none last:border-r-0 data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-amber-700 data-[state=active]:shadow-none dark:data-[state=active]:text-amber-300"
                             >
                               {group.group}
                             </TabsTrigger>
@@ -1213,7 +1215,7 @@ export default function UserPortalModelsPage() {
                           }
 
                           return (
-                            <div className="shrink-0 border-l border-border/60 px-3 text-[14px] text-muted-foreground">
+                            <div className="shrink-0 border-t border-border/60 px-3 py-2 text-[14px] text-muted-foreground sm:border-l sm:border-t-0 sm:py-0">
                               {t("portal.models.priceMultiplier")}
                               <span className="ml-1 font-mono text-amber-700 tabular-nums dark:text-amber-300">
                                 x {activeGroup.priceMultiplier.toFixed(2)}
