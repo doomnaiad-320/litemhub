@@ -1467,6 +1467,72 @@
       "createdAt": "Created At"
     }
   },
+  "publicModels": {
+    "seo": {
+      "title": "AI Model Catalog | LiteMHub",
+      "description": "Browse AI models, providers, capabilities, context windows, and API pricing available through the LiteMHub OpenAI-compatible API.",
+      "itemListName": "LiteMHub AI Model Catalog"
+    },
+    "nav": {
+      "models": "Models",
+      "billing": "Billing",
+      "workflow": "Workflow",
+      "login": "Log in",
+      "start": "Start",
+      "console": "Console"
+    },
+    "badge": "Public model catalog",
+    "title": "Find and connect to available AI models.",
+    "description": "Explore models, providers, capabilities, and public pricing without logging in. Register and create an API key to call them through an OpenAI-compatible API.",
+    "searchModels": "Search models",
+    "getApiKey": "Get API key",
+    "catalogEyebrow": "Model Catalog",
+    "catalogTitle": "Models, pricing, and capabilities",
+    "searchLabel": "Search models",
+    "searchPlaceholder": "Search model, provider, or capability",
+    "provider": "Provider",
+    "capability": "Capability",
+    "allProviders": "All providers",
+    "allCapabilities": "All capabilities",
+    "clear": "Clear",
+    "results": "{{count}} models",
+    "copied": "Model ID copied",
+    "copyFailed": "Copy failed",
+    "copyModelId": "Copy model ID",
+    "startUsing": "Start using",
+    "empty": "No matching models found. Adjust your search or filters.",
+    "loadError": "Failed to load the public model catalog. Please try again later.",
+    "defaultDescription": "Available through the LiteMHub OpenAI-compatible API.",
+    "priceUnit": "Prices shown per {{unit}}",
+    "stats": {
+      "models": "Available models",
+      "providers": "Providers",
+      "capabilities": "Capability types",
+      "groups": "Available groups"
+    },
+    "sort": {
+      "label": "Sort",
+      "name": "Model name",
+      "provider": "Provider",
+      "input": "Input price",
+      "output": "Output price",
+      "context": "Context length"
+    },
+    "table": {
+      "model": "Model",
+      "provider": "Provider",
+      "capabilities": "Capabilities",
+      "context": "Context",
+      "input": "Input",
+      "output": "Output",
+      "action": "Action"
+    },
+    "apiExample": {
+      "badge": "API example",
+      "title": "Call models with an OpenAI-compatible API.",
+      "description": "The public catalog helps users discover models. After registration, they can create a key and call models from different providers through one API."
+    }
+  },
   "consumptionRanking": {
     "title": "Consumption Ranking",
     "description": "View channel, model, and group consumption rankings for the selected range.",

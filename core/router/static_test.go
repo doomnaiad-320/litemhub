@@ -65,6 +65,30 @@ func TestSetStaticFileRouter_DisableWebRoot(t *testing.T) {
 			convey.So(recorder.Code, convey.ShouldEqual, http.StatusOK)
 			convey.So(recorder.Body.String(), convey.ShouldContainSubstring, "test-spa")
 		})
+
+		convey.Convey("should inject public models SEO metadata into SPA fallback", func() {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/models",
+				nil,
+			)
+
+			router.ServeHTTP(recorder, req)
+
+			convey.So(recorder.Code, convey.ShouldEqual, http.StatusOK)
+			convey.So(
+				recorder.Body.String(),
+				convey.ShouldContainSubstring,
+				"<title>AI Model Catalog | LiteMHub</title>",
+			)
+			convey.So(
+				recorder.Body.String(),
+				convey.ShouldContainSubstring,
+				"Browse AI models, providers, capabilities",
+			)
+		})
 	})
 }
 
@@ -140,7 +164,7 @@ func writeTestWebFiles(t *testing.T) string {
 
 	if err := os.WriteFile(
 		filepath.Join(webPath, "index.html"),
-		[]byte("<!doctype html><html><body>test-spa</body></html>"),
+		[]byte(`<!doctype html><html><head><title>AI Proxy</title><meta name="description" content="AI Proxy"><meta property="og:title" content="AI Proxy" /><meta property="og:description" content="AI Proxy" /></head><body>test-spa</body></html>`),
 		0o600,
 	); err != nil {
 		t.Fatalf("write index.html: %v", err)

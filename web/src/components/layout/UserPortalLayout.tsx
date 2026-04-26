@@ -44,9 +44,9 @@ export function UserPortalLayout() {
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
     ]
 
-    const currentFirstLevelPath = `/${location.pathname.split('/')[1]}`
+    const currentPath = location.pathname
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
-    const activeNavItem = portalNavItems.find((item) => item.href === currentFirstLevelPath) || portalNavItems[0]
+    const activeNavItem = portalNavItems.find((item) => item.href === currentPath) || portalNavItems[0]
 
     const handleLogout = () => {
         logout()
@@ -55,7 +55,7 @@ export function UserPortalLayout() {
 
     const renderNavigationLinks = (isCompact = false, onNavigate?: () => void) => (
         portalNavItems.map((item) => {
-            const isActive = currentFirstLevelPath === item.href
+            const isActive = currentPath === item.href
 
             return (
                 <Link
@@ -157,7 +157,7 @@ export function UserPortalLayout() {
                 <div className="flex-1 py-2 overflow-y-auto relative z-10">
                     <TooltipProvider delayDuration={300}>
                         {portalNavItems.map((item) => {
-                            const isActive = currentFirstLevelPath === item.href
+                            const isActive = currentPath === item.href
                             const content = (
                                 <>
                                     <div className="flex items-center justify-center w-5 h-5">

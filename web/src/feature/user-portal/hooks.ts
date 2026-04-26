@@ -9,6 +9,7 @@ import type {
 } from '@/types/user-portal'
 import { userPortalApi } from '@/api/user-portal'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
+import { ROUTES } from '@/routes/constants'
 
 const invalidatePortalQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
     queryClient.invalidateQueries({ queryKey: ['userPortalMe'] })
@@ -37,7 +38,7 @@ export const useUserPortalLogin = () => {
     const location = useLocation()
     const login = useUserPortalAuthStore((state) => state.login)
 
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.USER_DASHBOARD
 
     return useMutation({
         mutationFn: (data: UserPortalLoginRequest) => userPortalApi.login(data),

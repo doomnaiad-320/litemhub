@@ -1455,6 +1455,72 @@
       "createdAt": "时间"
     }
   },
+  "publicModels": {
+    "seo": {
+      "title": "AI 模型目录 | LiteMHub",
+      "description": "浏览 LiteMHub 支持的 AI 模型、供应商、能力、上下文和 API 价格，使用 OpenAI-compatible API 快速接入。",
+      "itemListName": "LiteMHub AI 模型目录"
+    },
+    "nav": {
+      "models": "模型",
+      "billing": "计费",
+      "workflow": "流程",
+      "login": "登录",
+      "start": "开始使用",
+      "console": "进入控制台"
+    },
+    "badge": "公开模型目录",
+    "title": "查找并接入可用 AI 模型。",
+    "description": "无需登录即可查看模型、供应商、能力和公开价格。注册后创建 API Key，即可通过 OpenAI-compatible API 调用这些模型。",
+    "searchModels": "搜索模型",
+    "getApiKey": "获取 API Key",
+    "catalogEyebrow": "Model Catalog",
+    "catalogTitle": "模型、价格和能力一览",
+    "searchLabel": "搜索模型",
+    "searchPlaceholder": "搜索模型、供应商或能力",
+    "provider": "供应商",
+    "capability": "能力",
+    "allProviders": "全部供应商",
+    "allCapabilities": "全部能力",
+    "clear": "清空",
+    "results": "{{count}} 个模型",
+    "copied": "模型 ID 已复制",
+    "copyFailed": "复制失败",
+    "copyModelId": "复制模型 ID",
+    "startUsing": "开始使用",
+    "empty": "没有找到匹配模型，请调整搜索或筛选条件。",
+    "loadError": "公开模型目录加载失败，请稍后重试。",
+    "defaultDescription": "可通过 LiteMHub OpenAI-compatible API 调用的模型。",
+    "priceUnit": "价格按 {{unit}} 展示",
+    "stats": {
+      "models": "可用模型",
+      "providers": "供应商",
+      "capabilities": "能力类型",
+      "groups": "可用分组"
+    },
+    "sort": {
+      "label": "排序",
+      "name": "模型名",
+      "provider": "供应商",
+      "input": "输入价格",
+      "output": "输出价格",
+      "context": "上下文长度"
+    },
+    "table": {
+      "model": "模型",
+      "provider": "供应商",
+      "capabilities": "能力",
+      "context": "上下文",
+      "input": "输入价",
+      "output": "输出价",
+      "action": "操作"
+    },
+    "apiExample": {
+      "badge": "API 示例",
+      "title": "兼容 OpenAI SDK 的调用方式。",
+      "description": "前端公开目录负责发现模型；注册后创建 Key，即可使用同一个接口调用不同供应商的模型。"
+    }
+  },
   "consumptionRanking": {
     "title": "消耗排行",
     "description": "查看所选时间范围内的渠道、模型和组别消耗排行。",

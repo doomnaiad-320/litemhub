@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
+import { ROUTES } from '@/routes/constants'
 
 const modelCards = [
     { name: 'GPT', desc: 'OpenAI compatible', tone: 'from-sky-400/24 to-blue-500/10' },
@@ -90,7 +91,7 @@ export default function UserPortalLandingPage() {
                     </Link>
 
                     <nav className="hidden items-center gap-8 text-sm text-slate-600 dark:text-slate-300 md:flex">
-                        <a href="#models" className="transition hover:text-slate-950 dark:hover:text-white">模型</a>
+                        <Link to={ROUTES.PUBLIC_MODELS} className="transition hover:text-slate-950 dark:hover:text-white">模型</Link>
                         <a href="#billing" className="transition hover:text-slate-950 dark:hover:text-white">计费</a>
                         <a href="#workflow" className="transition hover:text-slate-950 dark:hover:text-white">流程</a>
                     </nav>
@@ -102,10 +103,10 @@ export default function UserPortalLandingPage() {
                         <div className="hidden sm:block">
                             <LanguageSelector variant="minimal" />
                         </div>
-                        <Link to="/login">
+                        <Link to={ROUTES.USER_LOGIN}>
                             <Button variant="ghost" className="rounded-full">登录</Button>
                         </Link>
-                        <Link to={isAuthenticated ? '/dashboard' : '/register'}>
+                        <Link to={isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_REGISTER}>
                             <Button className="rounded-full bg-slate-950 px-5 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
                                 {isAuthenticated ? '进入控制台' : '开始使用'}
                                 <ArrowRight className="h-4 w-4" />
@@ -133,13 +134,13 @@ export default function UserPortalLandingPage() {
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row">
-                            <Link to="/register">
+                            <Link to={ROUTES.USER_REGISTER}>
                                 <Button size="lg" className="h-12 rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
                                     免费注册
                                     <ArrowRight className="h-4 w-4" />
                                 </Button>
                             </Link>
-                            <Link to="/login">
+                            <Link to={ROUTES.USER_LOGIN}>
                                 <Button size="lg" variant="outline" className="h-12 rounded-full border-slate-300 bg-white/70 px-7 backdrop-blur dark:border-white/12 dark:bg-white/5">
                                     登录控制台
                                 </Button>
@@ -299,12 +300,12 @@ export default function UserPortalLandingPage() {
                                 先注册用户账号，创建 Key，然后通过 OpenAI-compatible API 请求模型。充值支付接口后续接入即可闭环。
                             </p>
                             <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                                <Link to="/register">
+                                <Link to={ROUTES.USER_REGISTER}>
                                     <Button size="lg" className="h-12 rounded-full bg-slate-950 px-7 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
                                         注册账号
                                     </Button>
                                 </Link>
-                                <Link to="/login">
+                                <Link to={ROUTES.USER_LOGIN}>
                                     <Button size="lg" variant="outline" className="h-12 rounded-full px-7">
                                         已有账号登录
                                     </Button>

@@ -1,8 +1,10 @@
 package router
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -19,6 +21,8 @@ import (
 const (
 	githubProjectURL              = "https://github.com/labring/aiproxy"
 	githubProjectInitialCountdown = 15
+	publicModelsTitle             = "AI Model Catalog | LiteMHub"
+	publicModelsDescription       = "Browse AI models, providers, capabilities, context windows, and API pricing available through the LiteMHub OpenAI-compatible API."
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
@@ -95,6 +99,7 @@ func checkNoRouteNotFound(req *http.Request) bool {
 	}
 
 	if strings.HasPrefix(req.URL.Path, "/api") ||
+		strings.HasPrefix(req.URL.Path, "/public-api") ||
 		(strings.HasPrefix(req.URL.Path, "/mcp") && !strings.HasPrefix(req.URL.Path, "/mcp-front")) ||
 		strings.HasPrefix(req.URL.Path, "/v1") {
 		return true
@@ -107,6 +112,10 @@ func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		if checkNoRouteNotFound(ctx.Request) {
 			http.NotFound(ctx.Writer, ctx.Request)
+			return
+		}
+
+		if tryServeIndexWithPublicModelsMeta(ctx, fs) {
 			return
 		}
 
@@ -125,6 +134,10 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 
 		f, err := fs.Open(c.Request.URL.Path)
 		if err != nil {
+			if tryServeIndexWithPublicModelsMeta(c, fs) {
+				return
+			}
+
 			c.FileFromFS("", fs)
 			return
 		}
@@ -133,6 +146,48 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+func tryServeIndexWithPublicModelsMeta(ctx *gin.Context, fs http.FileSystem) bool {
+	if ctx.Request.URL.Path != "/models" {
+		return false
+	}
+
+	index, err := fs.Open("index.html")
+	if err != nil {
+		return false
+	}
+	defer index.Close()
+
+	content, err := io.ReadAll(index)
+	if err != nil {
+		return false
+	}
+
+	content = bytes.ReplaceAll(
+		content,
+		[]byte("<title>AI Proxy</title>"),
+		[]byte("<title>"+publicModelsTitle+"</title>"),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`content="AI Proxy"`),
+		[]byte(`content="`+publicModelsDescription+`"`),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`<meta property="og:title" content="AI Proxy" />`),
+		[]byte(`<meta property="og:title" content="`+publicModelsTitle+`" />`),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`<meta property="og:description" content="AI Proxy" />`),
+		[]byte(`<meta property="og:description" content="`+publicModelsDescription+`" />`),
+	)
+
+	ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
+
+	return true
 }
 
 type staticFileFS interface {

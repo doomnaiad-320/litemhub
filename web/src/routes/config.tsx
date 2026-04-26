@@ -15,6 +15,7 @@ import GroupPage from "@/pages/group/page"
 import ConsumptionRankingPage from "@/pages/consumption-ranking/page"
 import AppUserPage from "@/pages/app-user/page"
 import UserPortalLandingPage from "@/pages/user-portal/landing"
+import PublicModelsPage from "@/pages/public-models/page"
 import UserPortalDashboardPage from "@/pages/user-portal/dashboard"
 import UserPortalModelsPage from "@/pages/user-portal/models"
 import UserPortalGroupsPage from "@/pages/user-portal/groups"
@@ -47,6 +48,7 @@ export function useRoutes(): RouteObject[] {
     // auth routes
     const authRoutes: RouteObject[] = [
         { path: "/", element: <UserPortalLandingPage /> },
+        { path: ROUTES.PUBLIC_MODELS, element: <PublicModelsPage /> },
         { path: ROUTES.ADMIN_LOGIN, element: lazyLoad(LoginPage) },
         { path: ROUTES.USER_LOGIN, element: lazyLoad(UserPortalLoginPage) },
         { path: ROUTES.USER_REGISTER, element: lazyLoad(UserPortalRegisterPage) },

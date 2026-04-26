@@ -19,6 +19,7 @@ import {
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { useUserPortalRegister } from '@/feature/user-portal/hooks'
+import { ROUTES } from '@/routes/constants'
 
 interface UserPortalRegisterForm {
     account: string
@@ -57,7 +58,7 @@ export default function UserPortalRegisterPage() {
             : { phone: values.account.trim(), password: values.password.trim() }
 
         registerMutation.mutate(payload, {
-            onSuccess: () => navigate('/login'),
+            onSuccess: () => navigate(ROUTES.USER_LOGIN),
         })
     }
 
@@ -67,7 +68,7 @@ export default function UserPortalRegisterPage() {
                 <div className="hidden lg:block">
                     <button
                         type="button"
-                        onClick={() => navigate('/register')}
+                        onClick={() => navigate(ROUTES.USER_REGISTER)}
                         className="flex items-center gap-3 rounded-3xl border border-white/70 bg-white/85 px-4 py-3 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5"
                     >
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6A6DE6] to-[#8A8DF7] text-white shadow-lg">
@@ -202,7 +203,7 @@ export default function UserPortalRegisterPage() {
 
                         <div className="mt-6 text-center text-sm text-muted-foreground">
                             {t('portalAuth.hasAccount')}
-                            <Link to="/login" className="ml-2 font-medium text-primary hover:underline">
+                            <Link to={ROUTES.USER_LOGIN} className="ml-2 font-medium text-primary hover:underline">
                                 {t('portalAuth.toLogin')}
                             </Link>
                         </div>
