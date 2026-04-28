@@ -15,3 +15,4 @@
 ## Project Notes
 
 - User wallet and prepaid billing design is documented in `docs/user-wallet-mvp.md`.
+- Public-facing page design must follow the design system documented in `design.md`. Before designing or redesigning UI pages, read `design.md` and apply its typography, color, spacing, button, card, shadow, and layout rules unless the user explicitly requests a different style.
