@@ -39,7 +39,10 @@ export const useUserPortalLogin = () => {
     const location = useLocation()
     const login = useUserPortalAuthStore((state) => state.login)
 
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.USER_DASHBOARD
+    const fromPath = (location.state as { from?: { pathname: string } })?.from?.pathname
+    const from = fromPath?.startsWith(ROUTES.USER_DASHBOARD)
+        ? fromPath
+        : ROUTES.USER_DASHBOARD
 
     return useMutation({
         mutationFn: (data: UserPortalLoginRequest) => userPortalApi.login(data),
@@ -50,7 +53,7 @@ export const useUserPortalLogin = () => {
                 user: response.user,
             })
             toast.success('登录成功')
-            navigate(from, { replace: true })
+            navigate(from, { replace: true, state: null })
         },
         onError: (error: unknown) => {
             const message = error instanceof Error ? error.message : '登录失败'

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,9 +16,8 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
-import { LanguageSelector } from '@/components/common/LanguageSelector'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { useUserPortalLogin } from '@/feature/user-portal/hooks'
+import { UserPortalMarketingHeader } from '@/feature/user-portal/components/UserPortalMarketingHeader'
 import { ROUTES } from '@/routes/constants'
 
 interface UserPortalLoginForm {
@@ -29,7 +28,6 @@ interface UserPortalLoginForm {
 export default function UserPortalLoginPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string) => string
-    const navigate = useNavigate()
     const [loginType, setLoginType] = useState<'email' | 'phone'>('email')
     const loginMutation = useUserPortalLogin()
 
@@ -55,31 +53,10 @@ export default function UserPortalLoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.16),_transparent_30%),linear-gradient(180deg,_#f8faff_0%,_#eef2ff_100%)] px-4 py-10 dark:bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.2),_transparent_26%),linear-gradient(180deg,_#0f172a_0%,_#09111f_100%)]">
-            <div className="mx-auto flex max-w-6xl items-start justify-between gap-6">
-                <div className="hidden lg:block">
-                    <button
-                        type="button"
-                        onClick={() => navigate(ROUTES.USER_LOGIN)}
-                        className="flex items-center gap-3 rounded-3xl border border-white/70 bg-white/85 px-4 py-3 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5"
-                    >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6A6DE6] to-[#8A8DF7] text-white shadow-lg">
-                            <CreditCard className="h-6 w-6" />
-                        </div>
-                        <div className="text-left">
-                            <div className="text-sm text-muted-foreground">AI Proxy</div>
-                            <div className="text-lg font-semibold tracking-tight">{t('portalAuth.title')}</div>
-                        </div>
-                    </button>
-                </div>
+        <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.16),_transparent_30%),linear-gradient(180deg,_#f8faff_0%,_#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.2),_transparent_26%),linear-gradient(180deg,_#0f172a_0%,_#09111f_100%)]">
+            <UserPortalMarketingHeader />
 
-                <div className="flex items-center gap-3">
-                    <ThemeToggle />
-                    <LanguageSelector variant="minimal" />
-                </div>
-            </div>
-
-            <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:py-14">
                 <div className="hidden lg:flex flex-col justify-center rounded-[32px] border border-white/60 bg-white/55 p-10 shadow-[0_32px_64px_-48px_rgba(15,23,42,0.4)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
                     <div className="max-w-xl space-y-6">
                         <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">

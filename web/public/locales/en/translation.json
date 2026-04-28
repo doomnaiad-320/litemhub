@@ -376,6 +376,9 @@
       "updateDescription": "Update the model information",
       "modelName": "Model Name",
       "modelNamePlaceholder": "Enter model name",
+      "description": "Model Introduction",
+      "descriptionPlaceholder": "Enter the introduction shown on the public model detail page",
+      "descriptionDescription": "Displayed on the public model detail page instead of the generated default introduction.",
       "ownerPlaceholder": "Enter owner, optional",
       "ownerDescription": "Used only for display and search filtering. It can be empty and can contain any characters.",
       "modelType": "Model Type",
@@ -1607,6 +1610,12 @@
       "context": "Context window",
       "input": "Max input tokens",
       "output": "Max output tokens"
+    },
+    "sidebar": {
+      "specifications": "Model specifications",
+      "data": "Model data",
+      "capabilities": "Capabilities",
+      "supportedApis": "Supported APIs"
     },
     "pricingEyebrow": "Pricing",
     "pricingTitle": "Public API pricing",

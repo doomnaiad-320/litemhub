@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { CreditCard, ExternalLink, ReceiptText, Wallet } from 'lucide-react'
+import { CreditCard, ExternalLink } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
@@ -10,16 +10,9 @@ import {
 } from '@tanstack/react-table'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
@@ -63,6 +56,7 @@ export default function UserPortalDashboardPage() {
     const walletLogs = walletLogData?.wallet_logs || []
     const walletLogTotal = walletLogData?.total || 0
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
+    const totalBalance = (wallet?.available_balance || 0) + (wallet?.frozen_balance || 0)
 
     useEffect(() => {
         const payment = searchParams.get('payment')
@@ -136,81 +130,75 @@ export default function UserPortalDashboardPage() {
         getCoreRowModel: getCoreRowModel(),
     })
 
+    const metricItems = wallet
+        ? [
+            { label: t('portal.dashboard.available'), value: formatMoney(wallet.available_balance) },
+            { label: t('portal.dashboard.frozen'), value: formatMoney(wallet.frozen_balance) },
+            { label: t('portal.dashboard.total'), value: formatMoney(totalBalance) },
+            { label: t('portal.dashboard.historicalConsumed'), value: formatMoney(wallet.historical_consumed) },
+        ]
+        : []
+
     return (
-        <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
-                <div className="space-y-2">
-                    <div className="text-sm text-primary">{t('portal.dashboard.welcome')}</div>
-                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.dashboard.title')}</h1>
-                    <p className="max-w-2xl text-muted-foreground">
-                        {t('portal.dashboard.description')}
-                    </p>
-                    <div className="inline-flex rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-                        {t('portal.dashboard.currentAccount')}: {account}
+        <div className="font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
+            <Card className="overflow-hidden rounded-[24px] border-0 bg-white shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10">
+                <CardHeader className="border-b border-[#f2f3f5] p-5 dark:border-white/10 sm:p-6">
+                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                        <div>
+                            <div className="text-sm font-medium text-[#1456f0] dark:text-[#60a5fa]">
+                                {t('portal.dashboard.welcome')}
+                            </div>
+                            <h1 className="mt-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white sm:text-[31px]">
+                                {t('portal.dashboard.title')}
+                            </h1>
+                            <p className="mt-1 max-w-2xl text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
+                                {t('portal.dashboard.description')}
+                            </p>
+                        </div>
+                        <div className="inline-flex max-w-full rounded-full bg-[#f7f7f7] px-3 py-1.5 text-xs font-medium text-[#45515e] ring-1 ring-[#f2f3f5] dark:bg-white/10 dark:text-white/70 dark:ring-white/10">
+                            <span className="shrink-0">{t('portal.dashboard.currentAccount')}:</span>
+                            <span className="ml-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif]">{account}</span>
+                        </div>
                     </div>
-                </div>
-            </section>
 
-            <section className="grid gap-4 xl:grid-cols-3">
-                {isLoading || !wallet ? (
-                    <>
-                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
-                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
-                        <Skeleton className="h-40 rounded-[24px] sm:h-48 sm:rounded-[28px]" />
-                    </>
-                ) : (
-                    <>
-                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
-                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Wallet className="h-4 w-4 text-primary" />
-                                    {t('portal.dashboard.balanceTitle')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
-                                <div className="break-all text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    {formatMoney(wallet.available_balance)}
+                    <div className="mt-5 grid gap-x-6 gap-y-3 border-t border-[#f2f3f5] pt-4 dark:border-white/10 sm:grid-cols-2 lg:grid-cols-4">
+                        {isLoading || !wallet ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                                <Skeleton key={index} className="h-10 rounded-[12px]" />
+                            ))
+                        ) : (
+                            metricItems.map((item) => (
+                                <div key={item.label} className="min-w-0">
+                                    <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
+                                    <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#18181b] dark:text-white">
+                                        {item.value}
+                                    </div>
                                 </div>
-                                <div className="rounded-2xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
-                                    {t('portal.dashboard.frozenHint', {
-                                        amount: formatMoney(wallet.frozen_balance),
-                                    })}
-                                </div>
-                            </CardContent>
-                        </Card>
+                            ))
+                        )}
+                    </div>
+                </CardHeader>
 
-                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
-                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <ReceiptText className="h-4 w-4 text-primary" />
-                                    {t('portal.dashboard.historicalConsumed')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
-                                <div className="break-all text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    {formatMoney(wallet.historical_consumed)}
-                                </div>
-                                <div className="rounded-2xl bg-muted/70 px-4 py-3 text-sm text-muted-foreground">
-                                    {t('portal.dashboard.historicalHint')}
-                                </div>
-                            </CardContent>
-                        </Card>
+                <CardContent className="p-0">
+                    <section className="border-b border-[#f2f3f5] p-5 dark:border-white/10 sm:p-6">
+                        <div className="flex items-center gap-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
+                            <CreditCard className="h-4 w-4 text-[#1456f0] dark:text-[#60a5fa]" />
+                            {t('portal.dashboard.rechargeTitle')}
+                        </div>
+                        <p className="mt-2 max-w-3xl text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
+                            {t('portal.dashboard.rechargeDescription')}
+                        </p>
 
-                        <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
-                            <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <CreditCard className="h-4 w-4 text-primary" />
-                                    {t('portal.dashboard.rechargeTitle')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-3">
-                                <p className="text-sm leading-6 text-muted-foreground sm:min-h-16">
-                                    {t('portal.dashboard.rechargeDescription')}
-                                </p>
+                        {isLoading || !wallet ? (
+                            <Skeleton className="mt-6 h-24 rounded-[16px]" />
+                        ) : (
+                            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(260px,1fr)_280px_180px] lg:items-end">
                                 <div className="space-y-2">
-                                    <Label htmlFor="recharge-amount">{t('portal.dashboard.rechargeAmount')}</Label>
+                                    <Label htmlFor="recharge-amount" className="text-xs font-semibold text-[#5f5f5f] dark:text-white/60">
+                                        {t('portal.dashboard.rechargeAmount')}
+                                    </Label>
                                     <div className="relative">
-                                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground">$</span>
+                                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#8e8e93]">$</span>
                                         <Input
                                             id="recharge-amount"
                                             type="number"
@@ -218,44 +206,62 @@ export default function UserPortalDashboardPage() {
                                             step="0.01"
                                             value={rechargeAmount}
                                             onChange={(event) => setRechargeAmount(event.target.value)}
-                                            className="h-11 rounded-2xl pl-7 font-mono"
+                                            className="h-14 rounded-[14px] border-[#e5e7eb] bg-white pl-9 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold shadow-none focus-visible:ring-[#1456f0] dark:border-white/10 dark:bg-white/10"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="payment-type">{t('portal.dashboard.paymentMethod')}</Label>
-                                    <Select value={paymentType} onValueChange={setPaymentType}>
-                                        <SelectTrigger id="payment-type" className="h-11 rounded-2xl">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="alipay">{t('portal.dashboard.alipay')}</SelectItem>
-                                            <SelectItem value="wxpay">{t('portal.dashboard.wxpay')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Label className="text-xs font-semibold text-[#5f5f5f] dark:text-white/60">
+                                        {t('portal.dashboard.paymentMethod')}
+                                    </Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { value: 'alipay', label: t('portal.dashboard.alipay') },
+                                            { value: 'wxpay', label: t('portal.dashboard.wxpay') },
+                                        ].map((item) => (
+                                            <button
+                                                key={item.value}
+                                                type="button"
+                                                onClick={() => setPaymentType(item.value)}
+                                                className={
+                                                    paymentType === item.value
+                                                        ? 'h-14 rounded-[14px] border border-[#18181b] bg-white text-sm font-semibold text-[#18181b] dark:border-white dark:bg-white/10 dark:text-white'
+                                                        : 'h-14 rounded-[14px] border border-[#e5e7eb] bg-white text-sm font-semibold text-[#45515e] transition hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:border-white dark:hover:text-white'
+                                                }
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                                 <Button
                                     disabled={rechargeMutation.isPending}
                                     onClick={startRecharge}
-                                    className="w-full rounded-2xl"
+                                    className="h-14 rounded-[14px] bg-[#181e25] text-white shadow-none hover:bg-[#111827] dark:bg-white dark:text-[#181e25]"
                                 >
                                     {rechargeMutation.isPending
                                         ? t('portal.dashboard.recharging')
                                         : t('portal.dashboard.rechargeNow')}
                                     <ExternalLink className="h-4 w-4" />
                                 </Button>
-                            </CardContent>
-                        </Card>
-                    </>
-                )}
-            </section>
+                            </div>
+                        )}
+                    </section>
+                </CardContent>
 
-            <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
-                <CardHeader className="p-4 sm:p-6">
-                    <CardTitle>{t('portal.logs.rechargeList')}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                    <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+                <div className="border-t border-[#f2f3f5] dark:border-white/10">
+                <div className="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+                    <div>
+                        <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
+                            {t('portal.logs.rechargeList')}
+                        </h2>
+                    </div>
+                    <div className="inline-flex w-fit rounded-full bg-[#f7f7f7] px-3 py-1 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-semibold text-[#45515e] ring-1 ring-[#f2f3f5] dark:bg-white/10 dark:text-white/70 dark:ring-white/10">
+                        {walletLogTotal}
+                    </div>
+                </div>
+                <div className="px-0 pb-0">
+                    <div className="px-4 pb-3 sm:px-6 sm:pb-4">
                         <div className="space-y-3 md:hidden">
                             {isWalletLogLoading ? (
                                 Array.from({ length: 3 }).map((_, index) => (
@@ -263,42 +269,42 @@ export default function UserPortalDashboardPage() {
                                 ))
                             ) : walletLogs.length > 0 ? (
                                 walletLogs.map((log) => (
-                                    <div key={log.id} className="rounded-2xl border border-border/60 bg-background/75 p-4">
+                                    <div key={log.id} className="border-b border-[#f2f3f5] py-4 last:border-b-0 dark:border-white/10">
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
-                                                <div className="text-xs text-muted-foreground">{t('portal.logs.amount')}</div>
-                                                <div className="font-mono text-lg font-semibold">{formatMoney(log.amount)}</div>
+                                                <div className="text-xs text-[#8e8e93]">{t('portal.logs.amount')}</div>
+                                                <div className="font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">{formatMoney(log.amount)}</div>
                                             </div>
-                                            <div className="text-right text-xs text-muted-foreground">
+                                            <div className="text-right text-xs text-[#8e8e93]">
                                                 {formatDateTime(log.created_at)}
                                             </div>
                                         </div>
-                                        <div className="mt-3 rounded-xl bg-muted/60 px-3 py-2 font-mono text-xs text-muted-foreground">
+                                        <div className="mt-3 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-medium text-[#45515e] dark:text-white/70">
                                             {formatMoney(log.balance_before)} → {formatMoney(log.balance_after)}
                                         </div>
                                         {log.remark && (
-                                            <div className="mt-3 break-words text-sm text-muted-foreground">{log.remark}</div>
+                                            <div className="mt-3 break-words text-sm leading-[1.7] text-[#45515e] dark:text-white/70">{log.remark}</div>
                                         )}
                                     </div>
                                 ))
                             ) : (
-                                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center text-sm text-muted-foreground">
+                                <div className="border border-dashed border-[#e5e7eb] p-6 text-center text-sm text-[#8e8e93] dark:border-white/10">
                                     {t('table.noData')}
                                 </div>
                             )}
                         </div>
                         <div className="hidden md:block">
-                        <DataTable
-                            table={walletLogTable}
-                            columns={walletLogColumns}
-                            isLoading={isWalletLogLoading}
-                            loadingStyle="skeleton"
-                            fixedHeader={true}
-                            showScrollShadows={false}
-                        />
+                            <DataTable
+                                table={walletLogTable}
+                                columns={walletLogColumns}
+                                isLoading={isWalletLogLoading}
+                                loadingStyle="skeleton"
+                                fixedHeader={true}
+                                showScrollShadows={false}
+                            />
                         </div>
                     </div>
-                    <div className="border-t border-border/60 px-3">
+                    <div className="border-t border-[#f2f3f5] px-3 dark:border-white/10">
                         <ServerPagination
                             page={walletLogPage}
                             pageSize={walletLogPageSize}
@@ -310,7 +316,8 @@ export default function UserPortalDashboardPage() {
                             }}
                         />
                     </div>
-                </CardContent>
+                </div>
+                </div>
             </Card>
         </div>
     )

@@ -71,6 +71,7 @@ const KNOWN_PRICE_KEYS = new Set([
 
 const MANAGED_MODEL_KEYS = new Set([
     'config',
+    'description',
     'owner',
     'type',
     'rpm',
@@ -139,6 +140,7 @@ interface ModelFormProps {
     baseModelConfig?: ModelConfig | null
     defaultValues?: {
         model: string
+        description?: string
         config?: ModelConfig['config']
         owner?: string
         type: number
@@ -212,6 +214,7 @@ export function ModelForm({
         mode: 'onChange', // 启用实时验证
         defaultValues: {
             model: defaultValues.model || '',
+            description: defaultValues.description || '',
             config: {
                 max_input_tokens: defaultValues.config?.max_input_tokens,
                 max_output_tokens: defaultValues.config?.max_output_tokens,
@@ -710,6 +713,7 @@ export function ModelForm({
         // Prepare data for API - 如果没有启用的插件，则不传递 plugin 字段
         const formData: Omit<ModelCreateRequest, 'model'> = {
             ...preservedTopLevelFields,
+            ...(data.description?.trim() && { description: data.description.trim() }),
             ...(cleanedConfig && { config: cleanedConfig }),
             owner: data.owner ?? '',
             type: Number(data.type),
@@ -734,6 +738,7 @@ export function ModelForm({
             // For create mode, include the model name
             createModel({
                 model: data.model,
+                ...(data.description?.trim() && { description: data.description.trim() }),
                 ...(cleanedConfig && { config: cleanedConfig }),
                 owner: data.owner ?? '',
                 type: Number(data.type),
@@ -823,6 +828,26 @@ export function ModelForm({
                                         {t("model.dialog.modelNameUpdateDisabled")}
                                     </p>
                                 )}
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.description")}</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder={t("model.dialog.descriptionPlaceholder")}
+                                        className="min-h-24 resize-y"
+                                        {...field}
+                                        value={field.value ?? ''}
+                                    />
+                                </FormControl>
+                                <FormDescription>{t("model.dialog.descriptionDescription")}</FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -7,7 +7,6 @@ import {
   BrainCircuit,
   CheckCircle2,
   Copy,
-  ExternalLink,
   KeyRound,
   Loader2,
 } from "lucide-react";
@@ -29,13 +28,25 @@ import {
   formatPriceValue,
   formatTokenPriceValue,
   getPublicModelDetailPath,
-  hasPriceData,
 } from "@/lib/model-catalog";
 
 interface PriceRow {
   label: string;
   value: string;
 }
+
+const uniqueTags = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const getSupportedEndpoints = (model?: PublicModel) => {
+  const provider = model?.provider?.toLowerCase() || "";
+  const modelName = model?.model?.toLowerCase() || "";
+
+  if (provider.includes("anthropic") || modelName.startsWith("claude")) {
+    return ["Anthropic"];
+  }
+
+  return ["OpenAI"];
+};
 
 const decodeModelPath = (value?: string) => {
   if (!value) {
@@ -223,6 +234,14 @@ export default function PublicModelDetailPage() {
   const apiBase = typeof window === "undefined" ? "" : window.location.origin;
 
   const priceRows = useMemo(() => buildPriceRows(model, t), [model, t, i18n.resolvedLanguage]);
+  const capabilityTags = useMemo(
+    () =>
+      uniqueTags(model?.capabilities || []).map((capability) =>
+        t(`portal.models.capability.${capability}`),
+      ),
+    [model?.capabilities, t, i18n.resolvedLanguage],
+  );
+  const supportedEndpoints = useMemo(() => getSupportedEndpoints(model), [model]);
 
   const relatedModels = useMemo(() => {
     if (!model) {
@@ -424,14 +443,11 @@ const response = await client.chat.completions.create({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+              <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
                 <div className="min-w-0">
                   <h1 className="max-w-5xl break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-5xl font-medium leading-[1.1] tracking-tight text-[#222222] dark:text-white md:text-7xl">
                     {model.model}
                   </h1>
-                  <p className="mt-6 max-w-3xl text-lg font-normal leading-[1.5] text-[#45515e] dark:text-white/70 md:text-xl">
-                    {model.description || t("publicModels.defaultDescription")}
-                  </p>
                   <div className="mt-6 flex flex-wrap gap-2">
                     <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
                       {model.provider}
@@ -446,25 +462,58 @@ const response = await client.chat.completions.create({
                       </Badge>
                     ))}
                   </div>
+                  <p className="mt-5 max-w-3xl whitespace-pre-wrap font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-normal leading-[1.5] text-[#45515e] dark:text-white/70 md:text-lg">
+                    {model.description || t("publicModels.defaultDescription")}
+                  </p>
                 </div>
 
-                <div className="space-y-3">
-                  <Link to={signUpTarget}>
-                    <Button size="lg" className="h-12 w-full rounded-lg bg-[#181e25] px-6 text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
-                      {t("publicModelDetail.startUsing")}
-                      <KeyRound className="h-4 w-4" />
+                <div className="rounded-[24px] bg-white/86 p-5 shadow-[rgba(44,30,116,0.16)_0px_0px_15px] ring-1 ring-[#f2f3f5] backdrop-blur-xl dark:bg-white/8 dark:ring-white/10">
+                  <div className="grid gap-3">
+                    {[
+                      {
+                        label: t("publicModelDetail.metrics.context"),
+                        value: formatCompactTokenCount(model.context_length),
+                      },
+                      {
+                        label: t("publicModelDetail.metrics.input"),
+                        value: getInputPrice(model),
+                      },
+                      {
+                        label: t("publicModelDetail.metrics.output"),
+                        value: getOutputPrice(model),
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-[16px] border border-[#f2f3f5] bg-white px-4 py-3 dark:border-white/10 dark:bg-white/5"
+                      >
+                        <div className="text-xs font-medium uppercase tracking-[0.08em] text-[#8e8e93]">
+                          {item.label}
+                        </div>
+                        <div className="mt-1 break-words font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold text-[#18181b] dark:text-white">
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    <Link to={signUpTarget}>
+                      <Button size="lg" className="h-12 w-full rounded-lg bg-[#181e25] px-6 text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
+                        {t("publicModelDetail.startUsing")}
+                        <KeyRound className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="outline"
+                      className="h-12 w-full rounded-lg border-[#e5e7eb] bg-[#f0f0f0] px-6 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:border-white/10 dark:bg-white/10 dark:text-white"
+                      onClick={() => copyText(model.model, "publicModels.copied")}
+                    >
+                      {t("publicModelDetail.copyModel")}
+                      <Copy className="h-4 w-4" />
                     </Button>
-                  </Link>
-                  <Button
-                    type="button"
-                    size="lg"
-                    variant="outline"
-                    className="h-12 w-full rounded-lg border-[#e5e7eb] bg-[#f0f0f0] px-6 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:border-white/10 dark:bg-white/10 dark:text-white"
-                    onClick={() => copyText(model.model, "publicModels.copied")}
-                  >
-                    {t("publicModelDetail.copyModel")}
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -474,95 +523,7 @@ const response = await client.chat.completions.create({
         {model && (
           <section className="mx-auto grid max-w-7xl gap-16 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:py-20">
             <div className="min-w-0 space-y-20">
-              <div className="grid gap-4 md:grid-cols-3">
-                {[
-                  {
-                    label: t("publicModelDetail.metrics.context"),
-                    value: formatCompactTokenCount(model.context_length),
-                  },
-                  {
-                    label: t("publicModelDetail.metrics.input"),
-                    value: getInputPrice(model),
-                  },
-                  {
-                    label: t("publicModelDetail.metrics.output"),
-                    value: getOutputPrice(model),
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[20px] bg-white p-6 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10"
-                  >
-                    <div className="text-sm font-medium text-[#8e8e93]">{item.label}</div>
-                    <div className="mt-3 break-words font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold text-[#18181b] dark:text-white">
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <section aria-labelledby="capabilities-title">
-                <h2 id="capabilities-title" className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
-                  {t("publicModelDetail.capabilitiesTitle")}
-                </h2>
-                <div className="mt-6 grid gap-5 md:grid-cols-2">
-                  {(model.capabilities || []).map((capability) => (
-                    <div
-                      key={capability}
-                      className="rounded-[20px] bg-white p-6 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10"
-                    >
-                      <div className="flex items-center gap-2 font-['Poppins',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-medium text-[#18181b] dark:text-white">
-                        <CheckCircle2 className="h-4 w-4 text-[#1456f0]" />
-                        {t(`portal.models.capability.${capability}`)}
-                      </div>
-                      <p className="mt-3 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
-                        {t("publicModels.defaultDescription")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section aria-labelledby="pricing-title">
-                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-                  <div>
-                    <h2 id="pricing-title" className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
-                      {t("publicModelDetail.pricingTitle")}
-                    </h2>
-                    <p className="mt-3 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
-                      {t("publicModelDetail.pricingUnit", {
-                        unit: DISPLAY_TOKEN_PRICE_UNIT_LABEL,
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {!hasPriceData({
-                  price: model.price,
-                  imagePrices: model.image_prices,
-                  imageQualityPrices: model.image_quality_prices,
-                }) ? (
-                  <div className="mt-6 rounded-[16px] bg-white p-5 text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10">
-                    {t("publicModelDetail.pricingEmpty")}
-                  </div>
-                ) : (
-                  <div className="mt-6 overflow-hidden rounded-[20px] bg-white shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10">
-                    {priceRows.map((row) => (
-                      <div
-                        key={`${row.label}-${row.value}`}
-                        className="grid gap-2 border-b border-[#f2f3f5] px-6 py-4 last:border-b-0 sm:grid-cols-[1fr_auto] dark:border-white/10"
-                      >
-                        <div className="text-sm font-medium text-[#45515e] dark:text-white/70">
-                          {row.label}
-                        </div>
-                        <div className="font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-semibold text-[#18181b] dark:text-white">{row.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section aria-labelledby="api-title">
+              <section>
                 <h2 id="api-title" className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
                   {t("publicModelDetail.apiTitle")}
                 </h2>
@@ -594,7 +555,7 @@ const response = await client.chat.completions.create({
                 </Tabs>
               </section>
 
-              <section aria-labelledby="related-title">
+              <section>
                 <h2 id="related-title" className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
                   {t("publicModelDetail.relatedTitle")}
                 </h2>
@@ -626,63 +587,78 @@ const response = await client.chat.completions.create({
             </div>
 
             <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-[24px] bg-white p-6 shadow-[rgba(44,30,116,0.16)_0px_0px_15px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10">
-                <div className="flex items-center gap-2">
-                  <ServerIcon />
-                  <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">Model specifications</h2>
+              <div className="rounded-[24px] bg-white px-5 py-6 shadow-[rgba(44,30,116,0.16)_0px_0px_15px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10">
+                <div className="flex items-center gap-5">
+                  <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#18181b] underline decoration-[#18181b] underline-offset-4 dark:text-white dark:decoration-white">
+                    {t("publicModelDetail.sidebar.specifications")}
+                  </h2>
+                  <span className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-medium text-[#8e8e93]">
+                    {t("publicModelDetail.sidebar.data")}
+                  </span>
                 </div>
-                <dl className="mt-5 space-y-4 text-sm">
-                  {[
-                    {
-                      label: t("publicModelDetail.modelId"),
-                      value: model.model,
-                      copy: true,
-                    },
-                    {
-                      label: t("publicModelDetail.metrics.provider"),
-                      value: model.provider,
-                    },
-                    {
-                      label: t("publicModelDetail.limits.context"),
-                      value: formatTokenCount(model.context_length),
-                    },
-                    {
-                      label: t("publicModelDetail.limits.input"),
-                      value: formatTokenCount(model.max_input_tokens),
-                    },
-                    {
-                      label: t("publicModelDetail.limits.output"),
-                      value: formatTokenCount(model.max_output_tokens),
-                    },
-                  ].map((item) => (
-                    <div key={item.label}>
-                      <dt className="text-[#8e8e93]">{item.label}</dt>
-                      <dd className="mt-1 flex items-start gap-2 font-medium">
-                        <span className="min-w-0 break-words font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm text-[#18181b] dark:text-white">
-                          {item.value}
-                        </span>
-                        {item.copy && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6 shrink-0 rounded-md"
-                            aria-label={t("publicModels.copyModelId")}
-                            onClick={() => copyText(model.model, "publicModels.copied")}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </dd>
+
+                <div className="mt-5 divide-y divide-[#f2f3f5] dark:divide-white/10">
+                  <SpecRow label={t("publicModelDetail.metrics.provider")}>
+                    <div className="flex items-center gap-3">
+                      <ServerIcon />
+                      <span className="text-sm font-medium text-[#18181b] dark:text-white">
+                        {model.provider || "-"}
+                      </span>
                     </div>
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.sidebar.capabilities")}>
+                    <SpecTags values={capabilityTags} />
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.sidebar.supportedApis")}>
+                    <div className="flex flex-wrap gap-2">
+                      {supportedEndpoints.map((endpoint) => (
+                        <span
+                          key={endpoint}
+                          className="rounded-full bg-[#edf3ff] px-3 py-1 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-semibold leading-[1.5] text-[#1456f0] ring-1 ring-[#dbe7ff] dark:bg-[#1456f0]/15 dark:text-[#60a5fa] dark:ring-[#60a5fa]/20"
+                        >
+                          {endpoint}
+                        </span>
+                      ))}
+                    </div>
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.limits.context")}>
+                    <SpecValue value={formatTokenCount(model.context_length)} />
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.limits.input")}>
+                    <SpecValue value={formatTokenCount(model.max_input_tokens)} />
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.limits.output")}>
+                    <SpecValue value={formatTokenCount(model.max_output_tokens)} />
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.metrics.input")}>
+                    <SpecValue value={getInputPrice(model)} />
+                  </SpecRow>
+
+                  <SpecRow label={t("publicModelDetail.metrics.output")}>
+                    <SpecValue value={getOutputPrice(model)} />
+                  </SpecRow>
+
+                </div>
+
+                <div className="mt-5 grid gap-2 border-t border-[#f2f3f5] pt-5 text-sm dark:border-white/10">
+                  {[
+                    { href: "#api-title", label: t("publicModelDetail.apiTitle") },
+                  ].map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="rounded-full px-3 py-2 text-[#45515e] transition hover:bg-black/[0.05] hover:text-[#18181b] dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+                    >
+                      {item.label}
+                    </a>
                   ))}
-                </dl>
-                <Link to={signUpTarget}>
-                  <Button className="mt-6 h-10 w-full rounded-lg bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
-                    {t("publicModelDetail.startUsing")}
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </Link>
+                </div>
               </div>
             </aside>
           </section>
@@ -698,6 +674,54 @@ const response = await client.chat.completions.create({
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function SpecRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-4 py-4 text-sm">
+      <div className="leading-[1.5] text-[#5f5f5f] dark:text-white/60">{label}</div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function SpecTags({
+  values,
+  fallback = "-",
+}: {
+  values: string[];
+  fallback?: string;
+}) {
+  if (values.length === 0) {
+    return <SpecValue value={fallback} />;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((value) => (
+        <span
+          key={value}
+          className="rounded-[5px] border border-[#e5e7eb] bg-[#f7f7f7] px-2 py-1 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-[10px] font-semibold uppercase leading-none tracking-[0.08em] text-[#18181b] dark:border-white/10 dark:bg-white/10 dark:text-white"
+        >
+          {value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SpecValue({ value }: { value: ReactNode }) {
+  return (
+    <div className="break-words font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-medium leading-[1.5] text-[#18181b] dark:text-white">
+      {value}
     </div>
   );
 }

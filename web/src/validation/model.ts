@@ -151,6 +151,7 @@ const modelConfigSchema = z.object({
 
 export const modelCreateSchema = z.object({
     model: z.string().min(1, 'Model name is required'),
+    description: z.string().optional(),
     config: modelConfigSchema,
     owner: z.string().optional(),
     type: z.number().min(0, 'Type is required'),

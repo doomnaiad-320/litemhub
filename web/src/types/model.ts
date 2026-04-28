@@ -60,6 +60,7 @@ export interface ModelConfig {
     created_at?: number
     updated_at?: number
     model: string
+    description?: string
     owner?: string
     image_batch_size?: number
     type: number
@@ -161,6 +162,7 @@ type SearchXNGSpec = {
 
 export interface ModelCreateRequest {
     model: string
+    description?: string
     config?: ModelConfigDetail
     owner?: string
     type: number

@@ -160,6 +160,7 @@ func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResp
 		Price:              publicModelPriceFromModelPrice(config.Price),
 		ImagePrices:        config.ImagePrices,
 		ImageQualityPrices: config.ImageQualityPrices,
+		Description:        strings.TrimSpace(config.Description),
 	}
 
 	if maxContextTokens, ok := config.MaxContextTokens(); ok {
@@ -178,7 +179,9 @@ func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResp
 		response.ImageQualityPrices = detail.ImageQualityPrices
 	}
 
-	response.Description = buildPublicModelDescription(response)
+	if response.Description == "" {
+		response.Description = buildPublicModelDescription(response)
+	}
 
 	return response
 }

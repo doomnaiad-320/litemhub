@@ -365,6 +365,9 @@
       "updateDescription": "更新模型信息",
       "modelName": "模型名称",
       "modelNamePlaceholder": "输入模型名称",
+      "description": "模型介绍",
+      "descriptionPlaceholder": "输入模型详情页展示的介绍文本",
+      "descriptionDescription": "会展示在公开模型详情页，用于替代自动生成的默认介绍。",
       "ownerPlaceholder": "输入所有者，可留空",
       "ownerDescription": "仅用于展示和搜索过滤，可为空且支持任意字符。",
       "modelType": "模型类型",
@@ -1595,6 +1598,12 @@
       "context": "上下文窗口",
       "input": "最大输入 Tokens",
       "output": "最大输出 Tokens"
+    },
+    "sidebar": {
+      "specifications": "模型规格",
+      "data": "模型数据",
+      "capabilities": "能力",
+      "supportedApis": "支持接口"
     },
     "pricingEyebrow": "Pricing",
     "pricingTitle": "公开 API 价格",
