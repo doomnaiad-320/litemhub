@@ -3,6 +3,7 @@ package router
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"io/fs"
@@ -23,6 +24,8 @@ const (
 	githubProjectInitialCountdown = 15
 	publicModelsTitle             = "AI Model Catalog | LiteMHub"
 	publicModelsDescription       = "Browse AI models, providers, capabilities, context windows, and API pricing available through the LiteMHub OpenAI-compatible API."
+	publicModelDetailTitle        = "%s API Pricing, Context, and Capabilities | LiteMHub"
+	publicModelDetailDescription  = "Explore %s on LiteMHub, including API pricing, context window, capabilities, and OpenAI-compatible request examples."
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
@@ -149,7 +152,8 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 }
 
 func tryServeIndexWithPublicModelsMeta(ctx *gin.Context, fs http.FileSystem) bool {
-	if ctx.Request.URL.Path != "/models" {
+	path := strings.TrimRight(ctx.Request.URL.Path, "/")
+	if path != "/models" && !strings.HasPrefix(path, "/models/") {
 		return false
 	}
 
@@ -164,30 +168,57 @@ func tryServeIndexWithPublicModelsMeta(ctx *gin.Context, fs http.FileSystem) boo
 		return false
 	}
 
-	content = bytes.ReplaceAll(
-		content,
-		[]byte("<title>AI Proxy</title>"),
-		[]byte("<title>"+publicModelsTitle+"</title>"),
-	)
-	content = bytes.ReplaceAll(
-		content,
-		[]byte(`content="AI Proxy"`),
-		[]byte(`content="`+publicModelsDescription+`"`),
-	)
-	content = bytes.ReplaceAll(
-		content,
-		[]byte(`<meta property="og:title" content="AI Proxy" />`),
-		[]byte(`<meta property="og:title" content="`+publicModelsTitle+`" />`),
-	)
-	content = bytes.ReplaceAll(
-		content,
-		[]byte(`<meta property="og:description" content="AI Proxy" />`),
-		[]byte(`<meta property="og:description" content="`+publicModelsDescription+`" />`),
-	)
+	title := publicModelsTitle
+	description := publicModelsDescription
+	if strings.HasPrefix(path, "/models/") {
+		modelName := publicModelNameFromPath(path)
+		title = fmt.Sprintf(publicModelDetailTitle, modelName)
+		description = fmt.Sprintf(publicModelDetailDescription, modelName)
+	}
+
+	content = replaceHTMLMeta(content, title, description)
 
 	ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
 
 	return true
+}
+
+func publicModelNameFromPath(path string) string {
+	modelName := strings.TrimPrefix(path, "/models/")
+	if decoded, err := url.PathUnescape(modelName); err == nil {
+		modelName = decoded
+	}
+	modelName = strings.Trim(modelName, "/")
+	if modelName == "" {
+		return "Model"
+	}
+
+	return html.EscapeString(modelName)
+}
+
+func replaceHTMLMeta(content []byte, title, description string) []byte {
+	content = bytes.ReplaceAll(
+		content,
+		[]byte("<title>AI Proxy</title>"),
+		[]byte("<title>"+title+"</title>"),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`<meta property="og:title" content="AI Proxy" />`),
+		[]byte(`<meta property="og:title" content="`+title+`" />`),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`<meta property="og:description" content="AI Proxy" />`),
+		[]byte(`<meta property="og:description" content="`+description+`" />`),
+	)
+	content = bytes.ReplaceAll(
+		content,
+		[]byte(`content="AI Proxy"`),
+		[]byte(`content="`+description+`"`),
+	)
+
+	return content
 }
 
 type staticFileFS interface {

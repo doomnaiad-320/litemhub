@@ -89,6 +89,30 @@ func TestSetStaticFileRouter_DisableWebRoot(t *testing.T) {
 				"Browse AI models, providers, capabilities",
 			)
 		})
+
+		convey.Convey("should inject public model detail SEO metadata into SPA fallback", func() {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/models/openai/gpt-4o-mini",
+				nil,
+			)
+
+			router.ServeHTTP(recorder, req)
+
+			convey.So(recorder.Code, convey.ShouldEqual, http.StatusOK)
+			convey.So(
+				recorder.Body.String(),
+				convey.ShouldContainSubstring,
+				"<title>openai/gpt-4o-mini API Pricing, Context, and Capabilities | LiteMHub</title>",
+			)
+			convey.So(
+				recorder.Body.String(),
+				convey.ShouldContainSubstring,
+				"Explore openai/gpt-4o-mini on LiteMHub",
+			)
+		})
 	})
 }
 

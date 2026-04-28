@@ -15,6 +15,7 @@ export const ROUTES = {
     USER_KEYS: "/dashboard/keys",
     USER_LOGS: "/dashboard/logs",
     PUBLIC_MODELS: "/models",
+    PUBLIC_MODEL_DETAIL: "/models/*",
     KEY: "/key",
     CHANNEL: "/channel",
     MODEL: "/model",

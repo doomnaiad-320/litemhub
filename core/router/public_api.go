@@ -11,6 +11,6 @@ func SetPublicAPIRouter(router *gin.Engine) {
 	modelsRoute := publicAPI.Group("/models")
 	{
 		modelsRoute.GET("", controller.GetPublicModels)
-		modelsRoute.GET("/:model", controller.GetPublicModel)
+		modelsRoute.GET("/*model", controller.GetPublicModel)
 	}
 }

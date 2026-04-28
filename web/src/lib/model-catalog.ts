@@ -244,3 +244,9 @@ export const hasPriceData = (source?: CatalogPriceSource) => {
     ).length > 0
   );
 };
+
+export const getPublicModelDetailPath = (model: string) =>
+  `/models/${model
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/")}`;

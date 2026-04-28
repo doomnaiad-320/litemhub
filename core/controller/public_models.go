@@ -62,7 +62,7 @@ func GetPublicModels(c *gin.Context) {
 }
 
 func GetPublicModel(c *gin.Context) {
-	modelName := strings.TrimSpace(c.Param("model"))
+	modelName := strings.Trim(strings.TrimSpace(c.Param("model")), "/")
 	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "model is required")
 		return

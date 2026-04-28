@@ -1487,6 +1487,7 @@
     "copied": "模型 ID 已复制",
     "copyFailed": "复制失败",
     "copyModelId": "复制模型 ID",
+    "viewDetails": "详情",
     "startUsing": "开始使用",
     "empty": "没有找到匹配模型，请调整搜索或筛选条件。",
     "loadError": "公开模型目录加载失败，请稍后重试。",
@@ -1520,6 +1521,65 @@
       "title": "兼容 OpenAI SDK 的调用方式。",
       "description": "前端公开目录负责发现模型；注册后创建 Key，即可使用同一个接口调用不同供应商的模型。"
     }
+  },
+  "publicModelDetail": {
+    "seo": {
+      "title": "{{model}} API 价格、上下文和能力 | LiteMHub",
+      "description": "查看 LiteMHub 上 {{provider}} 的 {{model}}，包含 API 价格、上下文窗口、模型能力和 OpenAI-compatible 调用示例。"
+    },
+    "fallbackModel": "模型",
+    "fallbackProvider": "AI 供应商",
+    "badge": "模型 API 详情",
+    "title": "{{model}} API",
+    "backToCatalog": "返回模型目录",
+    "startUsing": "使用该模型",
+    "copyModel": "复制模型 ID",
+    "copyExample": "复制 API 示例",
+    "exampleCopied": "API 示例已复制",
+    "modelId": "模型 ID",
+    "notFoundTitle": "模型不存在",
+    "notFoundDescription": "{{model}} 未在公开模型目录中开放。",
+    "metrics": {
+      "provider": "供应商",
+      "context": "上下文",
+      "input": "输入价格",
+      "output": "输出价格"
+    },
+    "overviewEyebrow": "Overview",
+    "overviewTitle": "模型限制和能力",
+    "capabilitiesTitle": "模型能力",
+    "limits": {
+      "context": "上下文窗口",
+      "input": "最大输入 Tokens",
+      "output": "最大输出 Tokens"
+    },
+    "pricingEyebrow": "Pricing",
+    "pricingTitle": "公开 API 价格",
+    "pricingUnit": "Token 价格统一按 {{unit}} 展示；图片和请求价格保留原始单位。",
+    "pricingEmpty": "该模型暂未发布价格。",
+    "pricing": {
+      "input": "文本输入",
+      "output": "文本输出",
+      "request": "每次请求",
+      "cached": "缓存输入",
+      "cacheCreation": "缓存创建",
+      "imageInput": "图片输入",
+      "imageOutput": "图片输出",
+      "audioInput": "音频输入",
+      "thinking": "推理输出",
+      "webSearch": "联网搜索",
+      "image": "图片"
+    },
+    "apiEyebrow": "API",
+    "apiTitle": "OpenAI-compatible 请求",
+    "quickStartTitle": "快速开始",
+    "quickStart": {
+      "register": "注册账号或进入控制台。",
+      "key": "在用户后台创建 API Key。",
+      "call": "通过 OpenAI-compatible 端点传入该模型 ID。"
+    },
+    "relatedTitle": "相关模型",
+    "relatedEmpty": "暂无相关公开模型。"
   },
   "consumptionRanking": {
     "title": "消耗排行",

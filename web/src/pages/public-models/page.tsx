@@ -48,6 +48,7 @@ import {
   DISPLAY_TOKEN_PRICE_UNIT_LABEL,
   buildImagePriceEntries,
   formatTokenPriceValue,
+  getPublicModelDetailPath,
   sortCapabilities,
 } from "@/lib/model-catalog";
 
@@ -167,7 +168,7 @@ export default function PublicModelsPage() {
         position: index + 1,
         name: model.model,
         description: model.description || `${model.model} API`,
-        url: `${window.location.origin}${ROUTES.PUBLIC_MODELS}#${encodeURIComponent(model.model)}`,
+        url: `${window.location.origin}${getPublicModelDetailPath(model.model)}`,
       })),
     });
   }, [models, t, i18n.resolvedLanguage]);
@@ -533,9 +534,12 @@ export default function PublicModelsPage() {
                     <TableRow key={model.model} id={encodeURIComponent(model.model)}>
                       <TableCell className="max-w-[320px] px-4 py-4">
                         <div className="space-y-1">
-                          <div className="break-words font-medium text-slate-950 dark:text-white">
+                          <Link
+                            to={getPublicModelDetailPath(model.model)}
+                            className="break-words font-medium text-slate-950 transition hover:text-sky-700 dark:text-white dark:hover:text-sky-300"
+                          >
                             {model.model}
-                          </div>
+                          </Link>
                           <div className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
                             {model.description || t("publicModels.defaultDescription")}
                           </div>
@@ -577,6 +581,11 @@ export default function PublicModelsPage() {
                               {t("publicModels.startUsing")}
                             </Button>
                           </Link>
+                          <Link to={getPublicModelDetailPath(model.model)}>
+                            <Button size="sm" variant="outline" className="h-9 rounded-lg">
+                              {t("publicModels.viewDetails")}
+                            </Button>
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -609,7 +618,12 @@ export default function PublicModelsPage() {
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="break-words font-semibold">{model.model}</div>
+                        <Link
+                          to={getPublicModelDetailPath(model.model)}
+                          className="break-words font-semibold transition hover:text-sky-700 dark:hover:text-sky-300"
+                        >
+                          {model.model}
+                        </Link>
                         <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           {model.provider} · {formatContextLength(model.context_length)}
                         </div>
@@ -642,11 +656,18 @@ export default function PublicModelsPage() {
                         <div className="mt-1 font-mono">{getOutputPrice(model) || "-"}</div>
                       </div>
                     </div>
-                    <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                      <Button className="h-10 w-full rounded-lg bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950">
-                        {t("publicModels.startUsing")}
-                      </Button>
-                    </Link>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Link to={getPublicModelDetailPath(model.model)}>
+                        <Button variant="outline" className="h-10 w-full rounded-lg">
+                          {t("publicModels.viewDetails")}
+                        </Button>
+                      </Link>
+                      <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
+                        <Button className="h-10 w-full rounded-lg bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950">
+                          {t("publicModels.startUsing")}
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               ))

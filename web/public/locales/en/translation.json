@@ -1499,6 +1499,7 @@
     "copied": "Model ID copied",
     "copyFailed": "Copy failed",
     "copyModelId": "Copy model ID",
+    "viewDetails": "Details",
     "startUsing": "Start using",
     "empty": "No matching models found. Adjust your search or filters.",
     "loadError": "Failed to load the public model catalog. Please try again later.",
@@ -1532,6 +1533,65 @@
       "title": "Call models with an OpenAI-compatible API.",
       "description": "The public catalog helps users discover models. After registration, they can create a key and call models from different providers through one API."
     }
+  },
+  "publicModelDetail": {
+    "seo": {
+      "title": "{{model}} API Pricing, Context, and Capabilities | LiteMHub",
+      "description": "Explore {{model}} from {{provider}} on LiteMHub, including API pricing, context window, capabilities, and OpenAI-compatible request examples."
+    },
+    "fallbackModel": "Model",
+    "fallbackProvider": "AI provider",
+    "badge": "Model API detail",
+    "title": "{{model}} API",
+    "backToCatalog": "Back to model catalog",
+    "startUsing": "Start using this model",
+    "copyModel": "Copy model ID",
+    "copyExample": "Copy API example",
+    "exampleCopied": "API example copied",
+    "modelId": "Model ID",
+    "notFoundTitle": "Model not found",
+    "notFoundDescription": "{{model}} is not available in the public model catalog.",
+    "metrics": {
+      "provider": "Provider",
+      "context": "Context",
+      "input": "Input price",
+      "output": "Output price"
+    },
+    "overviewEyebrow": "Overview",
+    "overviewTitle": "Model limits and capabilities",
+    "capabilitiesTitle": "Capabilities",
+    "limits": {
+      "context": "Context window",
+      "input": "Max input tokens",
+      "output": "Max output tokens"
+    },
+    "pricingEyebrow": "Pricing",
+    "pricingTitle": "Public API pricing",
+    "pricingUnit": "Token prices are normalized per {{unit}}. Image and request prices keep their native unit.",
+    "pricingEmpty": "Pricing has not been published for this model yet.",
+    "pricing": {
+      "input": "Text input",
+      "output": "Text output",
+      "request": "Per request",
+      "cached": "Cached input",
+      "cacheCreation": "Cache creation",
+      "imageInput": "Image input",
+      "imageOutput": "Image output",
+      "audioInput": "Audio input",
+      "thinking": "Reasoning output",
+      "webSearch": "Web search",
+      "image": "Image"
+    },
+    "apiEyebrow": "API",
+    "apiTitle": "OpenAI-compatible request",
+    "quickStartTitle": "Quick start",
+    "quickStart": {
+      "register": "Create an account or open your console.",
+      "key": "Create an API key from the user dashboard.",
+      "call": "Send the model ID through the OpenAI-compatible endpoint."
+    },
+    "relatedTitle": "Related models",
+    "relatedEmpty": "No related public models are available yet."
   },
   "consumptionRanking": {
     "title": "Consumption Ranking",
