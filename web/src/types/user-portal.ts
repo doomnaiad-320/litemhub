@@ -47,6 +47,25 @@ export interface UserPortalWalletLogsResponse {
     total: number
 }
 
+export interface UserPortalRechargeRequest {
+    amount: number
+    type?: string
+    device?: string
+}
+
+export interface UserPortalPayment {
+    order_id: number
+    amount: number
+    out_trade_no: string
+    trade_no?: string
+    pay_type: string
+    pay_info: string
+}
+
+export interface UserPortalRechargeResponse {
+    payment: UserPortalPayment
+}
+
 export interface UserPortalModelLogsResponse {
     logs: LogRecord[]
     total: number

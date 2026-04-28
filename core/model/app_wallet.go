@@ -252,68 +252,79 @@ func RechargeAppUserBalance(params AppUserRechargeParams) (
 		tradeNo = "manual_" + common.ShortUUID()
 	}
 
-	wallet = &AppUserWallet{}
-	rechargeLog = &AppRechargeLog{}
-
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.
-			Where("user_id = ?", params.UserID).
-			Attrs(AppUserWallet{UserID: params.UserID}).
-			FirstOrCreate(wallet).Error; err != nil {
-			return err
-		}
+		params.Channel = channel
+		params.TradeNo = tradeNo
+		wallet, rechargeLog, err = rechargeAppUserBalanceWithTx(tx, params)
 
-		result := tx.
-			Model(wallet).
-			Clauses(clause.Returning{
-				Columns: []clause.Column{
-					{Name: "available_balance"},
-					{Name: "updated_at"},
-				},
-			}).
-			Where("id = ?", wallet.ID).
-			Update("available_balance", gorm.Expr("available_balance + ?", params.Amount))
-		if err := HandleUpdateResult(result, ErrAppUserWalletNotFound); err != nil {
-			return err
-		}
-
-		*rechargeLog = AppRechargeLog{
-			UserID:     params.UserID,
-			Amount:     params.Amount,
-			Channel:    EmptyNullString(channel),
-			TradeNo:    EmptyNullString(tradeNo),
-			Status:     AppRechargeStatusPaid,
-			RawPayload: params.RawPayload,
-		}
-
-		if err := tx.Create(rechargeLog).Error; err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
-				return ErrAppRechargeTradeNoExists
-			}
-
-			return err
-		}
-
-		balanceAfter := wallet.AvailableBalance
-		balanceBefore := balanceAfter - params.Amount
-
-		walletLog := &AppWalletLog{
-			UserID:        params.UserID,
-			Type:          AppWalletLogTypeRecharge,
-			Amount:        params.Amount,
-			BalanceBefore: balanceBefore,
-			BalanceAfter:  balanceAfter,
-			Remark:        params.Remark,
-		}
-
-		if err := tx.Create(walletLog).Error; err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 
 	return wallet, rechargeLog, err
+}
+
+func rechargeAppUserBalanceWithTx(
+	tx *gorm.DB,
+	params AppUserRechargeParams,
+) (wallet *AppUserWallet, rechargeLog *AppRechargeLog, err error) {
+	wallet = &AppUserWallet{}
+	rechargeLog = &AppRechargeLog{}
+
+	if err := tx.
+		Where("user_id = ?", params.UserID).
+		Attrs(AppUserWallet{UserID: params.UserID}).
+		FirstOrCreate(wallet).Error; err != nil {
+		return nil, nil, err
+	}
+
+	result := tx.
+		Model(wallet).
+		Clauses(clause.Returning{
+			Columns: []clause.Column{
+				{Name: "available_balance"},
+				{Name: "updated_at"},
+			},
+		}).
+		Where("id = ?", wallet.ID).
+		Update("available_balance", gorm.Expr("available_balance + ?", params.Amount))
+	if err := HandleUpdateResult(result, ErrAppUserWalletNotFound); err != nil {
+		return nil, nil, err
+	}
+
+	*rechargeLog = AppRechargeLog{
+		UserID:     params.UserID,
+		Amount:     params.Amount,
+		Channel:    EmptyNullString(params.Channel),
+		TradeNo:    EmptyNullString(params.TradeNo),
+		Status:     AppRechargeStatusPaid,
+		RawPayload: params.RawPayload,
+	}
+
+	if err := tx.Create(rechargeLog).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, nil, ErrAppRechargeTradeNoExists
+		}
+
+		return nil, nil, err
+	}
+
+	balanceAfter := wallet.AvailableBalance
+	balanceBefore := balanceAfter - params.Amount
+
+	walletLog := &AppWalletLog{
+		UserID:        params.UserID,
+		Type:          AppWalletLogTypeRecharge,
+		Amount:        params.Amount,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter,
+		Remark:        params.Remark,
+	}
+
+	if err := tx.Create(walletLog).Error; err != nil {
+		return nil, nil, err
+	}
+
+	return wallet, rechargeLog, nil
 }
 
 func ReserveAppUserBalance(params AppUserReserveBalanceParams) (

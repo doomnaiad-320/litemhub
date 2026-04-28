@@ -1,19 +1,31 @@
 import { format } from 'date-fns'
-import { CreditCard, ReceiptText, Wallet } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { CreditCard, ExternalLink, ReceiptText, Wallet } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router'
 import {
     getCoreRowModel,
     type ColumnDef,
     useReactTable,
 } from '@tanstack/react-table'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
 import type { UserPortalWalletLog } from '@/types/user-portal'
 import {
+    useUserPortalDuluPayRecharge,
     useUserPortalWallet,
     useUserPortalWalletLogs,
 } from '@/feature/user-portal/hooks'
@@ -38,15 +50,50 @@ export default function UserPortalDashboardPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
     const user = useUserPortalAuthStore((state) => state.user)
+    const [searchParams, setSearchParams] = useSearchParams()
     const { data: walletData, isLoading } = useUserPortalWallet(true)
     const [walletLogPage, setWalletLogPage] = useState(1)
     const [walletLogPageSize, setWalletLogPageSize] = useState(20)
+    const [rechargeAmount, setRechargeAmount] = useState('50')
+    const [paymentType, setPaymentType] = useState('alipay')
     const { data: walletLogData, isLoading: isWalletLogLoading } = useUserPortalWalletLogs(walletLogPage, walletLogPageSize, true)
+    const rechargeMutation = useUserPortalDuluPayRecharge()
 
     const wallet = walletData?.wallet
     const walletLogs = walletLogData?.wallet_logs || []
     const walletLogTotal = walletLogData?.total || 0
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
+
+    useEffect(() => {
+        const payment = searchParams.get('payment')
+        if (payment === 'success') {
+            toast.success(t('portal.dashboard.paymentSuccess'))
+            setSearchParams({}, { replace: true })
+        } else if (payment === 'failed') {
+            toast.error(t('portal.dashboard.paymentFailed'))
+            setSearchParams({}, { replace: true })
+        }
+    }, [searchParams, setSearchParams, t])
+
+    const startRecharge = async () => {
+        const amount = Number(rechargeAmount)
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast.error(t('portal.dashboard.amountInvalid'))
+            return
+        }
+
+        const response = await rechargeMutation.mutateAsync({
+            amount,
+            type: paymentType,
+        })
+        const payment = response.payment
+        if (payment.pay_type === 'jump' || payment.pay_type === 'urlscheme') {
+            window.location.href = payment.pay_info
+            return
+        }
+
+        window.open(payment.pay_info, '_blank', 'noopener,noreferrer')
+    }
 
     const walletLogColumns: ColumnDef<UserPortalWalletLog>[] = useMemo(() => [
         {
@@ -160,8 +207,42 @@ export default function UserPortalDashboardPage() {
                                 <p className="text-sm leading-6 text-muted-foreground sm:min-h-16">
                                     {t('portal.dashboard.rechargeDescription')}
                                 </p>
-                                <Button disabled className="w-full rounded-2xl">
-                                    {t('portal.dashboard.rechargeSoon')}
+                                <div className="space-y-2">
+                                    <Label htmlFor="recharge-amount">{t('portal.dashboard.rechargeAmount')}</Label>
+                                    <div className="relative">
+                                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground">$</span>
+                                        <Input
+                                            id="recharge-amount"
+                                            type="number"
+                                            min="1"
+                                            step="0.01"
+                                            value={rechargeAmount}
+                                            onChange={(event) => setRechargeAmount(event.target.value)}
+                                            className="h-11 rounded-2xl pl-7 font-mono"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="payment-type">{t('portal.dashboard.paymentMethod')}</Label>
+                                    <Select value={paymentType} onValueChange={setPaymentType}>
+                                        <SelectTrigger id="payment-type" className="h-11 rounded-2xl">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="alipay">{t('portal.dashboard.alipay')}</SelectItem>
+                                            <SelectItem value="wxpay">{t('portal.dashboard.wxpay')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button
+                                    disabled={rechargeMutation.isPending}
+                                    onClick={startRecharge}
+                                    className="w-full rounded-2xl"
+                                >
+                                    {rechargeMutation.isPending
+                                        ? t('portal.dashboard.recharging')
+                                        : t('portal.dashboard.rechargeNow')}
+                                    <ExternalLink className="h-4 w-4" />
                                 </Button>
                             </CardContent>
                         </Card>

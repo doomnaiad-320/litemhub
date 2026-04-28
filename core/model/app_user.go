@@ -130,6 +130,51 @@ func (r *AppRechargeLog) BeforeSave(_ *gorm.DB) error {
 	return nil
 }
 
+type AppPaymentOrder struct {
+	ID            int             `json:"id"               gorm:"primaryKey"`
+	UserID        int             `json:"user_id"          gorm:"index;not null"`
+	Amount        float64         `json:"amount"`
+	Channel       string          `json:"channel"          gorm:"size:32;index;not null"`
+	OutTradeNo    string          `json:"out_trade_no"     gorm:"size:128;uniqueIndex;not null"`
+	TradeNo       EmptyNullString `json:"trade_no"         gorm:"size:128;index"`
+	PayType       EmptyNullString `json:"pay_type"         gorm:"size:32"`
+	PayInfo       string          `json:"pay_info"         gorm:"type:text"`
+	Status        string          `json:"status"           gorm:"size:32;index;not null"`
+	NotifyPayload string          `json:"notify_payload"   gorm:"type:text"`
+	RechargeLogID int             `json:"recharge_log_id"  gorm:"index"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+	PaidAt        *time.Time      `json:"paid_at,omitempty"`
+}
+
+func (*AppPaymentOrder) TableName() string {
+	return "app_payment_order"
+}
+
+func (o *AppPaymentOrder) BeforeSave(_ *gorm.DB) error {
+	if o.UserID == 0 {
+		return errors.New("user id is required")
+	}
+
+	if o.Amount <= 0 {
+		return errors.New("amount must be greater than zero")
+	}
+
+	if o.Channel == "" {
+		return errors.New("channel is required")
+	}
+
+	if o.OutTradeNo == "" {
+		return errors.New("out trade no is required")
+	}
+
+	if o.Status == "" {
+		return errors.New("status is required")
+	}
+
+	return nil
+}
+
 type AppWalletReservation struct {
 	ID             int             `json:"id"              gorm:"primaryKey"`
 	RequestID      EmptyNullString `json:"request_id"      gorm:"size:64;uniqueIndex"`

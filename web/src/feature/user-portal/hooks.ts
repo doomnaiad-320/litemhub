@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import type {
     UserPortalCreateKeyRequest,
     UserPortalLoginRequest,
+    UserPortalRechargeRequest,
     UserPortalRegisterRequest,
     UserPortalUpdateKeyRequest,
 } from '@/types/user-portal'
@@ -91,6 +92,16 @@ export const useUserPortalWalletLogs = (page: number, perPage: number, enabled =
         queryKey: ['userPortalWalletLogs', page, perPage],
         queryFn: () => userPortalApi.getWalletLogs(page, perPage),
         enabled,
+    })
+}
+
+export const useUserPortalDuluPayRecharge = () => {
+    return useMutation({
+        mutationFn: (data: UserPortalRechargeRequest) => userPortalApi.createDuluPayRecharge(data),
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '创建支付订单失败'
+            toast.error(message)
+        },
     })
 }
 

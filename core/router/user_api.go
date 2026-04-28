@@ -8,6 +8,8 @@ import (
 
 func SetUserAPIRouter(router *gin.Engine) {
 	userAPI := router.Group("/user-api")
+	userAPI.GET("/payments/dulupay/notify", controller.DuluPayNotify)
+	userAPI.GET("/payments/dulupay/return", controller.DuluPayReturn)
 
 	authPublicRouter := userAPI.Group("/auth")
 	{
@@ -26,6 +28,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 		walletRouter := protectedUserAPI.Group("/wallet")
 		walletRouter.GET("", controller.GetCurrentUserWallet)
 		walletRouter.GET("/logs", controller.GetCurrentUserWalletLogs)
+		walletRouter.POST("/recharge/dulupay", controller.CreateDuluPayRecharge)
 
 		logsRouter := protectedUserAPI.Group("/logs")
 		logsRouter.GET("", controller.GetCurrentUserModelLogs)

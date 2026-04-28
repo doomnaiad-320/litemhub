@@ -23,6 +23,18 @@ var (
 	Redis                string
 	RedisKeyPrefix       string
 	ConfigFilePath       string
+	DuluPayAPIBaseURL    string
+	DuluPayPID           string
+	DuluPayPrivateKey    string
+	DuluPayPublicKey     string
+	DuluPayNotifyURL     string
+	DuluPayReturnURL     string
+	DuluPayMethod        string
+	DuluPayType          string
+	DuluPayDevice        string
+	DuluPayProductName   string
+	DuluPayMinAmount     float64
+	DuluPayMaxAmount     float64
 
 	// OnCall Lark configuration for urgent alerts
 	OnCallLarkAppID     string
@@ -49,6 +61,21 @@ func ReloadEnv() {
 	Redis = env.String("REDIS", os.Getenv("REDIS_CONN_STRING"))
 	RedisKeyPrefix = os.Getenv("REDIS_KEY_PREFIX")
 	ConfigFilePath = env.String("CONFIG_FILE_PATH", "./config.yaml")
+	DuluPayAPIBaseURL = strings.TrimRight(
+		env.String("DULUPAY_API_BASE_URL", "https://api.dulupay.com"),
+		"/",
+	)
+	DuluPayPID = os.Getenv("DULUPAY_PID")
+	DuluPayPrivateKey = os.Getenv("DULUPAY_PRIVATE_KEY")
+	DuluPayPublicKey = os.Getenv("DULUPAY_PUBLIC_KEY")
+	DuluPayNotifyURL = os.Getenv("DULUPAY_NOTIFY_URL")
+	DuluPayReturnURL = os.Getenv("DULUPAY_RETURN_URL")
+	DuluPayMethod = env.String("DULUPAY_METHOD", "jump")
+	DuluPayType = env.String("DULUPAY_TYPE", "alipay")
+	DuluPayDevice = env.String("DULUPAY_DEVICE", "pc")
+	DuluPayProductName = env.String("DULUPAY_PRODUCT_NAME", "LiteMHub Wallet Recharge")
+	DuluPayMinAmount = env.Float64("DULUPAY_MIN_AMOUNT", 1)
+	DuluPayMaxAmount = env.Float64("DULUPAY_MAX_AMOUNT", 50000)
 
 	// OnCall Lark configuration
 	OnCallLarkAppID = os.Getenv("ON_CALL_LARK_APP_ID")

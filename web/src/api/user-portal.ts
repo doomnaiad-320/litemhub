@@ -9,6 +9,8 @@ import type {
     UserPortalKeysResponse,
     UserPortalLoginRequest,
     UserPortalModelLogsResponse,
+    UserPortalRechargeRequest,
+    UserPortalRechargeResponse,
     UserPortalRegisterRequest,
     UserPortalUpdateKeyRequest,
     UserPortalUser,
@@ -108,6 +110,10 @@ export const userPortalApi = {
             p: page,
             per_page: perPage,
         })
+    },
+
+    createDuluPayRecharge: async (data: UserPortalRechargeRequest) => {
+        return post<UserPortalRechargeResponse>('wallet/recharge/dulupay', data)
     },
 
     getModelLogs: async (page: number, perPage: number) => {
