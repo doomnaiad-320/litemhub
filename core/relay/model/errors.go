@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/mode"
 )
@@ -45,12 +46,18 @@ func DefaultWrapperErrorOption() WrapperErrorOption {
 	}
 }
 
+func SanitizeErrorMessage(message string) string {
+	return common.SanitizeErrorMessage(message)
+}
+
 func WrapperErrorWithMessage(
 	m mode.Mode,
 	statusCode int,
 	message string,
 	opts ...WrapperErrorOptionFunc,
 ) adaptor.Error {
+	message = SanitizeErrorMessage(message)
+
 	opt := DefaultWrapperErrorOption()
 	for _, o := range opts {
 		if o == nil {

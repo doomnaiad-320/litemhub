@@ -47,6 +47,7 @@ func truncateDetailBody(body string, maxSize int64) (string, bool) {
 
 func (d *RequestDetail) ApplyBodySizeLimits(requestMaxSize, responseMaxSize int64) {
 	d.SanitizeRequestBody()
+	d.SanitizeResponseBody()
 	d.RequestBody, d.RequestBodyTruncated = truncateDetailBody(d.RequestBody, requestMaxSize)
 	d.ResponseBody, d.ResponseBodyTruncated = truncateDetailBody(d.ResponseBody, responseMaxSize)
 }
@@ -97,8 +98,17 @@ func sanitizeRequestBodyValue(value any) any {
 	}
 }
 
+func (d *RequestDetail) SanitizeResponseBody() {
+	if d == nil || d.ResponseBody == "" {
+		return
+	}
+
+	d.ResponseBody = common.SanitizeErrorMessage(d.ResponseBody)
+}
+
 type Log struct {
 	RequestDetail    *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
+	AppUser          *LogAppUser     `gorm:"-"                                                                  json:"app_user,omitempty"`
 	RequestAt        time.Time       `                                                                      json:"request_at"`
 	RetryAt          time.Time       `                                                                      json:"retry_at,omitempty"`
 	TTFBMilliseconds ZeroNullInt64   `                                                                      json:"ttfb_milliseconds,omitempty"`
@@ -126,6 +136,66 @@ type Log struct {
 	// https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
 	User     EmptyNullString   `gorm:"type:text"                     json:"user,omitempty"`
 	Metadata map[string]string `gorm:"serializer:fastjson;type:text" json:"metadata,omitempty"`
+}
+
+type LogAppUser struct {
+	ID    int    `json:"id"`
+	Email string `json:"email,omitempty"`
+	Phone string `json:"phone,omitempty"`
+}
+
+func attachAppUsersToLogs(logs []*Log) error {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	userIDs := make([]int, 0)
+	seen := make(map[int]struct{})
+	for _, log := range logs {
+		if log == nil || log.OwnerUserID == 0 {
+			continue
+		}
+
+		if _, ok := seen[log.OwnerUserID]; ok {
+			continue
+		}
+
+		seen[log.OwnerUserID] = struct{}{}
+		userIDs = append(userIDs, log.OwnerUserID)
+	}
+
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	users := make([]*AppUser, 0, len(userIDs))
+	if err := DB.Select("id", "email", "phone").Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+		return err
+	}
+
+	userMap := make(map[int]*LogAppUser, len(users))
+	for _, user := range users {
+		userMap[user.ID] = &LogAppUser{
+			ID:    user.ID,
+			Email: string(user.Email),
+			Phone: string(user.Phone),
+		}
+	}
+
+	for _, log := range logs {
+		if log == nil || log.OwnerUserID == 0 {
+			continue
+		}
+
+		if user, ok := userMap[log.OwnerUserID]; ok {
+			log.AppUser = user
+			continue
+		}
+
+		log.AppUser = &LogAppUser{ID: log.OwnerUserID}
+	}
+
+	return nil
 }
 
 func CreateLogIndexes(db *gorm.DB) error {
@@ -886,6 +956,10 @@ func GetAppUserLogs(
 		return nil, err
 	}
 
+	if err := attachAppUsersToLogs(logs); err != nil {
+		return nil, err
+	}
+
 	return &GetLogsResult{
 		Logs:  logs,
 		Total: total,
@@ -950,6 +1024,10 @@ func GetLogs(
 	})
 
 	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	if err := attachAppUsersToLogs(logs); err != nil {
 		return nil, err
 	}
 
@@ -1034,6 +1112,10 @@ func GetGroupLogs(
 	})
 
 	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	if err := attachAppUsersToLogs(logs); err != nil {
 		return nil, err
 	}
 
@@ -1599,6 +1681,10 @@ func SearchLogs(
 		return nil, err
 	}
 
+	if err := attachAppUsersToLogs(logs); err != nil {
+		return nil, err
+	}
+
 	result := &GetLogsResult{
 		Logs:     logs,
 		Total:    total,
@@ -1682,6 +1768,10 @@ func SearchGroupLogs(
 	})
 
 	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	if err := attachAppUsersToLogs(logs); err != nil {
 		return nil, err
 	}
 

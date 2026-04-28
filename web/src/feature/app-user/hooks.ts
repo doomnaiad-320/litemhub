@@ -36,6 +36,41 @@ export const useAppUsers = (
     }
 }
 
+export const useAppRechargeLogs = (
+    page: number,
+    perPage: number,
+    startTimestamp?: number,
+    endTimestamp?: number,
+    keyword?: string,
+    status?: string,
+    channel?: string,
+) => {
+    return useQuery({
+        queryKey: ['appRechargeLogs', page, perPage, startTimestamp, endTimestamp, keyword, status, channel],
+        queryFn: () => appUserApi.getAppRechargeLogs(
+            page,
+            perPage,
+            startTimestamp,
+            endTimestamp,
+            keyword,
+            status,
+            channel,
+        ),
+    })
+}
+
+export const useAppRechargeStats = (
+    startTimestamp?: number,
+    endTimestamp?: number,
+    keyword?: string,
+    granularity?: string,
+) => {
+    return useQuery({
+        queryKey: ['appRechargeStats', startTimestamp, endTimestamp, keyword, granularity],
+        queryFn: () => appUserApi.getAppRechargeStats(startTimestamp, endTimestamp, keyword, granularity),
+    })
+}
+
 export const useAppUser = (id?: number | null, enabled = true) => {
     const query = useQuery({
         queryKey: ['appUser', id],

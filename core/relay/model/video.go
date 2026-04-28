@@ -55,6 +55,8 @@ type OpenAIVideoError struct {
 }
 
 func NewOpenAIVideoError(statusCode int, err OpenAIVideoError) adaptor.Error {
+	err.Detail = SanitizeErrorMessage(err.Detail)
+
 	return adaptor.NewError(statusCode, err)
 }
 

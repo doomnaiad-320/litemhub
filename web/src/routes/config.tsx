@@ -14,6 +14,7 @@ import MCPPage from "@/pages/mcp/page"
 import GroupPage from "@/pages/group/page"
 import ConsumptionRankingPage from "@/pages/consumption-ranking/page"
 import AppUserPage from "@/pages/app-user/page"
+import BillingPage from "@/pages/billing/page"
 import UserPortalLandingPage from "@/pages/user-portal/landing"
 import PublicModelsPage from "@/pages/public-models/page"
 import PublicModelDetailPage from "@/pages/public-models/detail"
@@ -77,6 +78,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.APP_USERS,
                     element: <AppUserPage />,
+                },
+                {
+                    path: ROUTES.BILLING,
+                    element: <BillingPage />,
                 },
                 {
                     path: ROUTES.LEGACY_GROUP_RANKING,

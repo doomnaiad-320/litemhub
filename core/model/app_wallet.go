@@ -34,6 +34,29 @@ type AppUserRechargeParams struct {
 	Remark     string
 }
 
+type AppRechargeLogWithUser struct {
+	AppRechargeLog
+	UserEmail EmptyNullString `json:"user_email"`
+	UserPhone EmptyNullString `json:"user_phone"`
+}
+
+type AppRechargeStatsPoint struct {
+	Timestamp int64   `json:"timestamp"`
+	Channel   string  `json:"channel,omitempty"`
+	Amount    float64 `json:"amount"`
+	Count     int64   `json:"count"`
+}
+
+type AppRechargeStats struct {
+	Granularity string                  `json:"granularity"`
+	TotalAmount float64                 `json:"total_amount"`
+	TotalCount  int64                   `json:"total_count"`
+	PaidAmount  float64                 `json:"paid_amount"`
+	PaidCount   int64                   `json:"paid_count"`
+	ByChannel   []AppRechargeStatsPoint `json:"by_channel,omitempty" gorm:"-"`
+	TimeSeries  []AppRechargeStatsPoint `json:"time_series"`
+}
+
 type AppUserReserveBalanceParams struct {
 	RequestID string
 	UserID    int
@@ -72,6 +95,21 @@ func getAppWalletLogOrder(order string) string {
 		}
 	default:
 		return "id desc"
+	}
+}
+
+func getAppRechargeLogOrder(order string) string {
+	prefix, suffix, _ := strings.Cut(order, "-")
+	switch prefix {
+	case "id", "created_at", "updated_at", "amount":
+		switch suffix {
+		case "asc":
+			return "app_recharge_log." + prefix + " asc"
+		default:
+			return "app_recharge_log." + prefix + " desc"
+		}
+	default:
+		return "app_recharge_log.id desc"
 	}
 }
 
@@ -138,6 +176,236 @@ func GetAppWalletHistoricalConsumed(userID int) (float64, error) {
 		Scan(&total).Error
 
 	return total, err
+}
+
+func GetAppRechargeLogs(
+	userID int,
+	keyword string,
+	channel string,
+	status string,
+	startTime time.Time,
+	endTime time.Time,
+	page int,
+	perPage int,
+	order string,
+) (logs []*AppRechargeLogWithUser, total int64, err error) {
+	tx := appRechargeLogQuery(userID, keyword, channel, status, startTime, endTime)
+	if err = tx.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total <= 0 {
+		return nil, 0, nil
+	}
+
+	limit, offset := toLimitOffset(page, perPage)
+	err = tx.
+		Select("app_recharge_log.*, app_user.email AS user_email, app_user.phone AS user_phone").
+		Order(getAppRechargeLogOrder(order)).
+		Limit(limit).
+		Offset(offset).
+		Find(&logs).Error
+
+	return logs, total, err
+}
+
+func appRechargeLogQuery(
+	userID int,
+	keyword string,
+	channel string,
+	status string,
+	startTime time.Time,
+	endTime time.Time,
+) *gorm.DB {
+	tx := DB.Model(&AppRechargeLog{}).
+		Joins("LEFT JOIN app_user ON app_user.id = app_recharge_log.user_id")
+	if userID > 0 {
+		tx = tx.Where("app_recharge_log.user_id = ?", userID)
+	}
+	keyword = strings.TrimSpace(keyword)
+	if keyword != "" {
+		likeKeyword := "%" + keyword + "%"
+		if id := String2Int(keyword); id > 0 {
+			tx = tx.Where(
+				DB.Where("app_recharge_log.user_id = ?", id).
+					Or("app_user.email LIKE ?", likeKeyword).
+					Or("app_user.phone LIKE ?", likeKeyword),
+			)
+		} else {
+			tx = tx.Where("app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword)
+		}
+	}
+	channel = strings.TrimSpace(channel)
+	if channel != "" {
+		tx = tx.Where("app_recharge_log.channel = ?", channel)
+	}
+	status = strings.TrimSpace(status)
+	if status != "" {
+		tx = tx.Where("app_recharge_log.status = ?", status)
+	}
+	if !startTime.IsZero() {
+		tx = tx.Where("app_recharge_log.created_at >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		tx = tx.Where("app_recharge_log.created_at <= ?", endTime)
+	}
+
+	return tx
+}
+
+func GetAppRechargeStats(
+	keyword string,
+	startTime time.Time,
+	endTime time.Time,
+	granularity string,
+) (*AppRechargeStats, error) {
+	granularity = normalizeAppRechargeStatsGranularity(granularity)
+	baseQuery := func() *gorm.DB {
+		return appRechargeLogQuery(0, keyword, "", "", startTime, endTime)
+	}
+
+	stats := &AppRechargeStats{Granularity: granularity}
+	if err := baseQuery().
+		Select(
+			"COALESCE(SUM(app_recharge_log.amount), 0) AS total_amount, COUNT(*) AS total_count, "+
+				"COALESCE(SUM(CASE WHEN app_recharge_log.status = ? THEN app_recharge_log.amount ELSE 0 END), 0) AS paid_amount, "+
+				"COALESCE(SUM(CASE WHEN app_recharge_log.status = ? THEN 1 ELSE 0 END), 0) AS paid_count",
+			AppRechargeStatusPaid,
+			AppRechargeStatusPaid,
+		).
+		Scan(stats).Error; err != nil {
+		return nil, err
+	}
+
+	channelRows := []struct {
+		Channel EmptyNullString
+		Amount  float64
+		Count   int64
+	}{}
+	if err := baseQuery().
+		Select("COALESCE(app_recharge_log.channel, '') AS channel, COALESCE(SUM(app_recharge_log.amount), 0) AS amount, COUNT(*) AS count").
+		Where("app_recharge_log.status = ?", AppRechargeStatusPaid).
+		Group("app_recharge_log.channel").
+		Order("amount desc").
+		Scan(&channelRows).Error; err != nil {
+		return nil, err
+	}
+
+	stats.ByChannel = make([]AppRechargeStatsPoint, 0, len(channelRows))
+	for _, row := range channelRows {
+		stats.ByChannel = append(stats.ByChannel, AppRechargeStatsPoint{
+			Timestamp: 0,
+			Channel:   string(row.Channel),
+			Amount:    row.Amount,
+			Count:     row.Count,
+		})
+	}
+
+	paidLogs := []struct {
+		Amount    float64
+		CreatedAt time.Time
+	}{}
+	if err := baseQuery().
+		Select("app_recharge_log.amount, app_recharge_log.created_at").
+		Where("app_recharge_log.status = ?", AppRechargeStatusPaid).
+		Order("app_recharge_log.created_at asc").
+		Scan(&paidLogs).Error; err != nil {
+		return nil, err
+	}
+
+	stats.TimeSeries = buildAppRechargeTimeSeries(startTime, endTime, granularity, paidLogs)
+
+	return stats, nil
+}
+
+func normalizeAppRechargeStatsGranularity(granularity string) string {
+	switch strings.ToLower(strings.TrimSpace(granularity)) {
+	case "week", "month":
+		return strings.ToLower(strings.TrimSpace(granularity))
+	default:
+		return "day"
+	}
+}
+
+func buildAppRechargeTimeSeries(
+	startTime time.Time,
+	endTime time.Time,
+	granularity string,
+	paidLogs []struct {
+		Amount    float64
+		CreatedAt time.Time
+	},
+) []AppRechargeStatsPoint {
+	pointsByDate := make(map[string]*AppRechargeStatsPoint)
+	for _, log := range paidLogs {
+		bucket := beginningOfRechargeBucket(log.CreatedAt, granularity)
+		key := bucket.Format(time.DateOnly)
+		point := pointsByDate[key]
+		if point == nil {
+			point = &AppRechargeStatsPoint{Timestamp: bucket.UnixMilli()}
+			pointsByDate[key] = point
+		}
+
+		point.Amount += log.Amount
+		point.Count++
+	}
+
+	if startTime.IsZero() || endTime.IsZero() {
+		points := make([]AppRechargeStatsPoint, 0, len(pointsByDate))
+		for _, point := range pointsByDate {
+			points = append(points, *point)
+		}
+
+		return points
+	}
+
+	startBucket := beginningOfRechargeBucket(startTime, granularity)
+	endBucket := beginningOfRechargeBucket(endTime, granularity)
+	if endBucket.Before(startBucket) {
+		return []AppRechargeStatsPoint{}
+	}
+
+	points := make([]AppRechargeStatsPoint, 0)
+	for bucket := startBucket; !bucket.After(endBucket); bucket = nextRechargeBucket(bucket, granularity) {
+		key := bucket.Format(time.DateOnly)
+		if point := pointsByDate[key]; point != nil {
+			points = append(points, *point)
+			continue
+		}
+
+		points = append(points, AppRechargeStatsPoint{Timestamp: bucket.UnixMilli()})
+	}
+
+	return points
+}
+
+func beginningOfRechargeBucket(value time.Time, granularity string) time.Time {
+	local := value.In(time.Local)
+	day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.Local)
+
+	switch granularity {
+	case "week":
+		weekday := int(day.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+
+		return day.AddDate(0, 0, -(weekday - 1))
+	case "month":
+		return time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, time.Local)
+	default:
+		return day
+	}
+}
+
+func nextRechargeBucket(value time.Time, granularity string) time.Time {
+	switch granularity {
+	case "week":
+		return value.AddDate(0, 0, 7)
+	case "month":
+		return value.AddDate(0, 1, 0)
+	default:
+		return value.AddDate(0, 0, 1)
+	}
 }
 
 func GetAppUserWalletsByUserIDs(userIDs []int) (map[int]*AppUserWallet, error) {

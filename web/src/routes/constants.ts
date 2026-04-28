@@ -7,6 +7,7 @@ export const ROUTES = {
     LEGACY_GROUP_RANKING: "/group-ranking",
     ADMIN_LOGIN: "/litemhub",
     APP_USERS: "/app-users",
+    BILLING: "/billing",
     USER_LOGIN: "/login",
     USER_REGISTER: "/register",
     USER_DASHBOARD: "/dashboard",

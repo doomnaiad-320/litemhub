@@ -50,6 +50,8 @@ const sanitizeObjectForDisplay = (value: unknown): unknown => {
     return value
 }
 
+const getAppUserAccount = (log: LogRecord) => log.app_user?.email || log.app_user?.phone || ''
+
 export const ExpandedLogContent = ({
     log,
     scope = 'admin',
@@ -192,6 +194,14 @@ export const ExpandedLogContent = ({
                         </div>
                         <div><span className="font-medium">{t('log.group')}:</span> {log.group || '-'}</div>
                         <div><span className="font-medium">{t('log.keyName')}:</span> {log.token_name || '-'}</div>
+                        {scope === 'admin' && (
+                            <div className="min-w-0">
+                                <span className="font-medium">{t('log.appUser')}:</span>{' '}
+                                {log.app_user?.id || log.owner_user_id || getAppUserAccount(log)
+                                    ? `${getAppUserAccount(log) || '-'} (#${log.app_user?.id || log.owner_user_id || '-'})`
+                                    : '-'}
+                            </div>
+                        )}
                         <div className="min-w-0">
                             <span className="font-medium">{t('log.model')}:</span>{' '}
                             {log.model ? (

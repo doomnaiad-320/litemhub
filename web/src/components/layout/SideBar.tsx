@@ -13,6 +13,7 @@ import {
     Github,
     LogOut,
     MessageCircle,
+    ReceiptText,
     Trophy,
     User,
     Users,
@@ -72,6 +73,12 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             display: true,
         },
         {
+            title: t("sidebar.billing"),
+            icon: ReceiptText,
+            href: ROUTES.BILLING,
+            display: true,
+        },
+        {
             title: t("sidebar.consumptionRanking"),
             icon: Trophy,
             href: ROUTES.CONSUMPTION_RANKING,
@@ -110,6 +117,7 @@ interface SidebarDisplayConfig {
     monitor?: boolean
     group?: boolean
     appUsers?: boolean
+    billing?: boolean
     consumptionRanking?: boolean
     key?: boolean
     channel?: boolean

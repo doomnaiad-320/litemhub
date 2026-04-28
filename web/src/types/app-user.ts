@@ -85,6 +85,8 @@ export interface RechargeAppUserBalanceRequest {
 export interface AppRechargeLog {
     id: number
     user_id: number
+    user_email?: string
+    user_phone?: string
     amount: number
     channel?: string
     trade_no?: string
@@ -97,4 +99,30 @@ export interface AppRechargeLog {
 export interface RechargeAppUserBalanceResponse {
     wallet: AppUserWallet
     recharge_log?: AppRechargeLog
+}
+
+export interface AppRechargeLogsResponse {
+    recharge_logs: AppRechargeLog[]
+    total: number
+}
+
+export interface AppRechargeStatsPoint {
+    timestamp: number
+    channel?: string
+    amount: number
+    count: number
+}
+
+export interface AppRechargeStats {
+    granularity: string
+    total_amount: number
+    total_count: number
+    paid_amount: number
+    paid_count: number
+    by_channel?: AppRechargeStatsPoint[]
+    time_series: AppRechargeStatsPoint[]
+}
+
+export interface AppRechargeStatsResponse {
+    stats: AppRechargeStats
 }

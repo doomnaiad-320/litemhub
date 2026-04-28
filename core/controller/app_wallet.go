@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/controller/utils"
@@ -43,6 +44,20 @@ type AppUserAdminResponse struct {
 	FrozenBalance    float64 `json:"frozen_balance"`
 	CreatedAt        int64   `json:"created_at"`
 	UpdatedAt        int64   `json:"updated_at"`
+}
+
+type AppRechargeLogResponse struct {
+	ID         int     `json:"id"`
+	UserID     int     `json:"user_id"`
+	UserEmail  string  `json:"user_email,omitempty"`
+	UserPhone  string  `json:"user_phone,omitempty"`
+	Amount     float64 `json:"amount"`
+	Channel    string  `json:"channel,omitempty"`
+	TradeNo    string  `json:"trade_no,omitempty"`
+	Status     string  `json:"status"`
+	RawPayload string  `json:"raw_payload,omitempty"`
+	CreatedAt  int64   `json:"created_at"`
+	UpdatedAt  int64   `json:"updated_at"`
 }
 
 type RechargeAppUserBalanceRequest struct {
@@ -129,6 +144,31 @@ func buildAppUserAdminResponses(users []*model.AppUser, walletMap map[int]*model
 	responses := make([]*AppUserAdminResponse, len(users))
 	for i, user := range users {
 		responses[i] = buildAppUserAdminResponse(user, walletMap[user.ID])
+	}
+
+	return responses
+}
+
+func buildAppRechargeLogResponse(log *model.AppRechargeLogWithUser) *AppRechargeLogResponse {
+	return &AppRechargeLogResponse{
+		ID:         log.ID,
+		UserID:     log.UserID,
+		UserEmail:  string(log.UserEmail),
+		UserPhone:  string(log.UserPhone),
+		Amount:     log.Amount,
+		Channel:    string(log.Channel),
+		TradeNo:    string(log.TradeNo),
+		Status:     log.Status,
+		RawPayload: log.RawPayload,
+		CreatedAt:  log.CreatedAt.UnixMilli(),
+		UpdatedAt:  log.UpdatedAt.UnixMilli(),
+	}
+}
+
+func buildAppRechargeLogResponses(logs []*model.AppRechargeLogWithUser) []*AppRechargeLogResponse {
+	responses := make([]*AppRechargeLogResponse, len(logs))
+	for i, log := range logs {
+		responses[i] = buildAppRechargeLogResponse(log)
 	}
 
 	return responses
@@ -246,6 +286,53 @@ func GetAppUsers(c *gin.Context) {
 
 func SearchAppUsers(c *gin.Context) {
 	GetAppUsers(c)
+}
+
+func GetAppRechargeLogs(c *gin.Context) {
+	page, perPage := utils.ParsePageParams(c)
+	order := c.DefaultQuery("order", "")
+	userID, _ := strconv.Atoi(c.Query("user_id"))
+	keyword := c.Query("keyword")
+	channel := c.Query("channel")
+	status := c.Query("status")
+	startTime, endTime := utils.ParseTimeRange(c, 90*24*time.Hour)
+
+	logs, total, err := model.GetAppRechargeLogs(
+		userID,
+		keyword,
+		channel,
+		status,
+		startTime,
+		endTime,
+		page,
+		perPage,
+		order,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"recharge_logs": buildAppRechargeLogResponses(logs),
+		"total":         total,
+	})
+}
+
+func GetAppRechargeStats(c *gin.Context) {
+	startTime, endTime := utils.ParseTimeRange(c, 30*24*time.Hour)
+	keyword := c.Query("keyword")
+	granularity := c.DefaultQuery("granularity", "day")
+
+	stats, err := model.GetAppRechargeStats(keyword, startTime, endTime, granularity)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"stats": stats,
+	})
 }
 
 func CreateAppUser(c *gin.Context) {

@@ -146,6 +146,8 @@ type OpenAIError struct {
 }
 
 func NewOpenAIError(statusCode int, err OpenAIError) adaptor.Error {
+	err.Message = SanitizeErrorMessage(err.Message)
+
 	return adaptor.NewError(statusCode, OpenAIErrorResponse{
 		Error: err,
 	})

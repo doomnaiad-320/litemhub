@@ -18,6 +18,8 @@ type AnthropicErrorResponse struct {
 }
 
 func NewAnthropicError(statusCode int, err AnthropicError) adaptor.Error {
+	err.Message = SanitizeErrorMessage(err.Message)
+
 	return adaptor.NewError(statusCode, AnthropicErrorResponse{
 		Type:  "error",
 		Error: err,

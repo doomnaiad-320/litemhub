@@ -120,6 +120,28 @@ export function LogTable({
         return `x${Number(multiplier.toFixed(4)).toString()}`
     }
 
+    const getAppUserAccount = (log: LogRecord) => log.app_user?.email || log.app_user?.phone || ''
+
+    const renderAppUser = (log: LogRecord) => {
+        const userID = log.app_user?.id || log.owner_user_id
+        const account = getAppUserAccount(log)
+
+        if (!userID && !account) {
+            return <div className="text-sm text-muted-foreground">-</div>
+        }
+
+        return (
+            <div className="min-w-0 space-y-0.5">
+                <div className="truncate text-sm font-medium" title={account || undefined}>
+                    {account || '-'}
+                </div>
+                <div className="font-mono text-xs text-muted-foreground">
+                    #{userID || '-'}
+                </div>
+            </div>
+        )
+    }
+
     const renderMobileMetric = (label: string, value: React.ReactNode) => (
         <div className="min-w-0 text-left">
             <div className="text-[11px] leading-4 text-muted-foreground">{label}</div>
@@ -181,6 +203,12 @@ export function LogTable({
                 },
                 size: 150,
             }),
+            ...(detailScope === 'admin' ? [columnHelper.display({
+                id: 'app_user',
+                header: t('log.appUser'),
+                cell: ({ row }) => renderAppUser(row.original),
+                size: 160,
+            })] : []),
             columnHelper.accessor('model', {
                 header: t('log.model'),
                 cell: (info) => {

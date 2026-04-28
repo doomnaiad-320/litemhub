@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/bytedance/sonic"
@@ -100,5 +101,34 @@ func TestRequestDetailApplyBodySizeLimitsLeavesInvalidJSONRequestBodyUntouched(t
 
 	if detail.RequestBody != `{"messages":[` {
 		t.Fatalf("expected invalid json request body to remain unchanged, got %q", detail.RequestBody)
+	}
+}
+
+func TestRequestDetailApplyBodySizeLimitsSanitizesResponseBody(t *testing.T) {
+	detail := &model.RequestDetail{
+		ResponseBody: `{"type":"error","error":{"message":"request timeout: Post \"https://newnei.apifast.top/v1/messages\": dial tcp 203.0.113.10:443: http2: timeout awaiting response headers"}}`,
+	}
+
+	detail.ApplyBodySizeLimits(0, 0)
+
+	if strings.Contains(detail.ResponseBody, "newnei.apifast.top") {
+		t.Fatalf("expected response body URL to be redacted, got %q", detail.ResponseBody)
+	}
+
+	if strings.Contains(detail.ResponseBody, "203.0.113.10") {
+		t.Fatalf("expected response body IP to be redacted, got %q", detail.ResponseBody)
+	}
+
+	if !strings.Contains(detail.ResponseBody, "[redacted_url]") {
+		t.Fatalf("expected response body to contain redacted URL marker, got %q", detail.ResponseBody)
+	}
+
+	if !strings.Contains(detail.ResponseBody, "[redacted_ip]") {
+		t.Fatalf("expected response body to contain redacted IP marker, got %q", detail.ResponseBody)
+	}
+
+	var payload any
+	if err := sonic.UnmarshalString(detail.ResponseBody, &payload); err != nil {
+		t.Fatalf("expected sanitized response body to remain valid json: %v", err)
 	}
 }

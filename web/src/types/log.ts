@@ -54,8 +54,15 @@ export interface LogRequestDetail {
   response_body_truncated: boolean
 }
 
+export interface LogAppUser {
+  id: number
+  email?: string
+  phone?: string
+}
+
 // 日志记录
 export interface LogRecord {
+  app_user?: LogAppUser
   channel: number
   code: number
   content: string
@@ -67,6 +74,7 @@ export interface LogRecord {
   metadata: Record<string, string>
   mode: number
   model: string
+  owner_user_id?: number
   price: LogPrice
   request_at: string | number
   request_detail: LogRequestDetail

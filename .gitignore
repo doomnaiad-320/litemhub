@@ -1,9 +1,12 @@
 **/.vscode
 **/__debug_bin*
 **/.DS_Store
-**/.gocache
+/.gocache
+/.gomodcache
 **/node_modules
-.env
-.env.local
-.env.aiproxy.local
-dist/
+**/docs
+**.sh
+**.db
+**/dist
+**.md
+**.example

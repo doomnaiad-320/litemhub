@@ -270,6 +270,8 @@ type GeminiErrorResponse struct {
 }
 
 func NewGeminiError(statusCode int, err GeminiError) adaptor.Error {
+	err.Message = SanitizeErrorMessage(err.Message)
+
 	return adaptor.NewError(statusCode, GeminiErrorResponse{
 		Error: err,
 	})

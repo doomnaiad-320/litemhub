@@ -1,6 +1,8 @@
 import { del, get, post, put } from './index'
 import type {
     AppUserDetailResponse,
+    AppRechargeLogsResponse,
+    AppRechargeStatsResponse,
     AppUserWalletLogsResponse,
     AppUserWalletResponse,
     AppUsersResponse,
@@ -36,6 +38,61 @@ export const appUserApi = {
         }
 
         return get<AppUsersResponse>('app_users/search', { params })
+    },
+
+    getAppRechargeLogs: async (
+        page: number,
+        perPage: number,
+        startTimestamp?: number,
+        endTimestamp?: number,
+        keyword?: string,
+        status?: string,
+        channel?: string,
+    ): Promise<AppRechargeLogsResponse> => {
+        const params: Record<string, string | number> = {
+            p: page,
+            per_page: perPage,
+        }
+        if (startTimestamp) {
+            params.start_timestamp = startTimestamp
+        }
+        if (endTimestamp) {
+            params.end_timestamp = endTimestamp
+        }
+        if (keyword) {
+            params.keyword = keyword
+        }
+        if (status) {
+            params.status = status
+        }
+        if (channel) {
+            params.channel = channel
+        }
+
+        return get<AppRechargeLogsResponse>('app_users/recharges', { params })
+    },
+
+    getAppRechargeStats: async (
+        startTimestamp?: number,
+        endTimestamp?: number,
+        keyword?: string,
+        granularity?: string,
+    ): Promise<AppRechargeStatsResponse> => {
+        const params: Record<string, string | number> = {}
+        if (startTimestamp) {
+            params.start_timestamp = startTimestamp
+        }
+        if (endTimestamp) {
+            params.end_timestamp = endTimestamp
+        }
+        if (keyword) {
+            params.keyword = keyword
+        }
+        if (granularity) {
+            params.granularity = granularity
+        }
+
+        return get<AppRechargeStatsResponse>('app_users/recharge_stats', { params })
     },
 
     getAppUser: async (id: number): Promise<AppUserDetailResponse> => {

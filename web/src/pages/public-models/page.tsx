@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,14 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { LanguageSelector } from "@/components/common/LanguageSelector";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { usePublicModels } from "@/feature/public-models/hooks";
@@ -267,29 +258,34 @@ export default function PublicModelsPage() {
     sortBy !== "name";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/88 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/86">
+    <div className="min-h-screen bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:bg-[#111827] dark:text-white">
+      <header className="sticky top-0 z-40 border-b border-[#f2f3f5] bg-white/92 backdrop-blur-xl dark:border-white/10 dark:bg-[#111827]/92">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[13px] bg-[#181e25] text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px]">
               <BrainCircuit className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-base font-semibold tracking-tight">LiteMHub</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-base font-medium tracking-tight text-[#18181b] dark:text-white">
+                LiteMHub
+              </div>
+              <div className="text-xs leading-[1.7] text-[#8e8e93]">
                 AI Model Router
               </div>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm text-slate-600 dark:text-slate-300 md:flex">
-            <Link to={ROUTES.PUBLIC_MODELS} className="font-medium text-slate-950 dark:text-white">
+          <nav className="hidden items-center gap-2 text-sm font-medium text-[#45515e] dark:text-white/70 md:flex">
+            <Link
+              to={ROUTES.PUBLIC_MODELS}
+              className="rounded-full bg-black/[0.05] px-4 py-2 text-[#18181b] dark:bg-white/10 dark:text-white"
+            >
               {t("publicModels.nav.models")}
             </Link>
-            <Link to="/#billing" className="transition hover:text-slate-950 dark:hover:text-white">
+            <Link to="/#billing" className="rounded-full px-4 py-2 transition hover:bg-black/[0.05] hover:text-[#18181b] dark:hover:bg-white/10 dark:hover:text-white">
               {t("publicModels.nav.billing")}
             </Link>
-            <Link to="/#workflow" className="transition hover:text-slate-950 dark:hover:text-white">
+            <Link to="/#workflow" className="rounded-full px-4 py-2 transition hover:bg-black/[0.05] hover:text-[#18181b] dark:hover:bg-white/10 dark:hover:text-white">
               {t("publicModels.nav.workflow")}
             </Link>
           </nav>
@@ -302,12 +298,12 @@ export default function PublicModelsPage() {
               <LanguageSelector variant="minimal" />
             </div>
             <Link to={ROUTES.USER_LOGIN}>
-              <Button variant="ghost" className="rounded-full">
+              <Button variant="ghost" className="rounded-full text-[#18181b] dark:text-white">
                 {t("publicModels.nav.login")}
               </Button>
             </Link>
             <Link to={isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_REGISTER}>
-              <Button className="rounded-full bg-slate-950 px-4 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90 sm:px-5">
+              <Button className="rounded-lg bg-[#181e25] px-4 text-white shadow-[rgba(0,0,0,0.08)_0px_4px_6px] hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90 sm:px-5">
                 {isAuthenticated
                   ? t("publicModels.nav.console")
                   : t("publicModels.nav.start")}
@@ -319,30 +315,32 @@ export default function PublicModelsPage() {
       </header>
 
       <main>
-        <section className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
+        <section className="relative overflow-hidden border-b border-[#f2f3f5] dark:border-white/10">
+          <div className="pointer-events-none absolute right-[-9rem] top-[-12rem] h-[28rem] w-[28rem] rounded-full bg-[#1456f0]/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[-10rem] left-[-8rem] h-[24rem] w-[24rem] rounded-full bg-[#ea5ec1]/10 blur-3xl" />
+          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
             <div className="space-y-7">
-              <Badge className="rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" variant="outline">
-                <Sparkles className="h-3.5 w-3.5 text-sky-700 dark:text-sky-300" />
+              <Badge className="rounded-full border-[#e5e7eb] bg-white px-3 py-1 text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] dark:border-white/10 dark:bg-white/5 dark:text-white/70" variant="outline">
+                <Sparkles className="h-3.5 w-3.5 text-[#1456f0]" />
                 {t("publicModels.badge")}
               </Badge>
               <div className="space-y-4">
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-5xl lg:text-6xl">
+                <h1 className="max-w-4xl font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-5xl font-medium leading-[1.1] tracking-tight text-[#222222] dark:text-white sm:text-6xl lg:text-[80px]">
                   {t("publicModels.title")}
                 </h1>
-                <p className="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
+                <p className="max-w-2xl text-lg font-normal leading-[1.5] text-[#45515e] dark:text-white/70 md:text-xl">
                   {t("publicModels.description")}
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <a href="#model-catalog">
-                  <Button size="lg" className="h-12 rounded-full bg-sky-700 px-6 text-white hover:bg-sky-800">
+                  <Button size="lg" className="h-12 rounded-lg bg-[#181e25] px-6 text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] hover:bg-[#111827]">
                     {t("publicModels.searchModels")}
                     <Search className="h-4 w-4" />
                   </Button>
                 </a>
                 <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                  <Button size="lg" variant="outline" className="h-12 rounded-full border-slate-300 bg-white px-6 dark:border-slate-700 dark:bg-slate-900">
+                  <Button size="lg" variant="outline" className="h-12 rounded-lg border-0 bg-[#f0f0f0] px-6 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white">
                     {t("publicModels.getApiKey")}
                     <ExternalLink className="h-4 w-4" />
                   </Button>
@@ -357,60 +355,61 @@ export default function PublicModelsPage() {
                 { key: "capabilities", value: stats.capabilities, icon: SlidersHorizontal },
                 { key: "groups", value: stats.groups, icon: CheckCircle2 },
               ] satisfies StatItem[]).map(({ key, value, icon: Icon }) => (
-                <Card key={key} className="gap-0 rounded-lg border-slate-200 bg-slate-50 shadow-none dark:border-slate-800 dark:bg-slate-900/70">
-                  <CardContent className="flex items-center justify-between gap-4 p-5">
-                    <div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {t(`publicModels.stats.${key}`)}
-                      </div>
-                      <div className="mt-1 text-3xl font-semibold tabular-nums">
-                        {isLoading ? "-" : value}
-                      </div>
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-4 rounded-[20px] bg-white p-6 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-[#8e8e93]">
+                      {t(`publicModels.stats.${key}`)}
                     </div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300">
-                      <Icon className="h-5 w-5" />
+                    <div className="mt-2 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-3xl font-semibold tabular-nums text-[#18181b] dark:text-white">
+                      {isLoading ? "-" : value}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-[#f0f0f0] text-[#1456f0] dark:bg-white/10">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="model-catalog" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section id="model-catalog" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
+          <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="text-sm font-medium text-sky-700 dark:text-sky-300">
+              <div className="text-sm font-medium text-[#1456f0]">
                 {t("publicModels.catalogEyebrow")}
               </div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h2 className="mt-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
                 {t("publicModels.catalogTitle")}
               </h2>
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
+            <div className="text-sm text-[#8e8e93]" aria-live="polite">
               {t("publicModels.results", { count: filteredModels.length })}
             </div>
           </div>
 
-          <Card className="mb-5 gap-0 rounded-lg border-slate-200 bg-white py-0 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-            <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="mb-8 rounded-[24px] bg-white p-4 shadow-[rgba(0,0,0,0.08)_0px_0px_22.576px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10 sm:p-5">
+            <div className="space-y-4">
               <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_180px_180px_160px_auto]">
                 <div className="relative">
                   <label className="sr-only" htmlFor="public-model-search">
                     {t("publicModels.searchLabel")}
                   </label>
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
                   <Input
                     id="public-model-search"
                     value={keyword}
                     onChange={(event) => setKeyword(event.target.value)}
                     placeholder={t("publicModels.searchPlaceholder")}
-                    className="h-11 rounded-lg border-slate-200 bg-white pl-10 shadow-none dark:border-slate-800 dark:bg-slate-950"
+                    className="h-11 rounded-[13px] border-[#e5e7eb] bg-white pl-10 text-[#222222] shadow-none placeholder:text-[#8e8e93] dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
 
                 <Select value={providerFilter} onValueChange={setProviderFilter}>
-                  <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
                     <SelectValue placeholder={t("publicModels.provider")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -424,7 +423,7 @@ export default function PublicModelsPage() {
                 </Select>
 
                 <Select value={capabilityFilter} onValueChange={setCapabilityFilter}>
-                  <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
                     <SelectValue placeholder={t("publicModels.capability")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -438,7 +437,7 @@ export default function PublicModelsPage() {
                 </Select>
 
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
                     <SelectValue placeholder={t("publicModels.sort.label")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -453,7 +452,7 @@ export default function PublicModelsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 rounded-lg border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+                  className="h-11 rounded-lg border-0 bg-[#f0f0f0] px-5 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white"
                   onClick={clearFilters}
                   disabled={!hasActiveFilters}
                 >
@@ -467,8 +466,8 @@ export default function PublicModelsPage() {
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 shrink-0 rounded-full border-slate-200 px-3 shadow-none dark:border-slate-800",
-                    capabilityFilter === ALL_VALUE && "border-sky-700 bg-sky-50 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+                    "h-9 shrink-0 rounded-full border-transparent bg-black/[0.05] px-3 text-[#45515e] shadow-none hover:bg-black/[0.08] dark:bg-white/10 dark:text-white/70",
+                    capabilityFilter === ALL_VALUE && "bg-[#181e25] text-white hover:bg-[#181e25] dark:bg-white dark:text-[#181e25]",
                   )}
                   onClick={() => setCapabilityFilter(ALL_VALUE)}
                 >
@@ -483,8 +482,8 @@ export default function PublicModelsPage() {
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "h-9 shrink-0 rounded-full border-slate-200 px-3 shadow-none dark:border-slate-800",
-                      capabilityFilter === capability && "border-sky-700 bg-sky-50 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+                      "h-9 shrink-0 rounded-full border-transparent bg-black/[0.05] px-3 text-[#45515e] shadow-none hover:bg-black/[0.08] dark:bg-white/10 dark:text-white/70",
+                      capabilityFilter === capability && "bg-[#181e25] text-white hover:bg-[#181e25] dark:bg-white dark:text-[#181e25]",
                     )}
                     onClick={() => setCapabilityFilter(capability)}
                   >
@@ -492,204 +491,124 @@ export default function PublicModelsPage() {
                   </Button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60 lg:block">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="px-4 py-3">{t("publicModels.table.model")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("publicModels.table.provider")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("publicModels.table.capabilities")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("publicModels.table.context")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("publicModels.table.input")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("publicModels.table.output")}</TableHead>
-                  <TableHead className="px-4 py-3 text-right">{t("publicModels.table.action")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 8 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="px-4 py-4" colSpan={7}>
-                        <Skeleton className="h-8 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : isError ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
-                      {t("publicModels.loadError")}
-                    </TableCell>
-                  </TableRow>
-                ) : filteredModels.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
-                      {t("publicModels.empty")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredModels.map((model) => (
-                    <TableRow key={model.model} id={encodeURIComponent(model.model)}>
-                      <TableCell className="max-w-[320px] px-4 py-4">
-                        <div className="space-y-1">
-                          <Link
-                            to={getPublicModelDetailPath(model.model)}
-                            className="break-words font-medium text-slate-950 transition hover:text-sky-700 dark:text-white dark:hover:text-sky-300"
-                          >
-                            {model.model}
-                          </Link>
-                          <div className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
-                            {model.description || t("publicModels.defaultDescription")}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-4">{model.provider}</TableCell>
-                      <TableCell className="px-4 py-4">
-                        <div className="flex max-w-[280px] flex-wrap gap-1.5">
-                          {(model.capabilities || []).slice(0, 4).map((capability) => (
-                            <Badge key={capability} variant="outline" className="rounded-full border-slate-200 px-2 font-normal dark:border-slate-700">
-                              {t(`portal.models.capability.${capability}`)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-4 font-mono text-sm">
-                        {formatContextLength(model.context_length)}
-                      </TableCell>
-                      <TableCell className="px-4 py-4 font-mono text-sm">
-                        {getInputPrice(model) || "-"}
-                      </TableCell>
-                      <TableCell className="px-4 py-4 font-mono text-sm">
-                        {getOutputPrice(model) || "-"}
-                      </TableCell>
-                      <TableCell className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-9 w-9 rounded-lg"
-                            aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
-                            onClick={() => copyModelId(model.model)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                            <Button size="sm" className="h-9 rounded-lg bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950">
-                              {t("publicModels.startUsing")}
-                            </Button>
-                          </Link>
-                          <Link to={getPublicModelDetailPath(model.model)}>
-                            <Button size="sm" variant="outline" className="h-9 rounded-lg">
-                              {t("publicModels.viewDetails")}
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            </div>
           </div>
 
-          <div className="grid gap-3 lg:hidden">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
-                <Skeleton key={index} className="h-[178px] rounded-lg" />
+                <Skeleton key={index} className="h-[286px] rounded-[20px]" />
               ))
             ) : isError ? (
-              <Card className="rounded-lg border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-900">
-                <CardContent className="p-6 text-center text-sm text-slate-500">
-                  {t("publicModels.loadError")}
-                </CardContent>
-              </Card>
+              <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
+                {t("publicModels.loadError")}
+              </div>
             ) : filteredModels.length === 0 ? (
-              <Card className="rounded-lg border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-900">
-                <CardContent className="p-6 text-center text-sm text-slate-500">
-                  {t("publicModels.empty")}
-                </CardContent>
-              </Card>
+              <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
+                {t("publicModels.empty")}
+              </div>
             ) : (
               filteredModels.map((model) => (
-                <Card key={model.model} className="gap-0 rounded-lg border-slate-200 bg-white py-0 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-                  <CardContent className="space-y-4 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link
-                          to={getPublicModelDetailPath(model.model)}
-                          className="break-words font-semibold transition hover:text-sky-700 dark:hover:text-sky-300"
-                        >
-                          {model.model}
-                        </Link>
-                        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                          {model.provider} · {formatContextLength(model.context_length)}
+                <article
+                  key={model.model}
+                  id={encodeURIComponent(model.model)}
+                  className="group flex min-h-[286px] flex-col rounded-[20px] bg-white p-5 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:bg-white/5 dark:ring-white/10"
+                >
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
+                      {model.provider}
+                    </Badge>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
+                      onClick={() => copyModelId(model.model)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <Link
+                    to={getPublicModelDetailPath(model.model)}
+                    className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                  >
+                    {model.model}
+                  </Link>
+                  <p className="mt-3 line-clamp-2 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
+                    {model.description || t("publicModels.defaultDescription")}
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap gap-1.5">
+                    {(model.capabilities || []).slice(0, 5).map((capability) => (
+                      <Badge
+                        key={capability}
+                        variant="outline"
+                        className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+                      >
+                        {t(`portal.models.capability.${capability}`)}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="mt-auto grid grid-cols-3 gap-3 pt-6">
+                    {[
+                      {
+                        label: t("publicModels.table.context"),
+                        value: formatContextLength(model.context_length),
+                      },
+                      {
+                        label: t("publicModels.table.input"),
+                        value: getInputPrice(model) || "-",
+                      },
+                      {
+                        label: t("publicModels.table.output"),
+                        value: getOutputPrice(model) || "-",
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className="min-w-0">
+                        <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
+                        <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-semibold text-[#18181b] dark:text-white">
+                          {item.value}
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        className="h-9 w-9 shrink-0 rounded-lg"
-                        aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
-                        onClick={() => copyModelId(model.model)}
-                      >
-                        <Copy className="h-4 w-4" />
+                    ))}
+                  </div>
+
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    <Link to={getPublicModelDetailPath(model.model)}>
+                      <Button variant="outline" className="h-10 w-full rounded-lg border-0 bg-[#f0f0f0] text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white">
+                        {t("publicModels.viewDetails")}
                       </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(model.capabilities || []).slice(0, 5).map((capability) => (
-                        <Badge key={capability} variant="outline" className="rounded-full border-slate-200 px-2 font-normal dark:border-slate-700">
-                          {t(`portal.models.capability.${capability}`)}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <div className="text-xs text-slate-500">{t("publicModels.table.input")}</div>
-                        <div className="mt-1 font-mono">{getInputPrice(model) || "-"}</div>
-                      </div>
-                      <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                        <div className="text-xs text-slate-500">{t("publicModels.table.output")}</div>
-                        <div className="mt-1 font-mono">{getOutputPrice(model) || "-"}</div>
-                      </div>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Link to={getPublicModelDetailPath(model.model)}>
-                        <Button variant="outline" className="h-10 w-full rounded-lg">
-                          {t("publicModels.viewDetails")}
-                        </Button>
-                      </Link>
-                      <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                        <Button className="h-10 w-full rounded-lg bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950">
-                          {t("publicModels.startUsing")}
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </Link>
+                    <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
+                      <Button className="h-10 w-full rounded-lg bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
+                        {t("publicModels.startUsing")}
+                      </Button>
+                    </Link>
+                  </div>
+                </article>
               ))
             )}
           </div>
         </section>
 
-        <section className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <section className="border-t border-[#f2f3f5] bg-white dark:border-white/10">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20">
             <div className="space-y-4">
-              <Badge variant="outline" className="rounded-full border-slate-200 dark:border-slate-700">
+              <Badge variant="outline" className="rounded-full border-[#e5e7eb] bg-white text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70">
                 <Code2 className="h-3.5 w-3.5" />
                 {t("publicModels.apiExample.badge")}
               </Badge>
-              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
                 {t("publicModels.apiExample.title")}
               </h2>
-              <p className="leading-7 text-slate-600 dark:text-slate-300">
+              <p className="leading-[1.5] text-[#45515e] dark:text-white/70">
                 {t("publicModels.apiExample.description")}
               </p>
             </div>
-            <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950 shadow-2xl">
+            <div className="overflow-hidden rounded-[20px] bg-[#181e25] shadow-[rgba(44,30,116,0.16)_0px_0px_15px]">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div className="flex gap-2">
                   <span className="h-3 w-3 rounded-full bg-red-400" />
@@ -700,7 +619,7 @@ export default function PublicModelsPage() {
                   OpenAI compatible
                 </Badge>
               </div>
-              <pre className="overflow-x-auto p-5 text-sm leading-7 text-slate-200">
+              <pre className="overflow-x-auto p-5 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm leading-7 text-white/80">
 {`curl https://api.yourdomain.com/v1/chat/completions \\
   -H "Authorization: Bearer $API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -714,7 +633,7 @@ export default function PublicModelsPage() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 py-8 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <footer className="bg-[#181e25] py-8 text-sm text-white/70">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6">
           <div>© {new Date().getFullYear()} LiteMHub. AI model distribution platform.</div>
           <div className="inline-flex items-center gap-2">
