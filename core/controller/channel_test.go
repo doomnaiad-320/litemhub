@@ -8,9 +8,17 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/mode"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
+
+type testModelConfigCache map[string]model.ModelConfig
+
+func (c testModelConfigCache) GetModelConfig(modelName string) (model.ModelConfig, bool) {
+	config, ok := c[modelName]
+	return config, ok
+}
 
 func TestRunAutoTestBannedModelsHonorsConcurrencyLimit(t *testing.T) {
 	const (
@@ -117,4 +125,36 @@ func TestRunAutoTestBannedModelsClearsWhenModelRemovedFromChannel(t *testing.T) 
 	require.False(t, testInvoked.Load())
 	require.Equal(t, int32(1), cleared.Load())
 	require.Equal(t, int64(123), clearedChannel.Load())
+}
+
+func TestGetChannelTestModelConfigUsesOriginModelForMappedName(t *testing.T) {
+	mc := &model.ModelCaches{
+		ModelConfig: testModelConfigCache{
+			"public-model": {
+				Model: "public-model",
+				Type:  mode.ChatCompletions,
+				Price: model.Price{
+					InputPrice:  1,
+					OutputPrice: 2,
+				},
+			},
+		},
+	}
+	channel := &model.Channel{
+		ModelMapping: map[string]string{
+			"public-model": "upstream-model-without-price-config",
+		},
+	}
+
+	originModel, config, ok := getChannelTestModelConfig(
+		mc,
+		channel,
+		"upstream-model-without-price-config",
+	)
+
+	require.True(t, ok)
+	require.Equal(t, "public-model", originModel)
+	require.Equal(t, "public-model", config.Model)
+	require.Equal(t, model.ZeroNullFloat64(1), config.Price.InputPrice)
+	require.Equal(t, model.ZeroNullFloat64(2), config.Price.OutputPrice)
 }

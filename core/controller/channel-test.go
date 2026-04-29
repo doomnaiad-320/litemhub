@@ -56,6 +56,34 @@ func guessModelConfig(modelName string) model.ModelConfig {
 	return model.ModelConfig{}
 }
 
+func getChannelTestModelConfig(
+	mc *model.ModelCaches,
+	channel *model.Channel,
+	modelName string,
+) (string, model.ModelConfig, bool) {
+	modelConfig, ok := mc.ModelConfig.GetModelConfig(modelName)
+	if ok {
+		return modelName, modelConfig, true
+	}
+
+	if channel == nil || len(channel.ModelMapping) == 0 {
+		return modelName, model.ModelConfig{}, false
+	}
+
+	for originModel, actualModel := range channel.ModelMapping {
+		if !strings.EqualFold(actualModel, modelName) {
+			continue
+		}
+
+		modelConfig, ok = mc.ModelConfig.GetModelConfig(originModel)
+		if ok {
+			return originModel, modelConfig, true
+		}
+	}
+
+	return modelName, model.ModelConfig{}, false
+}
+
 // testSingleModel tests a single model in the channel
 // If saveToDB is true, the test result will be saved to database
 func testSingleModel(
@@ -64,13 +92,13 @@ func testSingleModel(
 	modelName string,
 	saveToDB bool,
 ) (*model.ChannelTest, error) {
-	modelConfig, ok := mc.ModelConfig.GetModelConfig(modelName)
+	originModel, modelConfig, ok := getChannelTestModelConfig(mc, channel, modelName)
 	if !ok {
 		return nil, errors.New(modelName + " model config not found")
 	}
 
 	if modelConfig.Type == mode.Unknown {
-		newModelConfig := guessModelConfig(modelName)
+		newModelConfig := guessModelConfig(originModel)
 		if newModelConfig.Type != mode.Unknown {
 			modelConfig = newModelConfig
 		}
@@ -118,7 +146,7 @@ func testSingleModel(
 	testMeta := meta.NewMeta(
 		channel,
 		m,
-		modelName,
+		originModel,
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
 	)

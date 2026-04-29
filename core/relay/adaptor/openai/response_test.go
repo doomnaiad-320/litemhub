@@ -139,3 +139,75 @@ func TestResponseStreamHandlerPromptCacheRetention(t *testing.T) {
 	require.Empty(t, store.savedIfNotExist)
 	assert.Equal(t, "resp_123", result.UpstreamID)
 }
+
+func TestResponseHandlerStoresOriginModelForMappedModel(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+	store := &responseTestStore{}
+	meta := &meta.Meta{
+		OriginModel: "gpt-image-2",
+		ActualModel: "gpt-image-2-origin",
+		Group:       model.GroupCache{ID: "group-1"},
+		Token:       model.TokenCache{ID: 7},
+		Channel:     meta.ChannelMeta{ID: 9},
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusCreated,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{"id":"resp_mapped","object":"response","created_at":1,"status":"completed","model":"gpt-image-2-origin","output":[],"parallel_tool_calls":true,"store":true}`,
+		)),
+		Header: make(http.Header),
+	}
+
+	result, err := ResponseHandler(meta, store, c, resp)
+	require.Nil(t, err)
+	require.Len(t, store.saved, 1)
+	assert.Equal(t, "resp_mapped", result.UpstreamID)
+	assert.Equal(t, model.ResponseStoreID("resp_mapped"), store.saved[0].ID)
+	assert.Equal(t, "gpt-image-2", store.saved[0].Model)
+}
+
+func TestResponseStreamHandlerStoresOriginModelForMappedModel(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+	store := &responseTestStore{}
+	meta := &meta.Meta{
+		OriginModel: "gpt-image-2",
+		ActualModel: "gpt-image-2-origin",
+		Group:       model.GroupCache{ID: "group-1"},
+		Token:       model.TokenCache{ID: 7},
+		Channel:     meta.ChannelMeta{ID: 9},
+	}
+	body := "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_stream_mapped\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-image-2-origin\",\"output\":[],\"parallel_tool_calls\":true,\"store\":true}}\n\n" +
+		"data: [DONE]\n\n"
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(meta, store, c, resp)
+	require.Nil(t, err)
+	require.Len(t, store.saved, 1)
+	assert.Equal(t, "resp_stream_mapped", result.UpstreamID)
+	assert.Equal(t, model.ResponseStoreID("resp_stream_mapped"), store.saved[0].ID)
+	assert.Equal(t, "gpt-image-2", store.saved[0].Model)
+}
