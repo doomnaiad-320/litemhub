@@ -13,6 +13,14 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { channelCreateSchema } from '@/validation/channel'
 import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannel, useTestChannelPreviewAll, useChannelDefaultModels, useDiscoverChannelModels } from '../hooks'
@@ -29,7 +37,7 @@ import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedContainer } from '@/components/ui/animation/components/animated-container'
 import { toast } from 'sonner'
-import { DownloadCloud, FlaskConical, Loader2, Info, Power, PowerOff } from 'lucide-react'
+import { DownloadCloud, FlaskConical, Loader2, Info, Power, PowerOff, Search } from 'lucide-react'
 import { ChannelTestDialog } from './ChannelTestDialog'
 import { DefaultModelsDialog } from './DefaultModelsDialog'
 import { ChannelConfigEditor } from './ChannelConfigEditor'
@@ -147,7 +155,8 @@ export function ChannelForm({
     const [currentStatus, setCurrentStatus] = useState(channel?.status ?? 1)
     const [discoveredModels, setDiscoveredModels] = useState<ChannelDiscoveredModel[]>([])
     const [selectedDiscoveredModels, setSelectedDiscoveredModels] = useState<Record<string, boolean>>({})
-    const [discoveredPublicNames, setDiscoveredPublicNames] = useState<Record<string, string>>({})
+    const [discoveredDialogOpen, setDiscoveredDialogOpen] = useState(false)
+    const [discoveredSearch, setDiscoveredSearch] = useState('')
 
     // Determine initial useDefaultModels state
     const initialUseDefault = mode === 'create'
@@ -264,7 +273,8 @@ export function ChannelForm({
     const clearDiscoveredModels = () => {
         setDiscoveredModels([])
         setSelectedDiscoveredModels({})
-        setDiscoveredPublicNames({})
+        setDiscoveredDialogOpen(false)
+        setDiscoveredSearch('')
     }
 
     // 防止意外的表单提交
@@ -428,9 +438,8 @@ export function ChannelForm({
         setSelectedDiscoveredModels(Object.fromEntries(
             discovered.map((item) => [item.upstream_model, !item.exists])
         ))
-        setDiscoveredPublicNames(Object.fromEntries(
-            discovered.map((item) => [item.upstream_model, item.model])
-        ))
+        setDiscoveredSearch('')
+        setDiscoveredDialogOpen(true)
         if (effectiveUseDefault) {
             setUseDefaultModels(false)
             form.setValue('useDefaultModels', false)
@@ -440,11 +449,7 @@ export function ChannelForm({
 
     const handleImportDiscoveredModels = () => {
         const selectedModels = discoveredModels
-            .map((item) => ({
-                ...item,
-                publicName: (discoveredPublicNames[item.upstream_model] || item.model).trim(),
-            }))
-            .filter((item) => selectedDiscoveredModels[item.upstream_model] && item.publicName)
+            .filter((item) => selectedDiscoveredModels[item.upstream_model] && item.model.trim())
 
         if (selectedModels.length === 0) {
             toast.error('请选择要导入的模型')
@@ -457,20 +462,17 @@ export function ChannelForm({
         const nextMapping = { ...currentMapping }
 
         selectedModels.forEach((item) => {
-            if (!nextModels.includes(item.publicName)) {
-                nextModels.push(item.publicName)
+            if (!nextModels.includes(item.model)) {
+                nextModels.push(item.model)
             }
-            if (item.publicName !== item.upstream_model) {
-                nextMapping[item.publicName] = item.upstream_model
-            } else {
-                delete nextMapping[item.publicName]
-            }
+            delete nextMapping[item.model]
         })
 
         setUseDefaultModels(false)
         form.setValue('useDefaultModels', false)
         form.setValue('models', nextModels)
         form.setValue('model_mapping', nextMapping)
+        setDiscoveredDialogOpen(false)
         toast.success(`已导入 ${selectedModels.length} 个模型`)
     }
 
@@ -796,87 +798,107 @@ export function ChannelForm({
         )
     }
 
-    const renderDiscoveredModelsPreview = () => {
-        if (discoveredModels.length === 0) {
-            return null
+    const renderDiscoveredModelsDialog = () => {
+        const query = discoveredSearch.trim().toLowerCase()
+        const filteredModels = query
+            ? discoveredModels.filter((item) => item.model.toLowerCase().includes(query))
+            : discoveredModels
+        const selectedCount = discoveredModels.filter((item) => selectedDiscoveredModels[item.upstream_model]).length
+        const visibleSelectedCount = filteredModels.filter((item) => selectedDiscoveredModels[item.upstream_model]).length
+        const allVisibleSelected = filteredModels.length > 0 && visibleSelectedCount === filteredModels.length
+
+        const toggleVisibleModels = (checked: boolean) => {
+            setSelectedDiscoveredModels((prev) => {
+                const next = { ...prev }
+                filteredModels.forEach((item) => {
+                    next[item.upstream_model] = checked
+                })
+                return next
+            })
         }
 
-        const unpricedCount = discoveredModels.filter((item) => !item.priced).length
-        const selectedCount = discoveredModels.filter((item) => selectedDiscoveredModels[item.upstream_model]).length
-
         return (
-            <div className="rounded-lg border border-dashed bg-muted/30 p-3">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{discoveredModels.length} 个上游模型</Badge>
-                        {unpricedCount > 0 && (
-                            <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300">
-                                {unpricedCount} 个待配置价格
-                            </Badge>
+            <Dialog open={discoveredDialogOpen} onOpenChange={setDiscoveredDialogOpen}>
+                <DialogContent className="max-h-[80vh] overflow-hidden p-0 sm:max-w-[50vw]">
+                    <DialogHeader className="border-b px-5 py-4">
+                        <DialogTitle>选择模型</DialogTitle>
+                        <DialogDescription>
+                            已获取 {discoveredModels.length} 个模型，已选择 {selectedCount} 个
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 px-5">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                value={discoveredSearch}
+                                onChange={(event) => setDiscoveredSearch(event.target.value)}
+                                placeholder="搜索模型"
+                                className="pl-9"
+                            />
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleVisibleModels(!allVisibleSelected)}
+                                disabled={filteredModels.length === 0}
+                            >
+                                {allVisibleSelected ? '取消当前结果' : '选择当前结果'}
+                            </Button>
+                            <Badge variant="secondary">{filteredModels.length} 个结果</Badge>
+                        </div>
+                    </div>
+                    <div className="mx-5 max-h-[48vh] overflow-y-auto rounded-md border">
+                        {filteredModels.length === 0 ? (
+                            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                                没有匹配的模型
+                            </div>
+                        ) : (
+                            filteredModels.map((item) => {
+                                const checked = !!selectedDiscoveredModels[item.upstream_model]
+                                return (
+                                    <label
+                                        key={item.upstream_model}
+                                        className="flex cursor-pointer items-center gap-3 border-b px-3 py-2.5 last:border-b-0 hover:bg-muted/40"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4"
+                                            checked={checked}
+                                            onChange={(event) => {
+                                                setSelectedDiscoveredModels((prev) => ({
+                                                    ...prev,
+                                                    [item.upstream_model]: event.target.checked,
+                                                }))
+                                            }}
+                                        />
+                                        <span className="min-w-0 flex-1 truncate font-mono text-sm">
+                                            {item.model}
+                                        </span>
+                                    </label>
+                                )
+                            })
                         )}
                     </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleImportDiscoveredModels}
-                        disabled={selectedCount === 0}
-                    >
-                        导入选中
-                    </Button>
-                </div>
-                <div className="max-h-72 overflow-y-auto rounded-md border bg-background">
-                    {discoveredModels.map((item) => {
-                        const checked = !!selectedDiscoveredModels[item.upstream_model]
-                        return (
-                            <div
-                                key={item.upstream_model}
-                                className="grid gap-2 border-b p-2 last:border-b-0 sm:grid-cols-[24px_minmax(0,1fr)_minmax(180px,0.8fr)_auto]"
-                            >
-                                <input
-                                    type="checkbox"
-                                    className="mt-2 h-4 w-4"
-                                    checked={checked}
-                                    onChange={(event) => {
-                                        setSelectedDiscoveredModels((prev) => ({
-                                            ...prev,
-                                            [item.upstream_model]: event.target.checked,
-                                        }))
-                                    }}
-                                />
-                                <div className="min-w-0">
-                                    <div className="truncate font-mono text-xs">{item.upstream_model}</div>
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                        {item.exists ? (
-                                            <Badge variant="secondary" className="text-[10px]">已存在</Badge>
-                                        ) : (
-                                            <Badge variant="outline" className="text-[10px]">新模型</Badge>
-                                        )}
-                                        {!item.priced && (
-                                            <Badge variant="outline" className="border-amber-300 text-[10px] text-amber-700 dark:border-amber-700 dark:text-amber-300">
-                                                待配置价格
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                                <Input
-                                    value={discoveredPublicNames[item.upstream_model] || item.model}
-                                    onChange={(event) => {
-                                        setDiscoveredPublicNames((prev) => ({
-                                            ...prev,
-                                            [item.upstream_model]: event.target.value,
-                                        }))
-                                    }}
-                                    className="h-8 font-mono text-xs"
-                                />
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                    {(discoveredPublicNames[item.upstream_model] || item.model).trim() !== item.upstream_model ? '映射' : ''}
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
+                    <DialogFooter className="border-t px-5 py-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDiscoveredDialogOpen(false)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleImportDiscoveredModels}
+                            disabled={selectedCount === 0}
+                        >
+                            导入选中
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         )
     }
 
@@ -1020,7 +1042,6 @@ export function ChannelForm({
                                         renderDefaultModelsPreview()
                                     ) : (
                                         <>
-                                            {renderDiscoveredModelsPreview()}
                                             <FormField
                                                 control={form.control}
                                                 name="models"
@@ -1535,6 +1556,8 @@ export function ChannelForm({
                     onOpenChange={setDefaultModelsDialogOpen}
                     initialTypeId={watchedType || undefined}
                 />
+
+                {renderDiscoveredModelsDialog()}
             </div>
         </AnimatedContainer>
     )
