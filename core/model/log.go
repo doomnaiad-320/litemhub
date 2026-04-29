@@ -599,6 +599,18 @@ type GetLogsResult struct {
 	Models   []string `json:"models,omitempty"`
 }
 
+type LogStats struct {
+	TotalCount          int64   `json:"total_count"`
+	SuccessCount        int64   `json:"success_count"`
+	ErrorCount          int64   `json:"error_count"`
+	UsedAmount          float64 `json:"used_amount"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	AverageMilliseconds float64 `json:"average_milliseconds"`
+	AverageTTFB         float64 `json:"average_ttfb_milliseconds"`
+}
+
 type GetGroupLogsResult struct {
 	GetLogsResult
 	TokenNames []string `json:"token_names"`
@@ -674,10 +686,72 @@ func buildGetLogsQuery(
 	}
 
 	if user != "" {
-		tx = tx.Where("user = ?", user)
+		tx = applyLogUserFilter(tx, user)
 	}
 
 	return tx
+}
+
+func applyLogUserFilter(tx *gorm.DB, user string) *gorm.DB {
+	user = strings.TrimSpace(user)
+	if user == "" {
+		return tx
+	}
+
+	userIDs := make([]int, 0)
+	if id := String2Int(user); id > 0 {
+		userIDs = append(userIDs, id)
+	}
+
+	likeUser := "%" + user + "%"
+	users := make([]*AppUser, 0)
+	if err := DB.
+		Select("id").
+		Where("email LIKE ? OR phone LIKE ?", likeUser, likeUser).
+		Find(&users).Error; err == nil {
+		seen := make(map[int]struct{}, len(userIDs)+len(users))
+		for _, id := range userIDs {
+			seen[id] = struct{}{}
+		}
+		for _, appUser := range users {
+			if appUser == nil || appUser.ID == 0 {
+				continue
+			}
+			if _, ok := seen[appUser.ID]; ok {
+				continue
+			}
+			seen[appUser.ID] = struct{}{}
+			userIDs = append(userIDs, appUser.ID)
+		}
+	}
+
+	conditions := LogDB.Where("user = ?", user)
+	if len(userIDs) > 0 {
+		conditions = conditions.Or("owner_user_id IN ?", userIDs)
+	}
+	return tx.Where(conditions)
+}
+
+func scanLogStats(tx *gorm.DB) (*LogStats, error) {
+	stats := &LogStats{}
+	durationSQL := "EXTRACT(EPOCH FROM (created_at - request_at)) * 1000"
+	if common.UsingSQLite {
+		durationSQL = "(julianday(created_at) - julianday(request_at)) * 86400000"
+	}
+
+	err := tx.Select(
+		"COUNT(*) AS total_count, " +
+			"COALESCE(SUM(CASE WHEN code = 200 THEN 1 ELSE 0 END), 0) AS success_count, " +
+			"COALESCE(SUM(CASE WHEN code != 200 THEN 1 ELSE 0 END), 0) AS error_count, " +
+			"COALESCE(SUM(used_amount), 0) AS used_amount, " +
+			"COALESCE(SUM(input_tokens), 0) AS input_tokens, " +
+			"COALESCE(SUM(output_tokens), 0) AS output_tokens, " +
+			"COALESCE(SUM(total_tokens), 0) AS total_tokens, " +
+			"COALESCE(AVG(" + durationSQL + "), 0) AS average_milliseconds, " +
+			"COALESCE(AVG(ttfb_milliseconds), 0) AS average_ttfb_milliseconds",
+	).Scan(stats).Error
+
+	return stats, err
 }
 
 func getLogs(
@@ -821,7 +895,7 @@ func buildAppUserLogsQuery(
 	}
 
 	if user != "" {
-		tx = tx.Where("user = ?", user)
+		tx = applyLogUserFilter(tx, user)
 	}
 
 	return tx
@@ -1605,6 +1679,40 @@ func searchLogs(
 	}
 
 	return total, logs, nil
+}
+
+func GetLogStats(
+	keyword string,
+	requestID string,
+	upstreamID string,
+	group string,
+	tokenID int,
+	tokenName string,
+	modelName string,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+	channelID int,
+	codeType CodeType,
+	code int,
+	ip string,
+	user string,
+) (*LogStats, error) {
+	return scanLogStats(buildSearchLogsQuery(
+		group,
+		keyword,
+		requestID,
+		upstreamID,
+		tokenID,
+		tokenName,
+		modelName,
+		startTimestamp,
+		endTimestamp,
+		channelID,
+		codeType,
+		code,
+		ip,
+		user,
+	))
 }
 
 func SearchLogs(

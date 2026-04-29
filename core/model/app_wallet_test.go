@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
@@ -41,10 +42,12 @@ func TestReserveAndSettleAppUserReservation(t *testing.T) {
 
 		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 10, "id-asc")
 		require.NoError(t, err)
-		require.EqualValues(t, 2, total)
-		require.Len(t, logs, 2)
-		require.Equal(t, model.AppWalletLogTypeReserve, logs[0].Type)
-		require.Equal(t, model.AppWalletLogTypeSettle, logs[1].Type)
+		require.EqualValues(t, 0, total)
+		require.Empty(t, logs)
+
+		consumed, err := model.GetAppWalletHistoricalConsumed(user.ID)
+		require.NoError(t, err)
+		require.Equal(t, 2.5, consumed)
 
 		rechargeLogs, total, err := model.GetAppWalletLogsByTypes(
 			user.ID,
@@ -87,8 +90,9 @@ func TestGetAppWalletLogsByTypes(t *testing.T) {
 
 		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 10, "id-asc")
 		require.NoError(t, err)
-		require.EqualValues(t, 3, total)
-		require.Len(t, logs, 3)
+		require.EqualValues(t, 1, total)
+		require.Len(t, logs, 1)
+		require.Equal(t, model.AppWalletLogTypeRecharge, logs[0].Type)
 
 		rechargeLogs, total, err := model.GetAppWalletLogsByTypes(
 			user.ID,
@@ -102,6 +106,120 @@ func TestGetAppWalletLogsByTypes(t *testing.T) {
 		require.Len(t, rechargeLogs, 1)
 		require.Equal(t, model.AppWalletLogTypeRecharge, rechargeLogs[0].Type)
 		require.Equal(t, 5.0, rechargeLogs[0].Amount)
+	})
+}
+
+func TestCleanupAppWalletConsumptionLogsKeepsRechargeLogs(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeRecharge,
+			Amount: 5,
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeReserve,
+			Amount: 2,
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeSettle,
+			Amount: 1.5,
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeRelease,
+			Amount: 0.5,
+		}).Error)
+
+		require.NoError(t, model.CleanupAppWalletConsumptionLogs())
+
+		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 1, total)
+		require.Len(t, logs, 1)
+		require.Equal(t, model.AppWalletLogTypeRecharge, logs[0].Type)
+	})
+}
+
+func TestGetAppRechargeStatsWithPaidDuluPayRecharge(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		paidAt := time.Date(2026, 4, 10, 13, 34, 0, 0, time.Local)
+
+		err := model.DB.Create(&model.AppPaymentOrder{
+			UserID:     user.ID,
+			Amount:     50,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-test-stats",
+			Status:     model.AppPaymentStatusPaid,
+			PaidAt:     &paidAt,
+			CreatedAt:  paidAt,
+		}).Error
+		require.NoError(t, err)
+
+		startTime := time.Date(2026, 4, 1, 0, 0, 0, 0, time.Local)
+		endTime := time.Date(2026, 4, 29, 23, 59, 59, 0, time.Local)
+		stats, err := model.GetAppRechargeStats("", startTime, endTime, "day")
+		require.NoError(t, err)
+		require.Equal(t, "day", stats.Granularity)
+		require.Equal(t, 50.0, stats.PaidAmount)
+		require.EqualValues(t, 1, stats.PaidCount)
+		require.NotEmpty(t, stats.ByChannel)
+		require.Equal(t, "dulupay", stats.ByChannel[0].Channel)
+		require.Equal(t, 50.0, stats.ByChannel[0].Amount)
+		require.NotEmpty(t, stats.TimeSeries)
+	})
+}
+
+func TestGetAppPaymentOrdersIncludesPaidPendingAndFailedStatuses(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		createdAt := time.Date(2026, 4, 29, 13, 34, 0, 0, time.Local)
+
+		require.NoError(t, model.DB.Create(&model.AppPaymentOrder{
+			UserID:     user.ID,
+			Amount:     50,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-paid",
+			TradeNo:    model.EmptyNullString("dulupay-paid"),
+			Status:     model.AppPaymentStatusPaid,
+			CreatedAt:  createdAt,
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppPaymentOrder{
+			UserID:     user.ID,
+			Amount:     20,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-pending",
+			Status:     model.AppPaymentStatusPending,
+			CreatedAt:  createdAt.Add(time.Minute),
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppPaymentOrder{
+			UserID:     user.ID,
+			Amount:     10,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-failed",
+			Status:     model.AppPaymentStatusFailed,
+			CreatedAt:  createdAt.Add(2 * time.Minute),
+		}).Error)
+
+		orders, total, err := model.GetAppPaymentOrders(0, "", "", "", time.Time{}, time.Time{}, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 3, total)
+		require.Len(t, orders, 3)
+		require.Equal(t, model.AppPaymentAdminStatusSuccess, orders[0].AdminStatus)
+		require.Equal(t, "dulupay-paid", orders[0].AdminTradeNo)
+		require.Equal(t, model.AppPaymentAdminStatusUnpaid, orders[1].AdminStatus)
+		require.Equal(t, "UP-pending", orders[1].AdminTradeNo)
+		require.Equal(t, model.AppPaymentAdminStatusFailed, orders[2].AdminStatus)
+
+		orders, total, err = model.GetAppPaymentOrders(0, "", "", model.AppPaymentAdminStatusUnpaid, time.Time{}, time.Time{}, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 1, total)
+		require.Len(t, orders, 1)
+		require.Equal(t, "UP-pending", orders[0].OutTradeNo)
 	})
 }
 
@@ -260,6 +378,10 @@ func TestFailAppUserReservation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 3.0, wallet.AvailableBalance)
 		require.Equal(t, 2.0, wallet.FrozenBalance)
+
+		consumed, err := model.GetAppWalletHistoricalConsumed(user.ID)
+		require.NoError(t, err)
+		require.Equal(t, 3.5, consumed)
 	})
 }
 
@@ -326,12 +448,8 @@ func TestReserveAppUserBalanceConcurrentDoesNotOverdraw(t *testing.T) {
 
 		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 20, "id-asc")
 		require.NoError(t, err)
-		require.EqualValues(t, 3, total)
-		require.Len(t, logs, 3)
-		for _, log := range logs {
-			require.Equal(t, model.AppWalletLogTypeReserve, log.Type)
-			require.Equal(t, reserveAmount, log.Amount)
-		}
+		require.EqualValues(t, 0, total)
+		require.Empty(t, logs)
 	})
 }
 
@@ -348,6 +466,7 @@ func withTestAppWalletDB(t *testing.T, fn func()) {
 		&model.AppUser{},
 		&model.AppUserWallet{},
 		&model.AppRechargeLog{},
+		&model.AppPaymentOrder{},
 		&model.AppWalletReservation{},
 		&model.AppWalletLog{},
 	))

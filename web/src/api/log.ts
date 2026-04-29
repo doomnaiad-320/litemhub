@@ -5,6 +5,7 @@ import {
     LogListParams,
     LogRequestDetail,
     LogExportParams,
+    LogStatsResponse,
 } from '@/types/log'
 
 // 构建日志搜索的通用查询参数
@@ -19,6 +20,10 @@ const buildLogSearchParams = (filters?: LogFilters): URLSearchParams => {
     if (filters?.end_timestamp) params.append('end_timestamp', filters.end_timestamp.toString())
     if (filters?.timezone) params.append('timezone', filters.timezone)
     if (filters?.code_type && filters.code_type !== 'all') params.append('code_type', filters.code_type)
+    if (typeof filters?.code === 'number') params.append('code', filters.code.toString())
+    if (filters?.request_id) params.append('request_id', filters.request_id)
+    if (filters?.upstream_id) params.append('upstream_id', filters.upstream_id)
+    if (filters?.user) params.append('user', filters.user)
     if (filters?.keyword) params.append('keyword', filters.keyword)
     return params
 }
@@ -96,6 +101,18 @@ export const logApi = {
             return logApi.getLogsByGroup(filters.group, filters)
         }
         return logApi.getLogs(filters)
+    },
+
+    getLogStats: async (filters?: LogListParams): Promise<LogStatsResponse> => {
+        const params = buildLogSearchParams(filters)
+        const queryString = params.toString()
+        if (filters?.group) {
+            const url = queryString ? `log/${filters.group}/stats?${queryString}` : `log/${filters.group}/stats`
+            return get<LogStatsResponse>(url)
+        }
+
+        const url = queryString ? `logs/stats?${queryString}` : 'logs/stats'
+        return get<LogStatsResponse>(url)
     },
     
     // 获取日志详情

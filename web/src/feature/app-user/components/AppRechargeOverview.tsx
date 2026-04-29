@@ -99,7 +99,7 @@ export function AppRechargeOverview() {
     }))
     const [keywordInput, setKeywordInput] = useState('')
     const [keyword, setKeyword] = useState('')
-    const [statusFilter, setStatusFilter] = useState('paid')
+    const [statusFilter, setStatusFilter] = useState('success')
     const [channelFilter, setChannelFilter] = useState('all')
     const [granularity, setGranularity] = useState<Granularity>('day')
 
@@ -217,7 +217,7 @@ export function AppRechargeOverview() {
     const resetFilters = () => {
         setKeywordInput('')
         setKeyword('')
-        setStatusFilter('paid')
+        setStatusFilter('success')
         setChannelFilter('all')
         setGranularity('day')
         setDateRange({ from: subDays(new Date(), 29), to: new Date() })
@@ -289,8 +289,8 @@ export function AppRechargeOverview() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">{t('appUser.rechargeStats.allStatus')}</SelectItem>
-                                <SelectItem value="paid">{t('appUser.rechargeStats.paid')}</SelectItem>
-                                <SelectItem value="pending">{t('appUser.rechargeStats.pending')}</SelectItem>
+                                <SelectItem value="success">{t('appUser.rechargeStats.success')}</SelectItem>
+                                <SelectItem value="unpaid">{t('appUser.rechargeStats.unpaid')}</SelectItem>
                                 <SelectItem value="failed">{t('appUser.rechargeStats.failed')}</SelectItem>
                             </SelectContent>
                         </Select>
@@ -482,7 +482,7 @@ export function AppRechargeOverview() {
                                                     variant="outline"
                                                     className="rounded-full border-transparent bg-primary/10 text-primary"
                                                 >
-                                                    {log.status}
+                                                    {t(`appUser.rechargeStats.statuses.${log.status}`)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">

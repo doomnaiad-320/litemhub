@@ -221,6 +221,37 @@ func SearchLogs(c *gin.Context) {
 	middleware.SuccessResponse(c, result)
 }
 
+func GetLogStats(c *gin.Context) {
+	startTime, endTime := utils.ParseTimeRange(c, 0)
+	params := parseCommonParams(c)
+	keyword := c.Query("keyword")
+
+	stats, err := model.GetLogStats(
+		keyword,
+		params.requestID,
+		params.upstreamID,
+		params.group,
+		params.tokenID,
+		params.tokenName,
+		params.modelName,
+		startTime,
+		endTime,
+		params.channelID,
+		model.CodeType(params.codeType),
+		params.code,
+		params.ip,
+		params.user,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"stats": stats,
+	})
+}
+
 // SearchGroupLogs godoc
 //
 //	@Summary		Search group logs
@@ -284,6 +315,43 @@ func SearchGroupLogs(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, result)
+}
+
+func GetGroupLogStats(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
+		return
+	}
+
+	startTime, endTime := utils.ParseTimeRange(c, 0)
+	params := parseCommonParams(c)
+	keyword := c.Query("keyword")
+
+	stats, err := model.GetLogStats(
+		keyword,
+		params.requestID,
+		params.upstreamID,
+		group,
+		params.tokenID,
+		params.tokenName,
+		params.modelName,
+		startTime,
+		endTime,
+		0,
+		model.CodeType(params.codeType),
+		params.code,
+		params.ip,
+		params.user,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"stats": stats,
+	})
 }
 
 // GetLogDetail godoc

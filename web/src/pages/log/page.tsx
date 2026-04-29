@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 
-import { useLogs } from '@/feature/log/hooks'
+import { useLogs, useLogStats } from '@/feature/log/hooks'
 import { LogExportDialog } from '@/feature/log/components/LogExportDialog'
 import { LogFilters } from '@/feature/log/components/LogFilters'
+import { LogStatsCards } from '@/feature/log/components/LogStatsCards'
 import { LogTable } from '@/feature/log/components/LogTable'
 import { GroupDialog } from '@/feature/group/components/GroupDialog'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
@@ -39,6 +40,7 @@ export default function LogPage() {
         error,
         refetch
     } = useLogs(filters)
+    const { data: statsData, isLoading: isStatsLoading } = useLogStats(filters)
 
     const handleFiltersChange = (newFilters: LogFiltersType) => {
         setFilters(newFilters)
@@ -73,6 +75,11 @@ export default function LogPage() {
                             currentFilters={filters}
                         />
                     </div>
+
+                    <LogStatsCards
+                        stats={statsData?.stats}
+                        loading={isStatsLoading}
+                    />
 
                     <LogFilters
                         onFiltersChange={handleFiltersChange}

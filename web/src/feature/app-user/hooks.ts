@@ -16,7 +16,6 @@ const invalidateAppUserQueries = (queryClient: ReturnType<typeof useQueryClient>
     if (userId) {
         queryClient.invalidateQueries({ queryKey: ['appUser', userId] })
         queryClient.invalidateQueries({ queryKey: ['appUserWallet', userId] })
-        queryClient.invalidateQueries({ queryKey: ['appUserWalletLogs', userId] })
     }
 }
 
@@ -87,23 +86,6 @@ export const useAppUserWallet = (id?: number | null, enabled = true) => {
     const query = useQuery({
         queryKey: ['appUserWallet', id],
         queryFn: () => appUserApi.getAppUserWallet(id as number),
-        enabled: enabled && !!id,
-    })
-
-    return {
-        ...query,
-    }
-}
-
-export const useAppUserWalletLogs = (
-    id: number | null | undefined,
-    page: number,
-    perPage: number,
-    enabled = true,
-) => {
-    const query = useQuery({
-        queryKey: ['appUserWalletLogs', id, page, perPage],
-        queryFn: () => appUserApi.getAppUserWalletLogs(id as number, page, perPage),
         enabled: enabled && !!id,
     })
 

@@ -104,12 +104,32 @@ export interface LogResponse {
   total: number
 }
 
+export interface LogStats {
+  total_count: number
+  success_count: number
+  error_count: number
+  used_amount: number
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  average_milliseconds: number
+  average_ttfb_milliseconds: number
+}
+
+export interface LogStatsResponse {
+  stats: LogStats
+}
+
 // 日志过滤器
 export interface LogFilters {
   model?: string
   token_name?: string
   channel?: number
   keyword?: string
+  request_id?: string
+  upstream_id?: string
+  user?: string
+  code?: number
   start_timestamp?: number
   end_timestamp?: number
   timezone?: string

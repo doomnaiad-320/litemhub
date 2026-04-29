@@ -14,6 +14,13 @@ import (
 const (
 	AppPaymentStatusPending = "pending"
 	AppPaymentStatusPaid    = "paid"
+	AppPaymentStatusFailed  = "failed"
+)
+
+const (
+	AppPaymentAdminStatusSuccess = "success"
+	AppPaymentAdminStatusUnpaid  = "unpaid"
+	AppPaymentAdminStatusFailed  = "failed"
 )
 
 var (

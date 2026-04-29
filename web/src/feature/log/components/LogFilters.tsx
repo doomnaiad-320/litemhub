@@ -82,6 +82,9 @@ export function LogFilters({
     const [tokenName, setTokenName] = useState(defaultTokenName)
     const [channel, setChannel] = useState('')
     const [keyword, setKeyword] = useState('')
+    const [user, setUser] = useState('')
+    const [requestID, setRequestID] = useState('')
+    const [statusCode, setStatusCode] = useState('')
     const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange())
     const [codeType, setCodeType] = useState<'all' | 'success' | 'error'>('all')
     const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE)
@@ -97,6 +100,9 @@ export function LogFilters({
             token_name: effectiveTokenName.trim() || undefined,
             channel: effectiveChannel ? parseInt(effectiveChannel) : undefined,
             keyword: keyword.trim() || undefined,
+            user: user.trim() || undefined,
+            request_id: requestID.trim() || undefined,
+            code: statusCode.trim() ? Number(statusCode.trim()) : undefined,
             code_type: codeType,
             page: 1,
             per_page: 10,
@@ -111,7 +117,7 @@ export function LogFilters({
         }
 
         return filters
-    }, [model, tokenName, channel, keyword, dateRange, codeType, timezone])
+    }, [model, tokenName, channel, keyword, user, requestID, statusCode, dateRange, codeType, timezone])
 
     // Auto-refresh on filter change (skip initial mount), debounce keyword input
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -141,6 +147,9 @@ export function LogFilters({
         setTokenName('')
         setChannel('')
         setKeyword('')
+        setUser('')
+        setRequestID('')
+        setStatusCode('')
         setDateRange(getDefaultDateRange())
         setCodeType('all')
         setTimezone(DEFAULT_TIMEZONE)
@@ -257,6 +266,36 @@ export function LogFilters({
                         placeholder={t('common.search')}
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
+                        disabled={loading}
+                        className="h-9"
+                    />
+                </div>
+
+                <div className="w-44 flex-shrink-0">
+                    <Input
+                        placeholder={t('log.filters.userPlaceholder')}
+                        value={user}
+                        onChange={(e) => setUser(e.target.value)}
+                        disabled={loading}
+                        className="h-9"
+                    />
+                </div>
+
+                <div className="w-44 flex-shrink-0">
+                    <Input
+                        placeholder={t('log.filters.requestIdPlaceholder')}
+                        value={requestID}
+                        onChange={(e) => setRequestID(e.target.value)}
+                        disabled={loading}
+                        className="h-9"
+                    />
+                </div>
+
+                <div className="w-28 flex-shrink-0">
+                    <Input
+                        placeholder={t('log.filters.codePlaceholder')}
+                        value={statusCode}
+                        onChange={(e) => setStatusCode(e.target.value.replace(/\D/g, ''))}
                         disabled={loading}
                         className="h-9"
                     />

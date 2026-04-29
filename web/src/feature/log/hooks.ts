@@ -23,6 +23,16 @@ export const useLogs = (filters?: LogFilters) => {
     }
 }
 
+export const useLogStats = (filters?: LogFilters) => {
+    return useQuery({
+        queryKey: ['logStats', filters],
+        queryFn: () => logApi.getLogStats(filters),
+        refetchInterval: 5 * 60 * 1000,
+        refetchOnWindowFocus: true,
+        retry: false,
+    })
+}
+
 // 获取日志详情
 export const useLogDetail = (logId: number | null, scope: LogDetailScope = 'admin') => {
     const query = useQuery({

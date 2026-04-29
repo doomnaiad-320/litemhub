@@ -174,6 +174,31 @@ func buildAppRechargeLogResponses(logs []*model.AppRechargeLogWithUser) []*AppRe
 	return responses
 }
 
+func buildAppPaymentOrderResponse(order *model.AppPaymentOrderWithUser) *AppRechargeLogResponse {
+	return &AppRechargeLogResponse{
+		ID:         order.ID,
+		UserID:     order.UserID,
+		UserEmail:  string(order.UserEmail),
+		UserPhone:  string(order.UserPhone),
+		Amount:     order.Amount,
+		Channel:    order.Channel,
+		TradeNo:    order.AdminTradeNo,
+		Status:     order.AdminStatus,
+		RawPayload: order.NotifyPayload,
+		CreatedAt:  order.AdminCreatedAt.UnixMilli(),
+		UpdatedAt:  order.UpdatedAt.UnixMilli(),
+	}
+}
+
+func buildAppPaymentOrderResponses(orders []*model.AppPaymentOrderWithUser) []*AppRechargeLogResponse {
+	responses := make([]*AppRechargeLogResponse, len(orders))
+	for i, order := range orders {
+		responses[i] = buildAppPaymentOrderResponse(order)
+	}
+
+	return responses
+}
+
 func parseAppUserID(c *gin.Context) (int, bool) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
@@ -297,7 +322,7 @@ func GetAppRechargeLogs(c *gin.Context) {
 	status := c.Query("status")
 	startTime, endTime := utils.ParseTimeRange(c, 90*24*time.Hour)
 
-	logs, total, err := model.GetAppRechargeLogs(
+	orders, total, err := model.GetAppPaymentOrders(
 		userID,
 		keyword,
 		channel,
@@ -314,7 +339,7 @@ func GetAppRechargeLogs(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, gin.H{
-		"recharge_logs": buildAppRechargeLogResponses(logs),
+		"recharge_logs": buildAppPaymentOrderResponses(orders),
 		"total":         total,
 	})
 }
@@ -608,7 +633,13 @@ func GetAppUserWalletLogs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	order := c.DefaultQuery("order", "")
 
-	logs, total, err := model.GetAppWalletLogs(userID, page, perPage, order)
+	logs, total, err := model.GetAppWalletLogsByTypes(
+		userID,
+		page,
+		perPage,
+		order,
+		[]string{model.AppWalletLogTypeRecharge},
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

@@ -10,14 +10,14 @@ export function UserPortalMarketingHeader() {
     const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated)
 
     return (
-        <header className="relative z-10">
+        <header className="relative z-10 border-b border-[#f2f3f5] bg-white/95 dark:border-white/10 dark:bg-[#080b12]/95">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
                 <Link to="/" className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.65)] dark:bg-white dark:text-slate-950">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#181e25] text-white dark:bg-white dark:text-[#181e25]">
                         <BrainCircuit className="h-5 w-5" />
                     </div>
                     <div>
-                        <div className="text-base font-semibold tracking-tight">LiteMHub</div>
+                        <div className="text-base font-semibold">LiteMHub</div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">AI Model Router</div>
                     </div>
                 </Link>

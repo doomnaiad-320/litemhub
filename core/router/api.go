@@ -193,6 +193,7 @@ func SetAPIRouter(router *gin.Engine) {
 			logsRoute.GET("/export", controller.ExportLogs)
 			logsRoute.GET("/", controller.GetLogs)
 			logsRoute.DELETE("/", controller.DeleteHistoryLogs)
+			logsRoute.GET("/stats", controller.GetLogStats)
 			logsRoute.GET("/search", controller.SearchLogs)
 			logsRoute.GET("/consume_error", controller.SearchConsumeError)
 			logsRoute.GET("/detail/:log_id", controller.GetLogDetail)
@@ -202,6 +203,7 @@ func SetAPIRouter(router *gin.Engine) {
 		{
 			logRoute.GET("/:group/export", controller.ExportGroupLogs)
 			logRoute.GET("/:group", controller.GetGroupLogs)
+			logRoute.GET("/:group/stats", controller.GetGroupLogStats)
 			logRoute.GET("/:group/search", controller.SearchGroupLogs)
 			logRoute.GET("/:group/detail/:log_id", controller.GetGroupLogDetail)
 		}

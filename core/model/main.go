@@ -169,6 +169,10 @@ func migrateDB() error {
 		return err
 	}
 
+	if err := CleanupAppWalletConsumptionLogs(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

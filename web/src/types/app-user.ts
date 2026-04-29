@@ -82,6 +82,8 @@ export interface RechargeAppUserBalanceRequest {
     raw_payload?: string
 }
 
+export type AppRechargeStatus = 'success' | 'unpaid' | 'failed'
+
 export interface AppRechargeLog {
     id: number
     user_id: number
@@ -90,7 +92,7 @@ export interface AppRechargeLog {
     amount: number
     channel?: string
     trade_no?: string
-    status: string
+    status: AppRechargeStatus
     raw_payload?: string
     created_at: number
     updated_at: number

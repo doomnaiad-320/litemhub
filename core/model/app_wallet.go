@@ -40,6 +40,15 @@ type AppRechargeLogWithUser struct {
 	UserPhone EmptyNullString `json:"user_phone"`
 }
 
+type AppPaymentOrderWithUser struct {
+	AppPaymentOrder
+	UserEmail      EmptyNullString `json:"user_email"`
+	UserPhone      EmptyNullString `json:"user_phone"`
+	AdminStatus    string          `json:"admin_status"`
+	AdminTradeNo   string          `json:"admin_trade_no"`
+	AdminCreatedAt time.Time       `json:"admin_created_at"`
+}
+
 type AppRechargeStatsPoint struct {
 	Timestamp int64   `json:"timestamp"`
 	Channel   string  `json:"channel,omitempty"`
@@ -54,7 +63,7 @@ type AppRechargeStats struct {
 	PaidAmount  float64                 `json:"paid_amount"`
 	PaidCount   int64                   `json:"paid_count"`
 	ByChannel   []AppRechargeStatsPoint `json:"by_channel,omitempty" gorm:"-"`
-	TimeSeries  []AppRechargeStatsPoint `json:"time_series"`
+	TimeSeries  []AppRechargeStatsPoint `json:"time_series"        gorm:"-"`
 }
 
 type AppUserReserveBalanceParams struct {
@@ -113,6 +122,30 @@ func getAppRechargeLogOrder(order string) string {
 	}
 }
 
+func getAppPaymentOrderOrder(order string) string {
+	prefix, suffix, _ := strings.Cut(order, "-")
+	switch prefix {
+	case "id", "updated_at", "amount":
+		column := "recharge_orders." + prefix
+		switch suffix {
+		case "asc":
+			return column + " asc"
+		default:
+			return column + " desc"
+		}
+	case "created_at":
+		column := "recharge_orders.admin_created_at"
+		switch suffix {
+		case "asc":
+			return column + " asc"
+		default:
+			return column + " desc"
+		}
+	default:
+		return "recharge_orders.admin_created_at desc, recharge_orders.id desc"
+	}
+}
+
 func GetAppUsers(keyword string, page, perPage int, order string, status int) (
 	users []*AppUser,
 	total int64,
@@ -152,6 +185,145 @@ func GetAppUsers(keyword string, page, perPage int, order string, status int) (
 	return users, total, err
 }
 
+func GetAppPaymentOrders(
+	userID int,
+	keyword string,
+	channel string,
+	status string,
+	startTime time.Time,
+	endTime time.Time,
+	page int,
+	perPage int,
+	order string,
+) (orders []*AppPaymentOrderWithUser, total int64, err error) {
+	tx := appPaymentOrderQuery(userID, keyword, channel, status, startTime, endTime)
+	if err = tx.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if total <= 0 {
+		return nil, 0, nil
+	}
+
+	limit, offset := toLimitOffset(page, perPage)
+	err = tx.
+		Select(appPaymentOrderSelectSQL()).
+		Order(getAppPaymentOrderOrder(order)).
+		Limit(limit).
+		Offset(offset).
+		Find(&orders).Error
+
+	return orders, total, err
+}
+
+func appPaymentOrderSelectSQL() string {
+	statusSQL := "CASE " +
+		"WHEN recharge_orders.source_status = '" + AppPaymentStatusPaid + "' THEN '" + AppPaymentAdminStatusSuccess + "' " +
+		"WHEN recharge_orders.source_status = '" + AppPaymentStatusFailed + "' THEN '" + AppPaymentAdminStatusFailed + "' " +
+		"ELSE '" + AppPaymentAdminStatusUnpaid + "' END"
+
+	return "recharge_orders.id AS id, recharge_orders.user_id AS user_id, recharge_orders.amount AS amount, " +
+		"recharge_orders.channel AS channel, recharge_orders.out_trade_no AS out_trade_no, " +
+		"recharge_orders.trade_no AS trade_no, recharge_orders.pay_type AS pay_type, recharge_orders.pay_info AS pay_info, " +
+		"recharge_orders.source_status AS status, recharge_orders.notify_payload AS notify_payload, " +
+		"recharge_orders.recharge_log_id AS recharge_log_id, recharge_orders.created_at AS created_at, " +
+		"recharge_orders.updated_at AS updated_at, recharge_orders.paid_at AS paid_at, " +
+		"recharge_orders.user_email AS user_email, recharge_orders.user_phone AS user_phone, " +
+		"recharge_orders.admin_created_at AS admin_created_at, " + statusSQL + " AS admin_status, " +
+		"CASE WHEN recharge_orders.trade_no IS NOT NULL AND recharge_orders.trade_no != '' THEN recharge_orders.trade_no ELSE recharge_orders.out_trade_no END AS admin_trade_no"
+}
+
+func appPaymentOrderQuery(
+	userID int,
+	keyword string,
+	channel string,
+	status string,
+	startTime time.Time,
+	endTime time.Time,
+) *gorm.DB {
+	tx := DB.Table("(?) AS recharge_orders", appPaymentOrderSourceQuery()).
+		Joins("LEFT JOIN app_user ON app_user.id = recharge_orders.user_id")
+	if userID > 0 {
+		tx = tx.Where("recharge_orders.user_id = ?", userID)
+	}
+	keyword = strings.TrimSpace(keyword)
+	if keyword != "" {
+		likeKeyword := "%" + keyword + "%"
+		if id := String2Int(keyword); id > 0 {
+			tx = tx.Where(
+				DB.Where("recharge_orders.user_id = ?", id).
+					Or("app_user.email LIKE ?", likeKeyword).
+					Or("app_user.phone LIKE ?", likeKeyword),
+			)
+		} else {
+			tx = tx.Where("app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword)
+		}
+	}
+	channel = strings.TrimSpace(channel)
+	if channel != "" {
+		tx = tx.Where("recharge_orders.channel = ?", channel)
+	}
+	status = normalizeAppPaymentAdminStatus(status)
+	switch status {
+	case AppPaymentAdminStatusSuccess:
+		tx = tx.Where("recharge_orders.source_status = ?", AppPaymentStatusPaid)
+	case AppPaymentAdminStatusUnpaid:
+		tx = tx.Where("recharge_orders.source_status = ?", AppPaymentStatusPending)
+	case AppPaymentAdminStatusFailed:
+		tx = tx.Where("recharge_orders.source_status = ?", AppPaymentStatusFailed)
+	}
+	if !startTime.IsZero() {
+		tx = tx.Where("recharge_orders.admin_created_at >= ?", startTime)
+	}
+	if !endTime.IsZero() {
+		tx = tx.Where("recharge_orders.admin_created_at <= ?", endTime)
+	}
+
+	return tx
+}
+
+func appPaymentOrderSourceQuery() *gorm.DB {
+	paymentOrders := DB.
+		Model(&AppPaymentOrder{}).
+		Select(
+			"app_payment_order.id, app_payment_order.user_id, app_payment_order.amount, " +
+				"app_payment_order.channel, app_payment_order.out_trade_no, app_payment_order.trade_no, " +
+				"app_payment_order.pay_type, app_payment_order.pay_info, app_payment_order.status AS source_status, " +
+				"app_payment_order.notify_payload, app_payment_order.recharge_log_id, app_payment_order.created_at, " +
+				"app_payment_order.updated_at, app_payment_order.paid_at, COALESCE(app_payment_order.paid_at, app_payment_order.created_at) AS admin_created_at, " +
+				"app_user.email AS user_email, app_user.phone AS user_phone",
+		).
+		Joins("LEFT JOIN app_user ON app_user.id = app_payment_order.user_id")
+
+	manualRecharges := DB.
+		Model(&AppRechargeLog{}).
+		Select(
+			"app_recharge_log.id * -1 AS id, app_recharge_log.user_id, app_recharge_log.amount, " +
+				"COALESCE(app_recharge_log.channel, '') AS channel, COALESCE(app_recharge_log.trade_no, '') AS out_trade_no, " +
+				"app_recharge_log.trade_no, '' AS pay_type, '' AS pay_info, '" + AppPaymentStatusPaid + "' AS source_status, " +
+				"app_recharge_log.raw_payload AS notify_payload, app_recharge_log.id AS recharge_log_id, app_recharge_log.created_at, " +
+				"app_recharge_log.updated_at, app_recharge_log.created_at AS paid_at, app_recharge_log.created_at AS admin_created_at, " +
+				"app_user.email AS user_email, app_user.phone AS user_phone",
+		).
+		Joins("LEFT JOIN app_user ON app_user.id = app_recharge_log.user_id").
+		Joins("LEFT JOIN app_payment_order ON app_payment_order.recharge_log_id = app_recharge_log.id").
+		Where("app_payment_order.id IS NULL")
+
+	return DB.Raw("? UNION ALL ?", paymentOrders, manualRecharges)
+}
+
+func normalizeAppPaymentAdminStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case AppPaymentAdminStatusSuccess, AppPaymentStatusPaid:
+		return AppPaymentAdminStatusSuccess
+	case AppPaymentAdminStatusUnpaid, AppPaymentStatusPending:
+		return AppPaymentAdminStatusUnpaid
+	case AppPaymentAdminStatusFailed:
+		return AppPaymentAdminStatusFailed
+	default:
+		return ""
+	}
+}
+
 func GetAppUserWalletByUserID(userID int) (*AppUserWallet, error) {
 	if userID == 0 {
 		return nil, errors.New("user id is empty")
@@ -170,12 +342,26 @@ func GetAppWalletHistoricalConsumed(userID int) (float64, error) {
 
 	var total float64
 	err := DB.
-		Model(&AppWalletLog{}).
-		Where("user_id = ? AND type = ?", userID, AppWalletLogTypeSettle).
-		Select("COALESCE(SUM(amount), 0)").
+		Model(&AppWalletReservation{}).
+		Where("user_id = ? AND status IN ?", userID, []string{
+			AppWalletReservationStatusSettled,
+			AppWalletReservationStatusFailed,
+		}).
+		Select("COALESCE(SUM(actual_amount), 0)").
 		Scan(&total).Error
 
 	return total, err
+}
+
+func CleanupAppWalletConsumptionLogs() error {
+	return DB.
+		Where("type IN ?", []string{
+			AppWalletLogTypeReserve,
+			AppWalletLogTypeSettle,
+			AppWalletLogTypeRelease,
+			AppWalletLogTypeAdjust,
+		}).
+		Delete(&AppWalletLog{}).Error
 }
 
 func GetAppRechargeLogs(
@@ -260,17 +446,17 @@ func GetAppRechargeStats(
 ) (*AppRechargeStats, error) {
 	granularity = normalizeAppRechargeStatsGranularity(granularity)
 	baseQuery := func() *gorm.DB {
-		return appRechargeLogQuery(0, keyword, "", "", startTime, endTime)
+		return appPaymentOrderQuery(0, keyword, "", "", startTime, endTime)
 	}
 
-	stats := &AppRechargeStats{Granularity: granularity}
+	stats := &AppRechargeStats{}
 	if err := baseQuery().
 		Select(
-			"COALESCE(SUM(app_recharge_log.amount), 0) AS total_amount, COUNT(*) AS total_count, "+
-				"COALESCE(SUM(CASE WHEN app_recharge_log.status = ? THEN app_recharge_log.amount ELSE 0 END), 0) AS paid_amount, "+
-				"COALESCE(SUM(CASE WHEN app_recharge_log.status = ? THEN 1 ELSE 0 END), 0) AS paid_count",
-			AppRechargeStatusPaid,
-			AppRechargeStatusPaid,
+			"COALESCE(SUM(recharge_orders.amount), 0) AS total_amount, COUNT(*) AS total_count, "+
+				"COALESCE(SUM(CASE WHEN recharge_orders.source_status = ? THEN recharge_orders.amount ELSE 0 END), 0) AS paid_amount, "+
+				"COALESCE(SUM(CASE WHEN recharge_orders.source_status = ? THEN 1 ELSE 0 END), 0) AS paid_count",
+			AppPaymentStatusPaid,
+			AppPaymentStatusPaid,
 		).
 		Scan(stats).Error; err != nil {
 		return nil, err
@@ -282,9 +468,9 @@ func GetAppRechargeStats(
 		Count   int64
 	}{}
 	if err := baseQuery().
-		Select("COALESCE(app_recharge_log.channel, '') AS channel, COALESCE(SUM(app_recharge_log.amount), 0) AS amount, COUNT(*) AS count").
-		Where("app_recharge_log.status = ?", AppRechargeStatusPaid).
-		Group("app_recharge_log.channel").
+		Select("COALESCE(recharge_orders.channel, '') AS channel, COALESCE(SUM(recharge_orders.amount), 0) AS amount, COUNT(*) AS count").
+		Where("recharge_orders.source_status = ?", AppPaymentStatusPaid).
+		Group("recharge_orders.channel").
 		Order("amount desc").
 		Scan(&channelRows).Error; err != nil {
 		return nil, err
@@ -305,13 +491,14 @@ func GetAppRechargeStats(
 		CreatedAt time.Time
 	}{}
 	if err := baseQuery().
-		Select("app_recharge_log.amount, app_recharge_log.created_at").
-		Where("app_recharge_log.status = ?", AppRechargeStatusPaid).
-		Order("app_recharge_log.created_at asc").
+		Select("recharge_orders.amount, recharge_orders.admin_created_at AS created_at").
+		Where("recharge_orders.source_status = ?", AppPaymentStatusPaid).
+		Order("recharge_orders.admin_created_at asc").
 		Scan(&paidLogs).Error; err != nil {
 		return nil, err
 	}
 
+	stats.Granularity = granularity
 	stats.TimeSeries = buildAppRechargeTimeSeries(startTime, endTime, granularity, paidLogs)
 
 	return stats, nil
@@ -670,19 +857,7 @@ func ReserveAppUserBalance(params AppUserReserveBalanceParams) (
 			return err
 		}
 
-		balanceAfter := wallet.AvailableBalance
-		balanceBefore := walletAmountAdd(balanceAfter, params.Amount)
-
-		return tx.Create(&AppWalletLog{
-			UserID:        params.UserID,
-			Type:          AppWalletLogTypeReserve,
-			Amount:        params.Amount,
-			BalanceBefore: balanceBefore,
-			BalanceAfter:  balanceAfter,
-			RequestID:     EmptyNullString(params.RequestID),
-			ReservationID: reservation.ID,
-			Remark:        params.Remark,
-		}).Error
+		return nil
 	})
 
 	return wallet, reservation, err
@@ -755,19 +930,7 @@ func ReleaseAppUserReservation(
 			return ErrAppWalletReservationInvalid
 		}
 
-		balanceAfter := wallet.AvailableBalance
-		balanceBefore := walletAmountSub(balanceAfter, reservation.ReservedAmount)
-
-		return tx.Create(&AppWalletLog{
-			UserID:        reservation.UserID,
-			Type:          AppWalletLogTypeRelease,
-			Amount:        reservation.ReservedAmount,
-			BalanceBefore: balanceBefore,
-			BalanceAfter:  balanceAfter,
-			RequestID:     reservation.RequestID,
-			ReservationID: reservation.ID,
-			Remark:        reason,
-		}).Error
+		return nil
 	})
 
 	return wallet, reservation, err
@@ -819,8 +982,6 @@ func SettleAppUserReservation(
 		updates := map[string]any{
 			"frozen_balance": gorm.Expr("frozen_balance - ?", reservation.ReservedAmount),
 		}
-		balanceBefore := wallet.AvailableBalance
-
 		switch {
 		case extraAmount > 0:
 			updates["available_balance"] = gorm.Expr("available_balance - ?", extraAmount)
@@ -845,12 +1006,6 @@ func SettleAppUserReservation(
 			return err
 		}
 
-		if extraAmount > 0 {
-			balanceBefore = walletAmountAdd(wallet.AvailableBalance, extraAmount)
-		} else if refundAmount > 0 {
-			balanceBefore = walletAmountSub(wallet.AvailableBalance, refundAmount)
-		}
-
 		reservation.Status = AppWalletReservationStatusSettled
 		reservation.ActualAmount = actualAmount
 		reservation.Reason = buildAppWalletSettleReason(reason, reservation.ReservedAmount, actualAmount)
@@ -868,16 +1023,7 @@ func SettleAppUserReservation(
 			return ErrAppWalletReservationInvalid
 		}
 
-		return tx.Create(&AppWalletLog{
-			UserID:        reservation.UserID,
-			Type:          AppWalletLogTypeSettle,
-			Amount:        actualAmount,
-			BalanceBefore: balanceBefore,
-			BalanceAfter:  wallet.AvailableBalance,
-			RequestID:     reservation.RequestID,
-			ReservationID: reservation.ID,
-			Remark:        reservation.Reason,
-		}).Error
+		return nil
 	})
 
 	return wallet, reservation, err
