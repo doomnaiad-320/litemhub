@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { channelApi, ChannelTestResult } from '@/api/channel'
 import { modelApi } from '@/api/model'
 import { useState, useCallback } from 'react'
-import { ChannelCreateRequest, ChannelUpdateRequest, ChannelStatusRequest } from '@/types/channel'
+import {
+    ChannelCreateRequest,
+    ChannelUpdateRequest,
+    ChannelStatusRequest,
+    ChannelDiscoverModelsRequest
+} from '@/types/channel'
 import { toast } from 'sonner'
 
 // 获取渠道类型元数据
@@ -76,6 +81,7 @@ export const useCreateChannel = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['channels'] })
+            queryClient.invalidateQueries({ queryKey: ['models'] })
             setError(null)
             toast.success('渠道创建成功')
         },
@@ -104,6 +110,7 @@ export const useUpdateChannel = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['channels'] })
+            queryClient.invalidateQueries({ queryKey: ['models'] })
             setError(null)
             toast.success('渠道更新成功')
         },
@@ -174,6 +181,20 @@ export const useUpdateChannelStatus = () => {
         isLoading: mutation.isPending,
         error,
         clearError: () => setError(null),
+    }
+}
+
+export const useDiscoverChannelModels = () => {
+    const mutation = useMutation({
+        mutationFn: (data: ChannelDiscoverModelsRequest) => channelApi.discoverModels(data),
+        onError: (err: ApiError) => {
+            toast.error(err.message || '获取模型失败')
+        },
+    })
+
+    return {
+        discoverModels: mutation.mutateAsync,
+        isDiscovering: mutation.isPending,
     }
 }
 

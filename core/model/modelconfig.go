@@ -11,8 +11,10 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/relay/mode"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -71,6 +73,41 @@ func NewDefaultModelConfig(model string) ModelConfig {
 	return ModelConfig{
 		Model: model,
 	}
+}
+
+func (c *ModelConfig) HasBillablePrice() bool {
+	if c == nil {
+		return false
+	}
+
+	if c.Price.HasBillableAmount() {
+		return true
+	}
+
+	for _, price := range c.ImagePrices {
+		if price > 0 {
+			return true
+		}
+	}
+
+	for _, prices := range c.ImageQualityPrices {
+		for _, price := range prices {
+			if price > 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (c *ModelConfig) AllowsZeroPrice() bool {
+	if c == nil {
+		return false
+	}
+
+	allowed, ok := GetModelConfigBool(c.Config, ModelConfigLimitedTimeFreeKey)
+	return ok && allowed
 }
 
 func (c *ModelConfig) RequestTimeout() time.Duration {
@@ -392,6 +429,54 @@ func SaveModelConfigs(configs []ModelConfig) (err error) {
 
 		return nil
 	})
+}
+
+func CreateMissingModelConfigs(models []string, modelType mode.Mode) (created []ModelConfig, err error) {
+	if len(models) == 0 || config.DisableModelConfig {
+		return nil, nil
+	}
+
+	normalizedModels := make([]string, 0, len(models))
+	seen := make(map[string]struct{}, len(models))
+	for _, modelName := range models {
+		modelName = strings.TrimSpace(modelName)
+		if modelName == "" {
+			continue
+		}
+
+		if _, ok := seen[modelName]; ok {
+			continue
+		}
+
+		seen[modelName] = struct{}{}
+		normalizedModels = append(normalizedModels, modelName)
+	}
+
+	if len(normalizedModels) == 0 {
+		return nil, nil
+	}
+
+	_, missingModels, err := GetModelConfigWithModels(normalizedModels)
+	if err != nil {
+		return nil, err
+	}
+	if len(missingModels) == 0 {
+		return nil, nil
+	}
+
+	configs := make([]ModelConfig, 0, len(missingModels))
+	for _, modelName := range missingModels {
+		configs = append(configs, ModelConfig{
+			Model: modelName,
+			Type:  modelType,
+		})
+	}
+
+	if err := DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&configs).Error; err != nil {
+		return nil, err
+	}
+
+	return configs, nil
 }
 
 const ErrModelConfigNotFound = "model config"

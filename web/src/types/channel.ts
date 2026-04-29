@@ -90,3 +90,24 @@ export interface ChannelUpdateRequest {
 export interface ChannelStatusRequest {
     status: number
 }
+
+export interface ChannelDiscoverModelsRequest {
+    type: number
+    key: string
+    base_url?: string
+    proxy_url?: string
+    skip_tls_verify?: boolean
+    configs?: Record<string, unknown>
+}
+
+export interface ChannelDiscoveredModel {
+    model: string
+    upstream_model: string
+    exists: boolean
+    priced: boolean
+    type: number
+}
+
+export interface ChannelDiscoverModelsResponse {
+    models: ChannelDiscoveredModel[]
+}

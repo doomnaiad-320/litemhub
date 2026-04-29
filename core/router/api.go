@@ -126,6 +126,7 @@ func SetAPIRouter(router *gin.Engine) {
 
 		channelRoute := apiRouter.Group("/channel")
 		{
+			channelRoute.POST("/discover-models", controller.DiscoverChannelModels)
 			channelRoute.GET("/:id", controller.GetChannel)
 			channelRoute.POST("/", controller.AddChannel)
 			channelRoute.PUT("/:id", controller.UpdateChannel)

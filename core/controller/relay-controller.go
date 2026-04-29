@@ -449,7 +449,7 @@ func estimateWalletReserveAmount(
 	requestUsage model.Usage,
 	serviceTier string,
 ) float64 {
-	if !priceHasBillableAmount(price) {
+	if !price.HasBillableAmount() {
 		return 0
 	}
 
@@ -541,30 +541,6 @@ func getNodeInt64ByPath(node *ast.Node, path ...string) int64 {
 	}
 
 	return value
-}
-
-func priceHasBillableAmount(price model.Price) bool {
-	switch {
-	case price.PerRequestPrice > 0,
-		price.InputPrice > 0,
-		price.ImageInputPrice > 0,
-		price.AudioInputPrice > 0,
-		price.OutputPrice > 0,
-		price.ImageOutputPrice > 0,
-		price.ThinkingModeOutputPrice > 0,
-		price.CachedPrice > 0,
-		price.CacheCreationPrice > 0,
-		price.WebSearchPrice > 0:
-		return true
-	default:
-		for _, conditionalPrice := range price.ConditionalPrices {
-			if priceHasBillableAmount(conditionalPrice.Price) {
-				return true
-			}
-		}
-
-		return false
-	}
 }
 
 func finalizeWalletReservation(c *gin.Context, code int, amount float64) {

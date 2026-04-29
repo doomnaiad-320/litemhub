@@ -59,6 +59,30 @@ type Price struct {
 	ConditionalPrices []ConditionalPrice `gorm:"serializer:fastjson;type:text" json:"conditional_prices,omitempty"`
 }
 
+func (p Price) HasBillableAmount() bool {
+	switch {
+	case p.PerRequestPrice > 0,
+		p.InputPrice > 0,
+		p.ImageInputPrice > 0,
+		p.AudioInputPrice > 0,
+		p.OutputPrice > 0,
+		p.ImageOutputPrice > 0,
+		p.ThinkingModeOutputPrice > 0,
+		p.CachedPrice > 0,
+		p.CacheCreationPrice > 0,
+		p.WebSearchPrice > 0:
+		return true
+	default:
+		for _, conditionalPrice := range p.ConditionalPrices {
+			if conditionalPrice.Price.HasBillableAmount() {
+				return true
+			}
+		}
+
+		return false
+	}
+}
+
 func (p Price) ApplyMultiplier(multiplier float64) Price {
 	if multiplier <= 0 || multiplier == 1 {
 		return p

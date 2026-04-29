@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,6 +19,9 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
 	"github.com/labring/aiproxy/core/relay/adaptors"
+	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
+	relayutils "github.com/labring/aiproxy/core/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,6 +42,33 @@ type ChannelResponse struct {
 	*model.Channel
 	Group      string    `json:"group,omitempty"`
 	AccessedAt time.Time `json:"accessed_at,omitempty"`
+}
+
+type DiscoverChannelModelsRequest struct {
+	Configs       model.ChannelConfigs `json:"configs"`
+	Key           string               `json:"key"`
+	BaseURL       string               `json:"base_url"`
+	ProxyURL      string               `json:"proxy_url"`
+	Type          model.ChannelType    `json:"type"`
+	SkipTLSVerify bool                 `json:"skip_tls_verify"`
+}
+
+type DiscoveredChannelModel struct {
+	Model         string    `json:"model"`
+	UpstreamModel string    `json:"upstream_model"`
+	Exists        bool      `json:"exists"`
+	Priced        bool      `json:"priced"`
+	Type          mode.Mode `json:"type"`
+}
+
+type DiscoverChannelModelsResponse struct {
+	Models []DiscoveredChannelModel `json:"models"`
+}
+
+type upstreamModelsResponse struct {
+	Data []struct {
+		ID string `json:"id"`
+	} `json:"data"`
 }
 
 func (c *ChannelResponse) MarshalJSON() ([]byte, error) {
@@ -88,6 +121,175 @@ func buildChannelResponses(channels []*model.Channel) []*ChannelResponse {
 	}
 
 	return responses
+}
+
+func inferModelConfigType(channelType model.ChannelType, modelName string) mode.Mode {
+	if a, ok := adaptors.GetAdaptor(channelType); ok {
+		for _, builtInModel := range a.Metadata().Models {
+			if builtInModel.Model == modelName && builtInModel.Type != mode.Unknown {
+				return builtInModel.Type
+			}
+		}
+	}
+
+	normalized := strings.ToLower(modelName)
+	switch {
+	case strings.Contains(normalized, "embedding"):
+		return mode.Embeddings
+	case strings.Contains(normalized, "image"):
+		return mode.ImagesGenerations
+	case strings.Contains(normalized, "tts"):
+		return mode.AudioSpeech
+	case strings.Contains(normalized, "transcribe"):
+		return mode.AudioTranscription
+	case strings.Contains(normalized, "moderation"):
+		return mode.Moderations
+	default:
+		return mode.ChatCompletions
+	}
+}
+
+func ensureChannelModelConfigs(channels []*model.Channel) error {
+	modelTypes := map[string]mode.Mode{}
+	for _, channel := range channels {
+		for _, modelName := range channel.Models {
+			modelName = strings.TrimSpace(modelName)
+			if modelName == "" {
+				continue
+			}
+			if _, ok := modelTypes[modelName]; ok {
+				continue
+			}
+
+			modelTypes[modelName] = inferModelConfigType(channel.Type, modelName)
+		}
+	}
+
+	for modelName, modelType := range modelTypes {
+		if _, err := model.CreateMissingModelConfigs([]string{modelName}, modelType); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func discoverChannelModels(
+	ctx context.Context,
+	req DiscoverChannelModelsRequest,
+) (DiscoverChannelModelsResponse, error) {
+	a, ok := adaptors.GetAdaptor(req.Type)
+	if !ok {
+		return DiscoverChannelModelsResponse{}, fmt.Errorf("invalid channel type: %d", req.Type)
+	}
+
+	baseURL := strings.TrimSpace(req.BaseURL)
+	if baseURL == "" {
+		baseURL = a.DefaultBaseURL()
+	}
+	if baseURL == "" {
+		return DiscoverChannelModelsResponse{}, fmt.Errorf("base_url is required")
+	}
+
+	endpoint, err := url.JoinPath(baseURL, "models")
+	if err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+
+	channel := &model.Channel{
+		Type:          req.Type,
+		Key:           req.Key,
+		BaseURL:       baseURL,
+		ProxyURL:      req.ProxyURL,
+		SkipTLSVerify: req.SkipTLSVerify,
+		Configs:       req.Configs,
+	}
+	m := meta.NewMeta(channel, mode.ChatCompletions, "", model.ModelConfig{})
+	m.RequestTimeout = 30 * time.Second
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+	setupContext := &gin.Context{Request: &http.Request{Header: make(http.Header)}}
+	if err := a.SetupRequestHeader(m, nil, setupContext, httpReq); err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+
+	resp, err := relayutils.DoRequestWithMeta(httpReq, m)
+	if err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return DiscoverChannelModelsResponse{}, fmt.Errorf(
+			"fetch upstream models failed: status %d: %s",
+			resp.StatusCode,
+			strings.TrimSpace(string(body)),
+		)
+	}
+
+	var upstream upstreamModelsResponse
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&upstream); err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+
+	modelNames := make([]string, 0, len(upstream.Data))
+	seen := make(map[string]struct{}, len(upstream.Data))
+	for _, item := range upstream.Data {
+		modelName := strings.TrimSpace(item.ID)
+		if modelName == "" {
+			continue
+		}
+		if _, ok := seen[modelName]; ok {
+			continue
+		}
+
+		seen[modelName] = struct{}{}
+		modelNames = append(modelNames, modelName)
+	}
+	slices.Sort(modelNames)
+
+	existingConfigs, _, err := model.GetModelConfigWithModels(modelNames)
+	if err != nil {
+		return DiscoverChannelModelsResponse{}, err
+	}
+
+	configs := make(map[string]model.ModelConfig, len(existingConfigs))
+	if len(existingConfigs) > 0 {
+		modelConfigs, err := model.GetModelConfigsByModels(existingConfigs)
+		if err != nil {
+			return DiscoverChannelModelsResponse{}, err
+		}
+		for _, cfg := range modelConfigs {
+			configs[cfg.Model] = cfg
+		}
+	}
+
+	result := DiscoverChannelModelsResponse{
+		Models: make([]DiscoveredChannelModel, 0, len(modelNames)),
+	}
+	for _, modelName := range modelNames {
+		cfg, exists := configs[modelName]
+		modelType := inferModelConfigType(req.Type, modelName)
+		priced := false
+		if exists {
+			modelType = cfg.Type
+			priced = cfg.HasBillablePrice() || cfg.AllowsZeroPrice()
+		}
+
+		result.Models = append(result.Models, DiscoveredChannelModel{
+			Model:         modelName,
+			UpstreamModel: modelName,
+			Exists:        exists,
+			Priced:        priced,
+			Type:          modelType,
+		})
+	}
+
+	return result, nil
 }
 
 // GetChannels godoc
@@ -187,6 +389,12 @@ func AddChannels(c *gin.Context) {
 		_channels = append(_channels, channels...)
 	}
 
+	err = ensureChannelModelConfigs(_channels)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	err = model.BatchInsertChannels(_channels)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -270,6 +478,43 @@ func GetChannel(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, buildChannelResponse(channel))
+}
+
+// DiscoverChannelModels godoc
+//
+//	@Summary		Discover upstream channel models
+//	@Description	Fetches OpenAI-compatible /models from an unsaved channel config
+//	@Tags			channel
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			channel	body		DiscoverChannelModelsRequest	true	"Channel connection information"
+//	@Success		200		{object}	middleware.APIResponse{data=DiscoverChannelModelsResponse}
+//	@Router			/api/channel/discover-models [post]
+func DiscoverChannelModels(c *gin.Context) {
+	req := DiscoverChannelModelsRequest{}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if req.Type == 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "type is required")
+		return
+	}
+	if strings.TrimSpace(req.Key) == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "key is required")
+		return
+	}
+
+	result, err := discoverChannelModels(c.Request.Context(), req)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, result)
 }
 
 // AddChannelRequest represents the request body for adding a channel
@@ -443,6 +688,12 @@ func AddChannel(c *gin.Context) {
 		return
 	}
 
+	err = ensureChannelModelConfigs(channels)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	err = model.BatchInsertChannels(channels)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -572,6 +823,12 @@ func UpdateChannel(c *gin.Context) {
 	}
 
 	ch.ID = id
+
+	err = ensureChannelModelConfigs([]*model.Channel{ch})
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	err = model.UpdateChannel(ch)
 	if err != nil {

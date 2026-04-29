@@ -412,6 +412,20 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	mc = GetGroupAdjustedModelConfig(group, mc)
 
+	if !config.DisableModelConfig && !mc.HasBillablePrice() && !mc.AllowsZeroPrice() {
+		AbortLogWithMessage(
+			c,
+			http.StatusForbidden,
+			fmt.Sprintf(
+				"模型 %s 的价格尚未由管理员配置，暂时无法使用，请联系站点管理员开启该模型；Model %s has not been priced by the administrator yet. Please contact the site administrator to enable this model.",
+				findModel,
+				findModel,
+			),
+		)
+
+		return
+	}
+
 	c.Set(RequestModel, findModel)
 	c.Set(ModelConfig, mc)
 

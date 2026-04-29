@@ -170,6 +170,101 @@ func TestModelConfigSupportStreamTimeout(t *testing.T) {
 	})
 }
 
+func TestModelConfigHasBillablePrice(t *testing.T) {
+	t.Run("false when no price is configured", func(t *testing.T) {
+		cfg := &model.ModelConfig{}
+		if cfg.HasBillablePrice() {
+			t.Fatal("expected empty model config to be unpriced")
+		}
+	})
+
+	t.Run("true when token price is configured", func(t *testing.T) {
+		cfg := &model.ModelConfig{
+			Price: model.Price{OutputPrice: 0.1},
+		}
+		if !cfg.HasBillablePrice() {
+			t.Fatal("expected token price to be billable")
+		}
+	})
+
+	t.Run("true when image price is configured", func(t *testing.T) {
+		cfg := &model.ModelConfig{
+			ImagePrices: map[string]float64{"1024x1024": 0.01},
+		}
+		if !cfg.HasBillablePrice() {
+			t.Fatal("expected image price to be billable")
+		}
+	})
+
+	t.Run("zero price may be explicitly allowed", func(t *testing.T) {
+		cfg := &model.ModelConfig{
+			Config: map[model.ModelConfigKey]any{
+				model.ModelConfigLimitedTimeFreeKey: true,
+			},
+		}
+		if !cfg.AllowsZeroPrice() {
+			t.Fatal("expected limited_time_free config to allow zero price")
+		}
+	})
+}
+
+func TestCreateMissingModelConfigs(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "missing-model-config.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.ModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate model config: %v", err)
+	}
+
+	existing := model.ModelConfig{
+		Model: "existing-model",
+		Type:  mode.ChatCompletions,
+		Price: model.Price{InputPrice: 0.01},
+	}
+	if err := testDB.Create(&existing).Error; err != nil {
+		t.Fatalf("failed to create existing model config: %v", err)
+	}
+
+	created, err := model.CreateMissingModelConfigs(
+		[]string{"existing-model", "new-model", "new-model", " "},
+		mode.ImagesGenerations,
+	)
+	if err != nil {
+		t.Fatalf("expected CreateMissingModelConfigs to succeed, got error: %v", err)
+	}
+	if len(created) != 1 {
+		t.Fatalf("expected one created config, got %d", len(created))
+	}
+	if created[0].Model != "new-model" {
+		t.Fatalf("expected created model new-model, got %q", created[0].Model)
+	}
+	if created[0].Type != mode.ImagesGenerations {
+		t.Fatalf("expected created model type ImagesGenerations, got %s", created[0].Type)
+	}
+
+	storedExisting, err := model.GetModelConfig("existing-model")
+	if err != nil {
+		t.Fatalf("expected existing model config to remain, got error: %v", err)
+	}
+	if storedExisting.Price.InputPrice != existing.Price.InputPrice {
+		t.Fatalf("expected existing price to remain unchanged, got %v", storedExisting.Price.InputPrice)
+	}
+}
+
 func TestModelConfigBeforeSaveClearsUnsupportedStreamTimeout(t *testing.T) {
 	cfg := &model.ModelConfig{
 		Model: "test-embedding",

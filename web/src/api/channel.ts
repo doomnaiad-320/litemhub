@@ -7,7 +7,9 @@ import {
     ChannelCreateRequest,
     ChannelUpdateRequest,
     ChannelStatusRequest,
-    Channel
+    Channel,
+    ChannelDiscoverModelsRequest,
+    ChannelDiscoverModelsResponse
 } from '@/types/channel'
 
 // 渠道测试结果类型
@@ -88,6 +90,10 @@ export const channelApi = {
     updateChannelStatus: async (id: number, status: ChannelStatusRequest): Promise<void> => {
         await post(`channel/${id}/status`, status)
         return
+    },
+
+    discoverModels: async (data: ChannelDiscoverModelsRequest): Promise<ChannelDiscoverModelsResponse> => {
+        return post<ChannelDiscoverModelsResponse>('channel/discover-models', data)
     },
 
     // 测试渠道所有模型 (SSE 模式)

@@ -13,14 +13,15 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
+import { Badge } from '@/components/ui/badge'
 import { channelCreateSchema } from '@/validation/channel'
-import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannel, useTestChannelPreviewAll, useChannelDefaultModels } from '../hooks'
+import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannel, useTestChannelPreviewAll, useChannelDefaultModels, useDiscoverChannelModels } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
 import { useGroups } from '@/feature/group/hooks'
 import { useTranslation } from 'react-i18next'
 import { ChannelCreateForm } from '@/validation/channel'
 import { ModelDialog } from '@/feature/model/components/ModelDialog'
-import { Channel } from '@/types/channel'
+import { Channel, ChannelDiscoveredModel } from '@/types/channel'
 import { SingleSelectCombobox } from '@/components/select/SingleSelectCombobox'
 import { MultiSelectCombobox } from '@/components/select/MultiSelectCombobox'
 import { ConstructMappingComponent } from '@/components/select/ConstructMappingComponent'
@@ -28,7 +29,7 @@ import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedContainer } from '@/components/ui/animation/components/animated-container'
 import { toast } from 'sonner'
-import { FlaskConical, Loader2, Info, Power, PowerOff } from 'lucide-react'
+import { DownloadCloud, FlaskConical, Loader2, Info, Power, PowerOff } from 'lucide-react'
 import { ChannelTestDialog } from './ChannelTestDialog'
 import { DefaultModelsDialog } from './DefaultModelsDialog'
 import { ChannelConfigEditor } from './ChannelConfigEditor'
@@ -144,6 +145,9 @@ export function ChannelForm({
     const [defaultModelsDialogOpen, setDefaultModelsDialogOpen] = useState(false)
     const [configsError, setConfigsError] = useState<string | null>(null)
     const [currentStatus, setCurrentStatus] = useState(channel?.status ?? 1)
+    const [discoveredModels, setDiscoveredModels] = useState<ChannelDiscoveredModel[]>([])
+    const [selectedDiscoveredModels, setSelectedDiscoveredModels] = useState<Record<string, boolean>>({})
+    const [discoveredPublicNames, setDiscoveredPublicNames] = useState<Record<string, string>>({})
 
     // Determine initial useDefaultModels state
     const initialUseDefault = mode === 'create'
@@ -172,6 +176,8 @@ export function ChannelForm({
         error: updateError,
         clearError: clearUpdateError
     } = useUpdateChannel()
+
+    const { discoverModels, isDiscovering } = useDiscoverChannelModels()
 
     const { updateStatus, isLoading: isStatusUpdating } = useUpdateChannelStatus()
 
@@ -229,6 +235,36 @@ export function ChannelForm({
     const openDefaultModelsEditor = () => {
         if (!watchedType) return
         setDefaultModelsDialogOpen(true)
+    }
+
+    const parseConfigsText = (rawConfigs?: string) => {
+        const trimmedConfigs = rawConfigs?.trim()
+        if (!trimmedConfigs) {
+            return undefined
+        }
+
+        try {
+            const parsed = JSON.parse(trimmedConfigs) as unknown
+            if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
+                const message = t('channel.dialog.configsJsonObjectError')
+                setConfigsError(message)
+                toast.error(message)
+                return null
+            }
+
+            return parsed as Record<string, unknown>
+        } catch {
+            const message = t('channel.dialog.configsJsonInvalid')
+            setConfigsError(message)
+            toast.error(message)
+            return null
+        }
+    }
+
+    const clearDiscoveredModels = () => {
+        setDiscoveredModels([])
+        setSelectedDiscoveredModels({})
+        setDiscoveredPublicNames({})
     }
 
     // 防止意外的表单提交
@@ -353,6 +389,89 @@ export function ChannelForm({
                 }
             }
         }
+    }
+
+    const handleDiscoverModels = async () => {
+        const values = form.getValues()
+        setConfigsError(null)
+
+        if (!values.type) {
+            toast.error('请先选择厂商')
+            return
+        }
+        if (!values.key) {
+            toast.error('请先填写密钥')
+            return
+        }
+
+        const parsedConfigs = parseConfigsText(values.configs_text)
+        if (parsedConfigs === null) {
+            return
+        }
+
+        let result
+        try {
+            result = await discoverModels({
+                type: values.type,
+                key: values.key,
+                base_url: values.base_url || '',
+                proxy_url: values.proxy_url || '',
+                skip_tls_verify: values.skip_tls_verify ?? false,
+                configs: parsedConfigs,
+            })
+        } catch {
+            return
+        }
+
+        const discovered = result.models || []
+        setDiscoveredModels(discovered)
+        setSelectedDiscoveredModels(Object.fromEntries(
+            discovered.map((item) => [item.upstream_model, !item.exists])
+        ))
+        setDiscoveredPublicNames(Object.fromEntries(
+            discovered.map((item) => [item.upstream_model, item.model])
+        ))
+        if (effectiveUseDefault) {
+            setUseDefaultModels(false)
+            form.setValue('useDefaultModels', false)
+        }
+        toast.success(`获取到 ${discovered.length} 个模型`)
+    }
+
+    const handleImportDiscoveredModels = () => {
+        const selectedModels = discoveredModels
+            .map((item) => ({
+                ...item,
+                publicName: (discoveredPublicNames[item.upstream_model] || item.model).trim(),
+            }))
+            .filter((item) => selectedDiscoveredModels[item.upstream_model] && item.publicName)
+
+        if (selectedModels.length === 0) {
+            toast.error('请选择要导入的模型')
+            return
+        }
+
+        const currentModels = form.getValues('models') || []
+        const currentMapping = form.getValues('model_mapping') || {}
+        const nextModels = [...currentModels]
+        const nextMapping = { ...currentMapping }
+
+        selectedModels.forEach((item) => {
+            if (!nextModels.includes(item.publicName)) {
+                nextModels.push(item.publicName)
+            }
+            if (item.publicName !== item.upstream_model) {
+                nextMapping[item.publicName] = item.upstream_model
+            } else {
+                delete nextMapping[item.publicName]
+            }
+        })
+
+        setUseDefaultModels(false)
+        form.setValue('useDefaultModels', false)
+        form.setValue('models', nextModels)
+        form.setValue('model_mapping', nextMapping)
+        toast.success(`已导入 ${selectedModels.length} 个模型`)
     }
 
     const isChannelFormUnchanged = (
@@ -677,6 +796,90 @@ export function ChannelForm({
         )
     }
 
+    const renderDiscoveredModelsPreview = () => {
+        if (discoveredModels.length === 0) {
+            return null
+        }
+
+        const unpricedCount = discoveredModels.filter((item) => !item.priced).length
+        const selectedCount = discoveredModels.filter((item) => selectedDiscoveredModels[item.upstream_model]).length
+
+        return (
+            <div className="rounded-lg border border-dashed bg-muted/30 p-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary">{discoveredModels.length} 个上游模型</Badge>
+                        {unpricedCount > 0 && (
+                            <Badge variant="outline" className="border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300">
+                                {unpricedCount} 个待配置价格
+                            </Badge>
+                        )}
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleImportDiscoveredModels}
+                        disabled={selectedCount === 0}
+                    >
+                        导入选中
+                    </Button>
+                </div>
+                <div className="max-h-72 overflow-y-auto rounded-md border bg-background">
+                    {discoveredModels.map((item) => {
+                        const checked = !!selectedDiscoveredModels[item.upstream_model]
+                        return (
+                            <div
+                                key={item.upstream_model}
+                                className="grid gap-2 border-b p-2 last:border-b-0 sm:grid-cols-[24px_minmax(0,1fr)_minmax(180px,0.8fr)_auto]"
+                            >
+                                <input
+                                    type="checkbox"
+                                    className="mt-2 h-4 w-4"
+                                    checked={checked}
+                                    onChange={(event) => {
+                                        setSelectedDiscoveredModels((prev) => ({
+                                            ...prev,
+                                            [item.upstream_model]: event.target.checked,
+                                        }))
+                                    }}
+                                />
+                                <div className="min-w-0">
+                                    <div className="truncate font-mono text-xs">{item.upstream_model}</div>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {item.exists ? (
+                                            <Badge variant="secondary" className="text-[10px]">已存在</Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="text-[10px]">新模型</Badge>
+                                        )}
+                                        {!item.priced && (
+                                            <Badge variant="outline" className="border-amber-300 text-[10px] text-amber-700 dark:border-amber-700 dark:text-amber-300">
+                                                待配置价格
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                                <Input
+                                    value={discoveredPublicNames[item.upstream_model] || item.model}
+                                    onChange={(event) => {
+                                        setDiscoveredPublicNames((prev) => ({
+                                            ...prev,
+                                            [item.upstream_model]: event.target.value,
+                                        }))
+                                    }}
+                                    className="h-8 font-mono text-xs"
+                                />
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                    {(discoveredPublicNames[item.upstream_model] || item.model).trim() !== item.upstream_model ? '映射' : ''}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <AnimatedContainer>
             <div>
@@ -729,6 +932,7 @@ export function ChannelForm({
                                                         field.onChange(Number(channelType))
                                                         form.setValue('models', [])
                                                         form.setValue('model_mapping', {})
+                                                        clearDiscoveredModels()
                                                         setUseDefaultModels(true)
                                                         form.setValue('useDefaultModels', true)
                                                     }
@@ -791,12 +995,32 @@ export function ChannelForm({
                             {watchedType > 0 && (
                                 <div className="space-y-3">
                                     <FormLabel>{t("channel.dialog.models")}</FormLabel>
-                                    {renderModelModeToggle()}
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                        <div className="flex-1">
+                                            {renderModelModeToggle()}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleDiscoverModels}
+                                            disabled={isDiscovering}
+                                            className="shrink-0"
+                                        >
+                                            {isDiscovering ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <DownloadCloud className="mr-2 h-4 w-4" />
+                                            )}
+                                            获取模型
+                                        </Button>
+                                    </div>
 
                                     {effectiveUseDefault ? (
                                         renderDefaultModelsPreview()
                                     ) : (
                                         <>
+                                            {renderDiscoveredModelsPreview()}
                                             <FormField
                                                 control={form.control}
                                                 name="models"
