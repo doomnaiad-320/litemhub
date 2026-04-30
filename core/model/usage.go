@@ -24,6 +24,13 @@ type ConditionalPrice struct {
 	Price     Price          `json:"price"`
 }
 
+type SelectedConditionalPrice struct {
+	Condition PriceCondition
+	Price     Price
+	Index     int
+	Matched   bool
+}
+
 type Price struct {
 	PerRequestPrice ZeroNullFloat64 `json:"per_request_price,omitempty"`
 
@@ -355,8 +362,15 @@ func (p *Price) validateConditionalPriceOrdering() error {
 }
 
 func (p *Price) SelectConditionalPrice(usage Usage, serviceTier string) Price {
+	return p.SelectConditionalPriceWithInfo(usage, serviceTier).Price
+}
+
+func (p *Price) SelectConditionalPriceWithInfo(usage Usage, serviceTier string) SelectedConditionalPrice {
 	if len(p.ConditionalPrices) == 0 {
-		return *p
+		return SelectedConditionalPrice{
+			Price: *p,
+			Index: -1,
+		}
 	}
 
 	inputTokens := int64(usage.InputTokens)
@@ -364,7 +378,7 @@ func (p *Price) SelectConditionalPrice(usage Usage, serviceTier string) Price {
 	usageServiceTier := normalizeServiceTier(serviceTier)
 	currentTime := time.Now().Unix()
 
-	for _, conditionalPrice := range p.ConditionalPrices {
+	for index, conditionalPrice := range p.ConditionalPrices {
 		condition := conditionalPrice.Condition
 		conditionServiceTier := normalizeServiceTier(condition.ServiceTier)
 
@@ -399,10 +413,18 @@ func (p *Price) SelectConditionalPrice(usage Usage, serviceTier string) Price {
 			continue
 		}
 
-		return conditionalPrice.Price
+		return SelectedConditionalPrice{
+			Condition: condition,
+			Price:     conditionalPrice.Price,
+			Index:     index,
+			Matched:   true,
+		}
 	}
 
-	return *p
+	return SelectedConditionalPrice{
+		Price: *p,
+		Index: -1,
+	}
 }
 
 func (p *Price) GetInputPriceUnit() int64 {

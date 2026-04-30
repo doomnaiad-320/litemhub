@@ -859,6 +859,52 @@ func TestPrice_SelectConditionalPrice_WithServiceTier(t *testing.T) {
 	}
 }
 
+func TestPrice_SelectConditionalPriceWithInfo(t *testing.T) {
+	price := model.Price{
+		InputPrice: 0.001,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 1000,
+				},
+				Price: model.Price{
+					InputPrice: 0.002,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					InputTokenMin: 1001,
+				},
+				Price: model.Price{
+					InputPrice: 0.003,
+				},
+			},
+		},
+	}
+
+	selected := price.SelectConditionalPriceWithInfo(model.Usage{InputTokens: 2000}, "")
+	if !selected.Matched {
+		t.Fatal("expected conditional price to match")
+	}
+	if selected.Index != 1 {
+		t.Fatalf("expected condition index 1, got %d", selected.Index)
+	}
+	if selected.Condition.InputTokenMin != 1001 {
+		t.Fatalf("expected input token min 1001, got %d", selected.Condition.InputTokenMin)
+	}
+	if selected.Price.InputPrice != 0.003 {
+		t.Fatalf("expected input price 0.003, got %v", selected.Price.InputPrice)
+	}
+
+	selected = price.SelectConditionalPriceWithInfo(model.Usage{InputTokens: 0}, "priority")
+	if !selected.Matched {
+		t.Fatal("expected first conditional price to match zero-token usage")
+	}
+	if selected.Index != 0 {
+		t.Fatalf("expected condition index 0, got %d", selected.Index)
+	}
+}
+
 func TestPrice_ValidateConditionalPrices_WithServiceTier(t *testing.T) {
 	tests := []struct {
 		name    string

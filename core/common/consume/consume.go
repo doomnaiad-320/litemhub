@@ -3,6 +3,7 @@ package consume
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -101,8 +102,10 @@ func Consume(
 		)
 	}
 
-	selectedModelPrice := modelPrice.SelectConditionalPrice(usage, meta.RequestServiceTier)
+	selectedPrice := modelPrice.SelectConditionalPriceWithInfo(usage, meta.RequestServiceTier)
+	selectedModelPrice := selectedPrice.Price
 	selectedModelPrice.ConditionalPrices = nil
+	metadata = withConditionalPriceMetadata(metadata, selectedPrice)
 
 	err := recordConsume(
 		now,
@@ -124,6 +127,42 @@ func Consume(
 		log.Error("error batch record consume: " + err.Error())
 		notify.ErrorThrottle("recordConsume", time.Minute*5, "record consume failed", err.Error())
 	}
+}
+
+func withConditionalPriceMetadata(
+	metadata map[string]string,
+	selectedPrice model.SelectedConditionalPrice,
+) map[string]string {
+	if !selectedPrice.Matched {
+		return metadata
+	}
+
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+
+	condition := selectedPrice.Condition
+	metadata["price_source"] = "conditional_prices"
+	metadata["price_condition_index"] = strconv.Itoa(selectedPrice.Index)
+	metadata["price_condition_number"] = strconv.Itoa(selectedPrice.Index + 1)
+
+	setInt64Metadata := func(key string, value int64) {
+		if value > 0 {
+			metadata[key] = strconv.FormatInt(value, 10)
+		}
+	}
+
+	setInt64Metadata("price_condition_input_token_min", condition.InputTokenMin)
+	setInt64Metadata("price_condition_input_token_max", condition.InputTokenMax)
+	setInt64Metadata("price_condition_output_token_min", condition.OutputTokenMin)
+	setInt64Metadata("price_condition_output_token_max", condition.OutputTokenMax)
+	setInt64Metadata("price_condition_start_time", condition.StartTime)
+	setInt64Metadata("price_condition_end_time", condition.EndTime)
+	if condition.ServiceTier != "" {
+		metadata["price_condition_service_tier"] = condition.ServiceTier
+	}
+
+	return metadata
 }
 
 func Summary(
