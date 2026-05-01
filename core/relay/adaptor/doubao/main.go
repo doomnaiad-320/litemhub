@@ -13,6 +13,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/registry"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -20,11 +21,32 @@ func init() {
 	registry.Register(model.ChannelTypeDoubao, &Adaptor{})
 }
 
+func featureModel(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	if modelName := utils.FirstMatchingModelName(
+		meta.OriginModel,
+		meta.ActualModel,
+		func(modelName string) bool {
+			modelName = strings.ToLower(modelName)
+			return strings.HasPrefix(modelName, "bot-") || strings.Contains(modelName, "vision")
+		},
+	); modelName != "" {
+		return modelName
+	}
+
+	return utils.PreferredModelName(meta.OriginModel, meta.ActualModel)
+}
+
 func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
+
+	modelName := strings.ToLower(featureModel(meta))
 	switch meta.Mode {
-	case mode.ChatCompletions, mode.Anthropic:
-		if strings.HasPrefix(meta.ActualModel, "bot-") {
+	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
+		if strings.HasPrefix(modelName, "bot-") {
 			url, err := url.JoinPath(u, "/api/v3/bots/chat/completions")
 			if err != nil {
 				return adaptor.RequestURL{}, err
@@ -46,7 +68,7 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 			URL:    url,
 		}, nil
 	case mode.Embeddings:
-		if strings.Contains(meta.ActualModel, "vision") {
+		if strings.Contains(modelName, "vision") {
 			url, err := url.JoinPath(u, "/api/v3/embeddings/multimodal")
 			if err != nil {
 				return adaptor.RequestURL{}, err
@@ -67,6 +89,56 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 			Method: http.MethodPost,
 			URL:    url,
 		}, nil
+	case mode.Responses:
+		url, err := url.JoinPath(u, "/api/v3/responses")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.ResponsesGet:
+		url, err := url.JoinPath(u, "/api/v3/responses", meta.ResponseID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.ResponsesDelete:
+		url, err := url.JoinPath(u, "/api/v3/responses", meta.ResponseID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodDelete,
+			URL:    url,
+		}, nil
+	case mode.ResponsesCancel:
+		url, err := url.JoinPath(u, "/api/v3/responses", meta.ResponseID, "cancel")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.ResponsesInputItems:
+		url, err := url.JoinPath(u, "/api/v3/responses", meta.ResponseID, "input_items")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
 	}
@@ -82,15 +154,23 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
-		m == mode.Embeddings
+		m == mode.Gemini ||
+		m == mode.Embeddings ||
+		m == mode.Responses ||
+		m == mode.ResponsesGet ||
+		m == mode.ResponsesDelete ||
+		m == mode.ResponsesCancel ||
+		m == mode.ResponsesInputItems
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {
 	return adaptor.Metadata{
-		Readme: "Doubao / Volcano Engine endpoint\nSupports bot-style models and network search metering fields",
+		Readme: "Doubao / Volcano Engine endpoint\nSupports bot-style models, native Responses API, Gemini-compatible request conversion, and network search metering fields",
 		Models: ModelList,
 	}
 }
@@ -108,14 +188,24 @@ func (a *Adaptor) ConvertRequest(
 	store adaptor.Store,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	reasoningHook := func(openAIReq *relaymodel.GeneralOpenAIRequest) error {
+		reasoning := utils.ParseOpenAIReasoning(openAIReq)
+		utils.ApplyReasoningToDoubaoRequest(openAIReq, reasoning)
+		return nil
+	}
+
 	switch meta.Mode {
 	case mode.Embeddings:
-		if strings.Contains(meta.ActualModel, "vision") {
+		if strings.Contains(strings.ToLower(featureModel(meta)), "vision") {
 			return openai.ConvertEmbeddingsRequest(meta, req, false, patchEmbeddingsVisionInput)
 		}
 		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.ChatCompletions:
 		return ConvertChatCompletionsRequest(meta, req)
+	case mode.Anthropic:
+		return openai.ConvertClaudeRequest(meta, req, reasoningHook)
+	case mode.Gemini:
+		return openai.ConvertGeminiRequest(meta, req, reasoningHook)
 	default:
 		return openai.ConvertRequest(meta, store, req)
 	}
@@ -152,6 +242,11 @@ func (a *Adaptor) DoResponse(
 			resp,
 			embeddingPreHandler,
 		)
+	case mode.Gemini:
+		if utils.IsStreamResponse(resp) {
+			return openai.GeminiStreamHandler(meta, c, resp)
+		}
+		return openai.GeminiHandler(meta, c, resp)
 	default:
 		return openai.DoResponse(meta, store, c, resp)
 	}

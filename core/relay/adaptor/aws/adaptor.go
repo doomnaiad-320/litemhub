@@ -12,6 +12,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
 type Adaptor struct{}
@@ -24,7 +25,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return ""
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Completions ||
 		m == mode.Anthropic ||
@@ -36,7 +39,13 @@ func (a *Adaptor) ConvertRequest(
 	store adaptor.Store,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	aa := GetAdaptor(meta.ActualModel)
+	aa := GetAdaptor(
+		relayutils.PreferredModelName(meta.OriginModel, meta.ActualModel),
+	)
+	if aa == nil && meta.ActualModel != "" && meta.ActualModel != meta.OriginModel {
+		aa = GetAdaptor(meta.ActualModel)
+	}
+
 	if aa == nil {
 		return adaptor.ConvertResult{}, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,

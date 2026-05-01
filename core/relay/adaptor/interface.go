@@ -1,6 +1,7 @@
 package adaptor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
-	"github.com/labring/aiproxy/core/relay/mode"
 )
 
 type StoreCache struct {
@@ -72,6 +72,7 @@ type DoRequest interface {
 type DoResponseResult struct {
 	Usage      model.Usage
 	UpstreamID string // ID from response body or x-request-id header
+	AsyncUsage bool   // usage will be fetched asynchronously by upstream ID
 }
 
 type DoResponse interface {
@@ -83,9 +84,17 @@ type DoResponse interface {
 	) (DoResponseResult, Error)
 }
 
+type AsyncUsageFetcher interface {
+	FetchAsyncUsage(
+		ctx context.Context,
+		channel *model.Channel,
+		info *model.AsyncUsageInfo,
+	) (usage model.Usage, completed bool, err error)
+}
+
 type Adaptor interface {
 	Metadata() Metadata
-	SupportMode(mode mode.Mode) bool
+	SupportMode(meta *meta.Meta) bool
 	DefaultBaseURL() string
 	GetRequestURL
 	SetupRequestHeader

@@ -19,8 +19,14 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+type OpenAIRequestHook func(*relaymodel.GeneralOpenAIRequest) error
+
 // ConvertGeminiRequest converts a Gemini native request to OpenAI format
-func ConvertGeminiRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+func ConvertGeminiRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	hooks ...OpenAIRequestHook,
+) (adaptor.ConvertResult, error) {
 	// Parse Gemini request
 	geminiReq, err := utils.UnmarshalGeminiChatRequest(req)
 	if err != nil {
@@ -73,6 +79,16 @@ func ConvertGeminiRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRe
 
 	// Convert tool config
 	openaiReq.ToolChoice = convertGeminiToolConfigToOpenAI(geminiReq)
+
+	for _, hook := range hooks {
+		if hook == nil {
+			continue
+		}
+
+		if err := hook(&openaiReq); err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	}
 
 	// Marshal to JSON
 	data, err := sonic.Marshal(openaiReq)
@@ -523,6 +539,11 @@ func convertGeminiGenerationConfigToOpenAI(
 				}
 			}
 		}
+
+		utils.ApplyReasoningToOpenAIRequest(
+			openaiReq,
+			utils.ParseGeminiReasoning(geminiReq.GenerationConfig.ThinkingConfig),
+		)
 	}
 }
 
@@ -757,6 +778,13 @@ func ConvertGeminiToResponsesRequest(
 		}
 	}
 
+	if geminiReq.GenerationConfig != nil {
+		utils.ApplyReasoningToResponsesRequest(
+			&responsesReq,
+			utils.ParseGeminiReasoning(geminiReq.GenerationConfig.ThinkingConfig),
+		)
+	}
+
 	// Convert tools
 	if len(geminiReq.Tools) > 0 {
 		var tools []relaymodel.ResponseTool
@@ -810,8 +838,6 @@ func ConvertGeminiToResponsesRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
-
-	fmt.Println(string(jsonData))
 
 	return adaptor.ConvertResult{
 		Header: http.Header{
@@ -936,11 +962,8 @@ func ConvertResponsesToGeminiResponse(
 		}
 	}
 
-	usage := model.Usage{}
-
 	// Convert usage
 	if responsesResp.Usage != nil {
-		usage = responsesResp.Usage.ToModelUsage()
 		geminiUsage := responsesResp.Usage.ToGeminiUsage()
 		geminiResp.UsageMetadata = &geminiUsage
 	}
@@ -959,7 +982,11 @@ func ConvertResponsesToGeminiResponse(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(geminiRespData)))
 	_, _ = c.Writer.Write(geminiRespData)
 
-	return adaptor.DoResponseResult{Usage: usage}, nil
+	return adaptor.DoResponseResult{
+		Usage:      responsesResp.ToModelUsage(),
+		UpstreamID: responsesResp.ID,
+		AsyncUsage: responseNeedsAsyncUsage(&responsesResp),
+	}, nil
 }
 
 // ConvertResponsesToGeminiStreamResponse converts Responses API stream to Gemini stream
@@ -979,7 +1006,11 @@ func ConvertResponsesToGeminiStreamResponse(
 	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
 	defer cleanup()
 
-	var usage model.Usage
+	var (
+		usage        model.Usage
+		responseID   string
+		lastResponse *relaymodel.Response
+	)
 
 	state := &geminiStreamState{
 		meta: meta,
@@ -1006,6 +1037,15 @@ func ConvertResponsesToGeminiStreamResponse(
 			continue
 		}
 
+		if event.Response != nil {
+			if responseID == "" {
+				responseID = event.Response.ID
+			}
+
+			lastResponse = event.Response
+			usage = event.Response.ToModelUsage()
+		}
+
 		// Handle events
 		// Note: Gemini format requires complete JSON for function calls,
 		// so we handle function_call_arguments.done (complete), not function_call_arguments.delta (streaming)
@@ -1017,10 +1057,6 @@ func ConvertResponsesToGeminiStreamResponse(
 		case relaymodel.EventFunctionCallArgumentsDone:
 			state.handleFunctionCallArgumentsDone(&event)
 		case relaymodel.EventResponseCompleted, relaymodel.EventResponseDone:
-			if event.Response != nil && event.Response.Usage != nil {
-				usage = event.Response.Usage.ToModelUsage()
-			}
-
 			state.handleResponseCompleted(&event)
 		}
 	}
@@ -1029,7 +1065,11 @@ func ConvertResponsesToGeminiStreamResponse(
 		log.Error("error reading response stream: " + err.Error())
 	}
 
-	return adaptor.DoResponseResult{Usage: usage}, nil
+	return adaptor.DoResponseResult{
+		Usage:      usage,
+		UpstreamID: responseID,
+		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
+	}, nil
 }
 
 // geminiStreamState manages state for Gemini stream conversion

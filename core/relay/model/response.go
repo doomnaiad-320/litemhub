@@ -34,6 +34,7 @@ type ResponseStatus = string
 
 const (
 	ResponseStatusInProgress ResponseStatus = "in_progress"
+	ResponseStatusQueued     ResponseStatus = "queued"
 	ResponseStatusCompleted  ResponseStatus = "completed"
 	ResponseStatusFailed     ResponseStatus = "failed"
 	ResponseStatusIncomplete ResponseStatus = "incomplete"
@@ -223,12 +224,35 @@ type ResponseUsage struct {
 	OutputTokensDetails *ResponseUsageDetails `json:"output_tokens_details,omitempty"`
 }
 
+type ResponseToolUsageWebSearch struct {
+	NumRequests int64 `json:"num_requests,omitempty"`
+}
+
+type ResponseToolUsageTokensDetails struct {
+	ImageTokens int64 `json:"image_tokens,omitempty"`
+	TextTokens  int64 `json:"text_tokens,omitempty"`
+}
+
+type ResponseToolUsageImageGen struct {
+	InputTokens         int64                           `json:"input_tokens,omitempty"`
+	InputTokensDetails  *ResponseToolUsageTokensDetails `json:"input_tokens_details,omitempty"`
+	OutputTokens        int64                           `json:"output_tokens,omitempty"`
+	OutputTokensDetails *ResponseToolUsageTokensDetails `json:"output_tokens_details,omitempty"`
+	TotalTokens         int64                           `json:"total_tokens,omitempty"`
+}
+
+type ResponseToolUsage struct {
+	ImageGen  *ResponseToolUsageImageGen  `json:"image_gen,omitempty"`
+	WebSearch *ResponseToolUsageWebSearch `json:"web_search,omitempty"`
+}
+
 // Response represents an OpenAI response object
 type Response struct {
 	ID                   string             `json:"id"`
 	Object               string             `json:"object"`
 	CreatedAt            int64              `json:"created_at"`
 	Status               ResponseStatus     `json:"status"`
+	Background           *bool              `json:"background,omitempty"`
 	Error                *ResponseError     `json:"error"`
 	IncompleteDetails    *IncompleteDetails `json:"incomplete_details"`
 	Instructions         *string            `json:"instructions"`
@@ -244,6 +268,7 @@ type Response struct {
 	Text                 ResponseText       `json:"text"`
 	ToolChoice           any                `json:"tool_choice"`
 	Tools                []ResponseTool     `json:"tools"`
+	ToolUsage            *ResponseToolUsage `json:"tool_usage,omitempty"`
 	TopP                 float64            `json:"top_p"`
 	Truncation           string             `json:"truncation"`
 	Usage                *ResponseUsage     `json:"usage"`
@@ -254,31 +279,32 @@ type Response struct {
 
 // CreateResponseRequest represents a request to create a response
 type CreateResponseRequest struct {
-	Model                string         `json:"model"`
-	Input                any            `json:"input"`
-	Background           *bool          `json:"background,omitempty"`
-	Conversation         any            `json:"conversation,omitempty"` // string or object
-	Include              []string       `json:"include,omitempty"`
-	Instructions         *string        `json:"instructions,omitempty"`
-	MaxOutputTokens      *int           `json:"max_output_tokens,omitempty"`
-	MaxToolCalls         *int           `json:"max_tool_calls,omitempty"`
-	Metadata             map[string]any `json:"metadata,omitempty"`
-	ParallelToolCalls    *bool          `json:"parallel_tool_calls,omitempty"`
-	PreviousResponseID   *string        `json:"previous_response_id,omitempty"`
-	PromptCacheKey       *string        `json:"prompt_cache_key,omitempty"`
-	PromptCacheRetention *string        `json:"prompt_cache_retention,omitempty"`
-	SafetyIdentifier     *string        `json:"safety_identifier,omitempty"`
-	ServiceTier          *string        `json:"service_tier,omitempty"`
-	Store                *bool          `json:"store,omitempty"`
-	Stream               bool           `json:"stream,omitempty"`
-	Temperature          *float64       `json:"temperature,omitempty"`
-	Text                 *ResponseText  `json:"text,omitempty"`
-	ToolChoice           any            `json:"tool_choice,omitempty"`
-	Tools                []ResponseTool `json:"tools,omitempty"`
-	TopLogprobs          *int           `json:"top_logprobs,omitempty"`
-	TopP                 *float64       `json:"top_p,omitempty"`
-	Truncation           *string        `json:"truncation,omitempty"`
-	User                 *string        `json:"user,omitempty"` // Deprecated, use prompt_cache_key
+	Model                string             `json:"model"`
+	Input                any                `json:"input"`
+	Background           *bool              `json:"background,omitempty"`
+	Conversation         any                `json:"conversation,omitempty"` // string or object
+	Include              []string           `json:"include,omitempty"`
+	Instructions         *string            `json:"instructions,omitempty"`
+	MaxOutputTokens      *int               `json:"max_output_tokens,omitempty"`
+	MaxToolCalls         *int               `json:"max_tool_calls,omitempty"`
+	Metadata             map[string]any     `json:"metadata,omitempty"`
+	ParallelToolCalls    *bool              `json:"parallel_tool_calls,omitempty"`
+	PreviousResponseID   *string            `json:"previous_response_id,omitempty"`
+	PromptCacheKey       *string            `json:"prompt_cache_key,omitempty"`
+	PromptCacheRetention *string            `json:"prompt_cache_retention,omitempty"`
+	Reasoning            *ResponseReasoning `json:"reasoning,omitempty"`
+	SafetyIdentifier     *string            `json:"safety_identifier,omitempty"`
+	ServiceTier          *string            `json:"service_tier,omitempty"`
+	Store                *bool              `json:"store,omitempty"`
+	Stream               bool               `json:"stream,omitempty"`
+	Temperature          *float64           `json:"temperature,omitempty"`
+	Text                 *ResponseText      `json:"text,omitempty"`
+	ToolChoice           any                `json:"tool_choice,omitempty"`
+	Tools                []ResponseTool     `json:"tools,omitempty"`
+	TopLogprobs          *int               `json:"top_logprobs,omitempty"`
+	TopP                 *float64           `json:"top_p,omitempty"`
+	Truncation           *string            `json:"truncation,omitempty"`
+	User                 *string            `json:"user,omitempty"` // Deprecated, use prompt_cache_key
 }
 
 // InputItemList represents a list of input items
@@ -303,6 +329,50 @@ type ResponseStreamEvent struct {
 	Text           string         `json:"text,omitempty"`      // For text content
 	Arguments      string         `json:"arguments,omitempty"` // For function_call_arguments.done
 	SequenceNumber int            `json:"sequence_number,omitempty"`
+}
+
+func (r *Response) ToolUsageWebSearchCallCount() int64 {
+	if r == nil || r.ToolUsage == nil || r.ToolUsage.WebSearch == nil {
+		return 0
+	}
+
+	return r.ToolUsage.WebSearch.NumRequests
+}
+
+func (r *Response) ToModelUsage() model.Usage {
+	if r == nil {
+		return model.Usage{}
+	}
+
+	var usage model.Usage
+	if r.Usage != nil {
+		usage = r.Usage.ToModelUsage()
+	}
+
+	if count := r.ToolUsageWebSearchCallCount(); count > 0 {
+		usage.WebSearchCount = model.ZeroNullInt64(count)
+	}
+
+	if r.ToolUsage != nil && r.ToolUsage.ImageGen != nil {
+		imageUsage := r.ToolUsage.ImageGen
+		usage.InputTokens += model.ZeroNullInt64(imageUsage.InputTokens)
+		usage.OutputTokens += model.ZeroNullInt64(imageUsage.OutputTokens)
+		usage.TotalTokens += model.ZeroNullInt64(imageUsage.TotalTokens)
+
+		if imageUsage.InputTokensDetails != nil {
+			usage.ImageInputTokens += model.ZeroNullInt64(
+				imageUsage.InputTokensDetails.ImageTokens,
+			)
+		}
+
+		if imageUsage.OutputTokensDetails != nil {
+			usage.ImageOutputTokens += model.ZeroNullInt64(
+				imageUsage.OutputTokensDetails.ImageTokens,
+			)
+		}
+	}
+
+	return usage
 }
 
 func (u *ResponseUsage) ToModelUsage() model.Usage {

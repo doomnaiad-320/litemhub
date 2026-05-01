@@ -22,10 +22,21 @@ import (
 func ConvertClaudeRequest(
 	meta *meta.Meta,
 	req *http.Request,
+	hooks ...OpenAIRequestHook,
 ) (adaptor.ConvertResult, error) {
 	openAIRequest, err := ConvertClaudeRequestModel(meta, req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
+	}
+
+	for _, hook := range hooks {
+		if hook == nil {
+			continue
+		}
+
+		if err := hook(openAIRequest); err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	}
 
 	// Marshal the converted request
@@ -85,6 +96,11 @@ func ConvertClaudeRequestModel(
 			IncludeUsage: true,
 		}
 	}
+
+	utils.ApplyReasoningToOpenAIRequest(
+		&openAIRequest,
+		utils.ParseClaudeReasoning(claudeRequest.Thinking, claudeRequest.OutputConfig),
+	)
 
 	return &openAIRequest, nil
 }
@@ -808,6 +824,11 @@ func ConvertClaudeToResponsesRequest(
 		responsesReq.ToolChoice = openAIRequest.ToolChoice
 	}
 
+	utils.ApplyReasoningToResponsesRequest(
+		&responsesReq,
+		utils.ParseOpenAIReasoning(openAIRequest),
+	)
+
 	// Force non-store mode
 	storeValue := false
 	responsesReq.Store = &storeValue
@@ -926,11 +947,11 @@ func ConvertResponsesToClaudeResponse(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(claudeRespData)))
 	_, _ = c.Writer.Write(claudeRespData)
 
-	if responsesResp.Usage != nil {
-		return adaptor.DoResponseResult{Usage: responsesResp.Usage.ToModelUsage()}, nil
-	}
-
-	return adaptor.DoResponseResult{}, nil
+	return adaptor.DoResponseResult{
+		Usage:      responsesResp.ToModelUsage(),
+		UpstreamID: responsesResp.ID,
+		AsyncUsage: responseNeedsAsyncUsage(&responsesResp),
+	}, nil
 }
 
 // ConvertResponsesToClaudeStreamResponse converts Responses API stream to Claude stream
@@ -950,7 +971,11 @@ func ConvertResponsesToClaudeStreamResponse(
 	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
 	defer cleanup()
 
-	var usage model.Usage
+	var (
+		usage        model.Usage
+		responseID   string
+		lastResponse *relaymodel.Response
+	)
 
 	state := &claudeStreamState{
 		meta: meta,
@@ -977,6 +1002,15 @@ func ConvertResponsesToClaudeStreamResponse(
 			continue
 		}
 
+		if event.Response != nil {
+			if responseID == "" {
+				responseID = event.Response.ID
+			}
+
+			lastResponse = event.Response
+			usage = event.Response.ToModelUsage()
+		}
+
 		// Handle events
 		switch event.Type {
 		case relaymodel.EventResponseCreated:
@@ -994,10 +1028,6 @@ func ConvertResponsesToClaudeStreamResponse(
 		case relaymodel.EventOutputItemDone:
 			state.handleOutputItemDone(&event)
 		case relaymodel.EventResponseCompleted, relaymodel.EventResponseDone:
-			if event.Response != nil && event.Response.Usage != nil {
-				usage = event.Response.Usage.ToModelUsage()
-			}
-
 			state.handleResponseCompleted(&event)
 		}
 	}
@@ -1006,7 +1036,11 @@ func ConvertResponsesToClaudeStreamResponse(
 		log.Error("error reading response stream: " + err.Error())
 	}
 
-	return adaptor.DoResponseResult{Usage: usage}, nil
+	return adaptor.DoResponseResult{
+		Usage:      usage,
+		UpstreamID: responseID,
+		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
+	}, nil
 }
 
 // claudeStreamState manages state for Claude stream conversion

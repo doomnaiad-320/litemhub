@@ -14,6 +14,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -56,7 +57,7 @@ func ResponseHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if !adaptor.IsSuccessfulResponseStatus(mode.Responses, resp.StatusCode) {
 		return adaptor.DoResponseResult{}, ErrorHanlder(resp)
 	}
 
@@ -105,13 +106,13 @@ func ResponseHandler(
 	_, _ = c.Writer.Write(responseBody)
 
 	// Calculate usage
-	if response.Usage != nil {
-		usage := response.Usage.ToModelUsage()
+	usage := response.ToModelUsage()
 
-		return adaptor.DoResponseResult{Usage: usage, UpstreamID: response.ID}, nil
-	}
-
-	return adaptor.DoResponseResult{UpstreamID: response.ID}, nil
+	return adaptor.DoResponseResult{
+		Usage:      usage,
+		UpstreamID: response.ID,
+		AsyncUsage: responseNeedsAsyncUsage(&response),
+	}, nil
 }
 
 // ResponseStreamHandler handles streaming response
@@ -121,7 +122,7 @@ func ResponseStreamHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	if resp.StatusCode != http.StatusOK {
+	if !adaptor.IsSuccessfulResponseStatus(mode.Responses, resp.StatusCode) {
 		return adaptor.DoResponseResult{}, ErrorHanlder(resp)
 	}
 
@@ -133,8 +134,9 @@ func ResponseStreamHandler(
 	defer cleanup()
 
 	var (
-		usage      model.Usage
-		responseID string
+		usage        model.Usage
+		responseID   string
+		lastResponse *relaymodel.Response
 	)
 
 	for scanner.Scan() {
@@ -144,9 +146,6 @@ func ResponseStreamHandler(
 		}
 
 		data = render.ExtractSSEData(data)
-		if render.IsSSEDone(data) {
-			break
-		}
 
 		// Parse the stream event
 		var event relaymodel.ResponseStreamEvent
@@ -176,8 +175,9 @@ func ResponseStreamHandler(
 		}
 
 		// Update usage if available
-		if event.Response != nil && event.Response.Usage != nil {
-			usage = event.Response.Usage.ToModelUsage()
+		if event.Response != nil {
+			lastResponse = event.Response
+			usage = event.Response.ToModelUsage()
 		}
 
 		// Forward the event
@@ -188,7 +188,28 @@ func ResponseStreamHandler(
 		log.Error("error reading response stream: " + err.Error())
 	}
 
-	return adaptor.DoResponseResult{Usage: usage, UpstreamID: responseID}, nil
+	return adaptor.DoResponseResult{
+		Usage:      usage,
+		UpstreamID: responseID,
+		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
+	}, nil
+}
+
+func responseNeedsAsyncUsage(response *relaymodel.Response) bool {
+	if response == nil || response.ID == "" || response.Usage != nil {
+		return false
+	}
+
+	if usage := response.ToModelUsage(); usage.TotalTokens > 0 || usage.WebSearchCount > 0 {
+		return false
+	}
+
+	switch response.Status {
+	case relaymodel.ResponseStatusInProgress, relaymodel.ResponseStatusQueued:
+		return true
+	default:
+		return false
+	}
 }
 
 // GetResponseHandler handles GET /v1/responses/{response_id}
@@ -216,7 +237,7 @@ func DeleteResponseHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+	if !adaptor.IsSuccessfulResponseStatus(mode.ResponsesDelete, resp.StatusCode) {
 		return adaptor.DoResponseResult{}, ErrorHanlder(resp)
 	}
 

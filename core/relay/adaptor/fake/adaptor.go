@@ -26,7 +26,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Completions ||
 		m == mode.Embeddings ||
@@ -101,7 +103,7 @@ func (a *Adaptor) DoRequest(
 	_ *gin.Context,
 	_ *http.Request,
 ) (*http.Response, error) {
-	cfg := loadConfig(meta)
+	cfg := a.loadConfig(meta)
 	reqCtx := getRequestContext(meta)
 	usage := buildUsage(cfg)
 
@@ -134,7 +136,7 @@ func (a *Adaptor) DoResponse(
 	c *gin.Context,
 	_ *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	cfg := loadConfig(meta)
+	cfg := a.loadConfig(meta)
 	usage := buildUsage(cfg)
 	reqCtx := getRequestContext(meta)
 

@@ -43,12 +43,22 @@ func stopReasonClaude2OpenAI(reason string) string {
 	}
 }
 
-//nolint:gocyclo
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.ClaudeRequest, error) {
-	adaptorConfig := Config{}
-	if err := meta.ChannelConfigs.LoadConfig(&adaptorConfig); err != nil {
+	adaptorConfig, err := loadConfig(meta)
+	if err != nil {
 		return nil, err
 	}
+
+	return openAIConvertRequest(meta, req, adaptorConfig)
+}
+
+//nolint:gocyclo
+func openAIConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	adaptorConfig Config,
+) (*relaymodel.ClaudeRequest, error) {
+	resolvedModel := ResolveModelName(meta.OriginModel, meta.ActualModel)
 
 	var textRequest relaymodel.ClaudeOpenAIRequest
 
@@ -57,10 +67,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.Claud
 		return nil, err
 	}
 
-	onlyThinking, err := utils.UnmarshalGeneralThinking(req)
-	if err != nil {
-		return nil, err
-	}
+	reasoning := utils.ParseClaudeOpenAIReasoning(&textRequest)
 
 	textRequest.Model = meta.ActualModel
 	claudeTools := make([]relaymodel.ClaudeTool, 0, len(textRequest.Tools))
@@ -117,19 +124,32 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.Claud
 	}
 
 	if claudeRequest.MaxTokens == 0 {
-		claudeRequest.MaxTokens = ModelDefaultMaxTokens(meta.ActualModel)
+		claudeRequest.MaxTokens = ModelDefaultMaxTokens(resolvedModel)
 	}
 
-	if onlyThinking.Thinking != nil {
-		claudeRequest.Thinking = onlyThinking.Thinking
-		if claudeRequest.Thinking.Type == "disabled" {
+	if reasoning.Specified {
+		utils.ApplyReasoningToClaudeRequest(
+			resolvedModel,
+			&claudeRequest.MaxTokens,
+			&claudeRequest.Thinking,
+			&claudeRequest.OutputConfig,
+			reasoning,
+		)
+
+		if claudeRequest.Thinking != nil && claudeRequest.Thinking.Type == "disabled" {
 			claudeRequest.Thinking = nil
+			claudeRequest.OutputConfig = nil
 		}
-	} else if strings.Contains(meta.OriginModel, "think") {
-		// Use "adaptive" for Opus 4.6, "enabled" for older models
+	} else if utils.FirstMatchingModelName(
+		meta.OriginModel,
+		meta.ActualModel,
+		func(modelName string) bool {
+			return strings.Contains(strings.ToLower(modelName), "think")
+		},
+	) != "" {
 		thinkingType := relaymodel.ClaudeThinkingTypeEnabled
-		if strings.Contains(meta.OriginModel, "opus") && strings.Contains(meta.OriginModel, "4-6") {
-			thinkingType = "adaptive"
+		if shouldAutoUseAdaptiveThinking(resolvedModel) {
+			thinkingType = relaymodel.ClaudeThinkingTypeAdaptive
 		}
 
 		claudeRequest.Thinking = &relaymodel.ClaudeThinking{
@@ -138,15 +158,15 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.Claud
 	}
 
 	if claudeRequest.Thinking != nil {
-		// Only adjust budget_tokens for "enabled" type
-		// Opus 4.6's "adaptive" type doesn't support budget_tokens
-		if claudeRequest.Thinking.Type == relaymodel.ClaudeThinkingTypeEnabled {
-			adjustThinkingBudgetTokens(
-				&claudeRequest.MaxTokens,
-				&claudeRequest.Thinking.BudgetTokens,
-			)
-		}
+		normalizeClaudeThinking(
+			resolvedModel,
+			&claudeRequest.MaxTokens,
+			&claudeRequest.Thinking,
+			&claudeRequest.OutputConfig,
+		)
+	}
 
+	if claudeRequest.Thinking != nil {
 		claudeRequest.Temperature = nil
 	}
 

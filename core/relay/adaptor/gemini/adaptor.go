@@ -14,7 +14,9 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-type Adaptor struct{}
+type Adaptor struct {
+	configCache utils.ChannelConfigCache[Config]
+}
 
 func init() {
 	registry.Register(model.ChannelTypeGoogleGemini, &Adaptor{})
@@ -26,7 +28,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
 		m == mode.Embeddings ||
@@ -35,6 +39,25 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 
 var v1ModelMap = map[string]struct{}{}
 
+func requestVersionModel(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	if modelName := utils.FirstMatchingModelName(
+		meta.OriginModel,
+		meta.ActualModel,
+		func(modelName string) bool {
+			_, ok := v1ModelMap[modelName]
+			return ok
+		},
+	); modelName != "" {
+		return modelName
+	}
+
+	return meta.ActualModel
+}
+
 func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	u := meta.Channel.BaseURL
 	if u == "" {
@@ -42,7 +65,7 @@ func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	}
 
 	version := "v1beta"
-	if _, ok := v1ModelMap[meta.ActualModel]; ok {
+	if _, ok := v1ModelMap[requestVersionModel(meta)]; ok {
 		version = "v1"
 	}
 
@@ -92,9 +115,9 @@ func (a *Adaptor) ConvertRequest(
 	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, req)
 	case mode.ChatCompletions:
-		return ConvertRequest(meta, req)
+		return a.convertRequest(meta, req)
 	case mode.Anthropic:
-		return ConvertClaudeRequest(meta, req)
+		return a.convertClaudeRequest(meta, req)
 	case mode.Gemini:
 		return NativeConvertRequest(meta, req)
 	default:

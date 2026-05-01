@@ -32,7 +32,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Embeddings ||
 		m == mode.Rerank ||
@@ -79,9 +81,25 @@ func (a *Adaptor) GetRequestURL(
 		pathSuffix = "text2image"
 	}
 
-	modelEndpoint, ok := modelEndpointMap[meta.ActualModel]
+	modelName := meta.ActualModel
+	if modelName == "" {
+		modelName = meta.OriginModel
+	}
+
+	if endpointModel := utils.FirstMatchingModelName(
+		meta.OriginModel,
+		meta.ActualModel,
+		func(modelName string) bool {
+			_, ok := modelEndpointMap[modelName]
+			return ok
+		},
+	); endpointModel != "" {
+		modelName = endpointModel
+	}
+
+	modelEndpoint, ok := modelEndpointMap[modelName]
 	if !ok {
-		modelEndpoint = strings.ToLower(meta.ActualModel)
+		modelEndpoint = strings.ToLower(modelName)
 	}
 
 	// Construct full URL

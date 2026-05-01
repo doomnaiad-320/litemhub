@@ -20,7 +20,9 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-type Adaptor struct{}
+type Adaptor struct {
+	configCache utils.ChannelConfigCache[Config]
+}
 
 func init() {
 	registry.Register(model.ChannelTypeAnthropic, &Adaptor{})
@@ -32,7 +34,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) SupportMode(m mode.Mode) bool {
+func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
+	m := adaptor.ModeFromMeta(mt)
+
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
 		m == mode.Gemini
@@ -155,7 +159,10 @@ func (a *Adaptor) SetupRequestHeader(
 	rawBetas := c.Request.Header.Get(AnthropicBeta)
 
 	if rawBetas != "" {
-		req.Header.Set(AnthropicBeta, FixBetasStringWithModel(meta.ActualModel, rawBetas))
+		req.Header.Set(
+			AnthropicBeta,
+			FixBetasStringWithModel(ResolveModelName(meta.OriginModel, meta.ActualModel), rawBetas),
+		)
 	}
 
 	return nil
@@ -166,9 +173,14 @@ func (a *Adaptor) ConvertRequest(
 	_ adaptor.Store,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	cfg, err := a.loadConfig(meta)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		data, err := OpenAIConvertRequest(meta, req)
+		data, err := openAIConvertRequest(meta, req, cfg)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -186,7 +198,7 @@ func (a *Adaptor) ConvertRequest(
 			Body: bytes.NewReader(data2),
 		}, nil
 	case mode.Anthropic:
-		return ConvertRequest(meta, req)
+		return convertRequest(meta, req, cfg)
 	case mode.Gemini:
 		return ConvertGeminiRequest(meta, req)
 	default:
