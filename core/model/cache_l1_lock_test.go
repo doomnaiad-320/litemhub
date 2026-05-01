@@ -80,6 +80,9 @@ func withTestModelCacheDB(t *testing.T, fn func()) {
 	require.NoError(
 		t,
 		db.AutoMigrate(
+			&AppUser{},
+			&AppUserWallet{},
+			&AppUserGroup{},
 			&Group{},
 			&GroupModelConfig{},
 			&Token{},
@@ -268,6 +271,114 @@ func TestCacheUpdateTokenStatusUpdatesLocalCache(t *testing.T) {
 		got, err := CacheGetTokenByKey(cache.Key)
 		require.NoError(t, err)
 		assert.Equal(t, TokenStatusDisabled, got.Status)
+	})
+}
+
+func TestTokenCacheLoadsAppUserGroupPriceMultiplierOverride(t *testing.T) {
+	withTestModelCacheDB(t, func() {
+		require.NoError(t, DB.Create(&AppUser{
+			Email:        EmptyNullString("cache-override@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       AppUserStatusEnabled,
+		}).Error)
+
+		user := &AppUser{}
+		require.NoError(t, DB.Where("email = ?", "cache-override@example.com").First(user).Error)
+
+		require.NoError(t, DB.Create(&Group{
+			ID:              "override-group",
+			Status:          GroupStatusEnabled,
+			PriceMultiplier: 2,
+		}).Error)
+
+		override := 1.25
+		require.NoError(t, DB.Create(&AppUserGroup{
+			UserID:                  user.ID,
+			GroupID:                 "override-group",
+			Status:                  AppUserGroupStatusEnabled,
+			PriceMultiplierOverride: &override,
+		}).Error)
+
+		token := &Token{
+			Key:         "123456789012345678901234567890123456789012345678",
+			Name:        EmptyNullString("override-token"),
+			GroupID:     "override-group",
+			Status:      TokenStatusEnabled,
+			OwnerUserID: user.ID,
+		}
+		require.NoError(t, DB.Create(token).Error)
+
+		got, err := CacheGetTokenByKey(token.Key)
+		require.NoError(t, err)
+		assert.Equal(t, override, got.PriceMultiplierOverride)
+		assert.Equal(t, override, got.GetPriceMultiplier(GroupCache{PriceMultiplier: 2}))
+	})
+}
+
+func TestSetAppUserGroupPriceMultiplierOverrideInvalidatesTokenCache(t *testing.T) {
+	withTestModelCacheDB(t, func() {
+		user := &AppUser{
+			Email:        EmptyNullString("cache-invalidate@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       AppUserStatusEnabled,
+		}
+		require.NoError(t, DB.Create(user).Error)
+
+		require.NoError(t, DB.Create(&Group{
+			ID:              "invalidate-group",
+			Status:          GroupStatusEnabled,
+			PriceMultiplier: 2,
+		}).Error)
+
+		initialOverride := 1.5
+		require.NoError(t, DB.Create(&AppUserGroup{
+			UserID:                  user.ID,
+			GroupID:                 "invalidate-group",
+			Status:                  AppUserGroupStatusEnabled,
+			PriceMultiplierOverride: &initialOverride,
+		}).Error)
+
+		token := &Token{
+			Key:         "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef",
+			Name:        EmptyNullString("invalidate-token"),
+			GroupID:     "invalidate-group",
+			Status:      TokenStatusEnabled,
+			OwnerUserID: user.ID,
+		}
+		require.NoError(t, DB.Create(token).Error)
+
+		got, err := CacheGetTokenByKey(token.Key)
+		require.NoError(t, err)
+		assert.Equal(t, initialOverride, got.PriceMultiplierOverride)
+
+		updatedOverride := 1.0
+		require.NoError(
+			t,
+			SetAppUserGroupPriceMultiplierOverride(
+				user.ID,
+				"invalidate-group",
+				&updatedOverride,
+			),
+		)
+
+		got, err = CacheGetTokenByKey(token.Key)
+		require.NoError(t, err)
+		assert.Equal(t, updatedOverride, got.PriceMultiplierOverride)
+
+		restoreDefault := 0.0
+		require.NoError(
+			t,
+			SetAppUserGroupPriceMultiplierOverride(
+				user.ID,
+				"invalidate-group",
+				&restoreDefault,
+			),
+		)
+
+		got, err = CacheGetTokenByKey(token.Key)
+		require.NoError(t, err)
+		assert.Zero(t, got.PriceMultiplierOverride)
+		assert.Equal(t, 2.0, got.GetPriceMultiplier(GroupCache{PriceMultiplier: 2}))
 	})
 }
 

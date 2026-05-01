@@ -88,6 +88,11 @@ type UpdateAppUserStatusRequest struct {
 	Status int `json:"status"`
 }
 
+type UpdateAppUserGroupPriceMultiplierRequest struct {
+	Group                   string   `json:"group"`
+	PriceMultiplierOverride *float64 `json:"price_multiplier_override"`
+}
+
 func buildAppWalletResponse(wallet *model.AppUserWallet, historicalConsumed float64) *AppWalletResponse {
 	return &AppWalletResponse{
 		UserID:             wallet.UserID,
@@ -693,5 +698,79 @@ func RechargeAppUserBalance(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"wallet":       buildAppWalletResponse(wallet, historicalConsumed),
 		"recharge_log": rechargeLog,
+	})
+}
+
+func GetAppUserGroupPriceMultipliers(c *gin.Context) {
+	userID, ok := parseAppUserID(c)
+	if !ok {
+		return
+	}
+
+	page, perPage := utils.ParsePageParams(c)
+	keyword := c.Query("keyword")
+
+	items, total, err := model.GetAppUserGroupPriceMultipliers(userID, keyword, page, perPage)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"groups": items,
+		"total":  total,
+	})
+}
+
+func UpdateAppUserGroupPriceMultiplier(c *gin.Context) {
+	userID, ok := parseAppUserID(c)
+	if !ok {
+		return
+	}
+
+	req := UpdateAppUserGroupPriceMultiplierRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
+		return
+	}
+
+	if req.Group == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
+		return
+	}
+
+	if req.PriceMultiplierOverride != nil && *req.PriceMultiplierOverride < 0 {
+		middleware.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"price multiplier override must be greater than or equal to 0",
+		)
+		return
+	}
+
+	err := model.SetAppUserGroupPriceMultiplierOverride(
+		userID,
+		req.Group,
+		req.PriceMultiplierOverride,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"user_id":                   userID,
+		"group":                     req.Group,
+		"price_multiplier_override": req.PriceMultiplierOverride,
 	})
 }

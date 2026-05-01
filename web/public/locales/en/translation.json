@@ -1218,6 +1218,7 @@
     "refresh": "Refresh",
     "recharge": "Recharge",
     "resetPassword": "Reset Password",
+    "groupPriceMultiplier": "Group Multiplier",
     "delete": "Delete User",
     "enable": "Enable",
     "disable": "Disable",
@@ -1305,6 +1306,19 @@
       "confirmPasswordPlaceholder": "Enter the password again",
       "passwordNotMatch": "The two passwords do not match",
       "submitting": "Submitting..."
+    },
+    "groupPriceMultiplierDialog": {
+      "title": "Set Group Multiplier",
+      "description": "Set a user-specific billing multiplier for {{account}} in one group.",
+      "searchPlaceholder": "Search groups",
+      "group": "Group ID",
+      "selectGroupFirst": "Select a group from the left",
+      "defaultMultiplier": "Group Default Multiplier",
+      "multiplier": "Override multiplier",
+      "zeroHint": "0 restores default",
+      "groupRequired": "Enter a group ID",
+      "multiplierNonNegative": "Override multiplier cannot be less than 0",
+      "submit": "Save Multiplier"
     },
     "deleteDialog": {
       "title": "Disable User",

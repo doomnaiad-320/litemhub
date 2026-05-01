@@ -187,6 +187,14 @@ func SetAPIRouter(router *gin.Engine) {
 			appUsersRoute.GET("/:id/wallet", controller.GetAppUserWallet)
 			appUsersRoute.GET("/:id/wallet_logs", controller.GetAppUserWalletLogs)
 			appUsersRoute.POST("/:id/recharge", controller.RechargeAppUserBalance)
+			appUsersRoute.GET(
+				"/:id/group_price_multipliers",
+				controller.GetAppUserGroupPriceMultipliers,
+			)
+			appUsersRoute.POST(
+				"/:id/group_price_multiplier",
+				controller.UpdateAppUserGroupPriceMultiplier,
+			)
 		}
 
 		logsRoute := apiRouter.Group("/logs")

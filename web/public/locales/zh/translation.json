@@ -1206,6 +1206,7 @@
     "refresh": "刷新",
     "recharge": "充值",
     "resetPassword": "重置密码",
+    "groupPriceMultiplier": "分组倍率",
     "delete": "删除用户",
     "enable": "启用",
     "disable": "禁用",
@@ -1293,6 +1294,19 @@
       "confirmPasswordPlaceholder": "请再次输入新密码",
       "passwordNotMatch": "两次输入的密码不一致",
       "submitting": "提交中..."
+    },
+    "groupPriceMultiplierDialog": {
+      "title": "设置分组专属倍率",
+      "description": "为 {{account}} 设置某个分组下的专属计费倍率。",
+      "searchPlaceholder": "搜索分组",
+      "group": "分组 ID",
+      "selectGroupFirst": "请先从左侧选择分组",
+      "defaultMultiplier": "分组默认倍率",
+      "multiplier": "专属倍率",
+      "zeroHint": "填 0 恢复默认",
+      "groupRequired": "请输入分组 ID",
+      "multiplierNonNegative": "专属倍率不能小于 0",
+      "submit": "保存倍率"
     },
     "deleteDialog": {
       "title": "禁用用户",

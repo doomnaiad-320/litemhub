@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
-import { Pencil, Wallet, Key } from 'lucide-react'
+import { Gauge, Key, Pencil, Wallet } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +23,7 @@ interface AppUserDetailSheetProps {
     onEdit?: (user: AppUser) => void
     onRecharge?: (user: AppUser) => void
     onResetPassword?: (user: AppUser) => void
+    onSetGroupPriceMultiplier?: (user: AppUser) => void
 }
 
 const formatDateTime = (timestamp?: number) => {
@@ -62,6 +63,7 @@ export function AppUserDetailSheet({
     onEdit,
     onRecharge,
     onResetPassword,
+    onSetGroupPriceMultiplier,
 }: AppUserDetailSheetProps) {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
@@ -97,6 +99,14 @@ export function AppUserDetailSheet({
                                 <Button variant="outline" size="sm" onClick={() => onResetPassword?.(currentUser)}>
                                     <Key className="h-4 w-4" />
                                     {t('appUser.resetPassword')}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onSetGroupPriceMultiplier?.(currentUser)}
+                                >
+                                    <Gauge className="h-4 w-4" />
+                                    {t('appUser.groupPriceMultiplier')}
                                 </Button>
                             </>
                         )}

@@ -82,6 +82,23 @@ export interface RechargeAppUserBalanceRequest {
     raw_payload?: string
 }
 
+export interface UpdateAppUserGroupPriceMultiplierRequest {
+    group: string
+    price_multiplier_override: number | null
+}
+
+export interface AppUserGroupPriceMultiplier {
+    group: string
+    description?: string
+    group_price_multiplier: number
+    price_multiplier_override: number | null
+}
+
+export interface AppUserGroupPriceMultipliersResponse {
+    groups: AppUserGroupPriceMultiplier[]
+    total: number
+}
+
 export type AppRechargeStatus = 'success' | 'unpaid' | 'failed'
 
 export interface AppRechargeLog {

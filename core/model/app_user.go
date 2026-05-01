@@ -237,12 +237,13 @@ func (l *AppWalletLog) BeforeSave(_ *gorm.DB) error {
 }
 
 type AppUserGroup struct {
-	ID        int       `json:"id"         gorm:"primaryKey"`
-	UserID    int       `json:"user_id"    gorm:"not null;uniqueIndex:idx_app_user_group"`
-	GroupID   string    `json:"group_id"   gorm:"size:64;not null;index;uniqueIndex:idx_app_user_group"`
-	Status    int       `json:"status"     gorm:"default:1;index"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                      int       `json:"id"                        gorm:"primaryKey"`
+	UserID                  int       `json:"user_id"                   gorm:"not null;uniqueIndex:idx_app_user_group"`
+	GroupID                 string    `json:"group_id"                  gorm:"size:64;not null;index;uniqueIndex:idx_app_user_group"`
+	Status                  int       `json:"status"                    gorm:"default:1;index"`
+	PriceMultiplierOverride *float64  `json:"price_multiplier_override,omitempty" gorm:"index"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
 }
 
 func (*AppUserGroup) TableName() string {

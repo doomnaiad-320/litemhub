@@ -27,15 +27,16 @@ func updateTokenLocalCache(key string, update func(*TokenCache) bool) {
 }
 
 type TokenCache struct {
-	Group       string           `json:"group"       redis:"g"`
-	Key         string           `json:"-"           redis:"-"`
-	Name        string           `json:"name"        redis:"n"`
-	Subnets     redisStringSlice `json:"subnets"     redis:"s"`
-	Models      redisStringSlice `json:"models"      redis:"m"`
-	ID          int              `json:"id"          redis:"i"`
-	Status      int              `json:"status"      redis:"st"`
-	OwnerUserID int              `json:"owner_user_id,omitempty" redis:"oui"`
-	UsedAmount  float64          `json:"used_amount" redis:"u"`
+	Group                   string           `json:"group"       redis:"g"`
+	Key                     string           `json:"-"           redis:"-"`
+	Name                    string           `json:"name"        redis:"n"`
+	Subnets                 redisStringSlice `json:"subnets"     redis:"s"`
+	Models                  redisStringSlice `json:"models"      redis:"m"`
+	ID                      int              `json:"id"          redis:"i"`
+	Status                  int              `json:"status"      redis:"st"`
+	OwnerUserID             int              `json:"owner_user_id,omitempty" redis:"oui"`
+	UsedAmount              float64          `json:"used_amount" redis:"u"`
+	PriceMultiplierOverride float64          `json:"price_multiplier_override,omitempty" redis:"pmo"`
 
 	Quota                  float64   `json:"quota"                     redis:"q"`
 	PeriodQuota            float64   `json:"period_quota"              redis:"pq"`
@@ -53,6 +54,31 @@ func (t *TokenCache) SetAvailableSets(availableSets []string) {
 
 func (t *TokenCache) SetModelsBySet(modelsBySet map[string][]string) {
 	t.modelsBySet = modelsBySet
+}
+
+func (t *TokenCache) GetPriceMultiplier(group GroupCache) float64 {
+	if t.PriceMultiplierOverride > 0 {
+		return t.PriceMultiplierOverride
+	}
+
+	return group.GetPriceMultiplier()
+}
+
+func (t *TokenCache) LoadPriceMultiplierOverride() error {
+	if t.OwnerUserID == 0 || t.Group == "" {
+		return nil
+	}
+
+	priceMultiplierOverride, err := GetAppUserGroupPriceMultiplierOverride(t.OwnerUserID, t.Group)
+	if err != nil {
+		return err
+	}
+
+	if priceMultiplierOverride != nil {
+		t.PriceMultiplierOverride = *priceMultiplierOverride
+	}
+
+	return nil
 }
 
 func (t *TokenCache) FindModel(model string) string {
@@ -208,6 +234,10 @@ func CacheGetTokenByKey(key string) (*TokenCache, error) {
 			}
 
 			tc := token.ToTokenCache()
+			if err := tc.LoadPriceMultiplierOverride(); err != nil {
+				return nil, err
+			}
+
 			cacheSetModelLocalUnlocked(cacheKey, tc, cloneTokenCache)
 
 			return tc, nil

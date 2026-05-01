@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-table'
 import {
     Eye,
+    Gauge,
     Key,
     MoreHorizontal,
     Pencil,
@@ -61,6 +62,7 @@ import {
 } from '../hooks'
 import { AppUserDetailSheet } from './AppUserDetailSheet'
 import { AppUserDialog } from './AppUserDialog'
+import { AppUserGroupPriceMultiplierDialog } from './AppUserGroupPriceMultiplierDialog'
 import { AppUserRechargeDialog } from './AppUserRechargeDialog'
 import { AppUserResetPasswordDialog } from './AppUserResetPasswordDialog'
 
@@ -90,6 +92,7 @@ export function AppUserTable() {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [rechargeOpen, setRechargeOpen] = useState(false)
     const [passwordOpen, setPasswordOpen] = useState(false)
+    const [groupPriceMultiplierOpen, setGroupPriceMultiplierOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null)
     const [dialogMode, setDialogMode] = useState<'create' | 'update'>('create')
@@ -137,6 +140,11 @@ export function AppUserTable() {
     const openResetPasswordDialog = (user: AppUser) => {
         setSelectedUser(user)
         setPasswordOpen(true)
+    }
+
+    const openGroupPriceMultiplierDialog = (user: AppUser) => {
+        setSelectedUser(user)
+        setGroupPriceMultiplierOpen(true)
     }
 
     const openDeleteDialog = (user: AppUser) => {
@@ -251,6 +259,10 @@ export function AppUserTable() {
                             <DropdownMenuItem onClick={() => openResetPasswordDialog(row.original)}>
                                 <Key className="mr-2 h-4 w-4" />
                                 {t('appUser.resetPassword')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openGroupPriceMultiplierDialog(row.original)}>
+                                <Gauge className="mr-2 h-4 w-4" />
+                                {t('appUser.groupPriceMultiplier')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => handleStatusChange(row.original)}
@@ -414,6 +426,12 @@ export function AppUserTable() {
                 user={selectedUser}
             />
 
+            <AppUserGroupPriceMultiplierDialog
+                open={groupPriceMultiplierOpen}
+                onOpenChange={setGroupPriceMultiplierOpen}
+                user={selectedUser}
+            />
+
             <AppUserDetailSheet
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
@@ -421,6 +439,7 @@ export function AppUserTable() {
                 onEdit={openEditDialog}
                 onRecharge={openRechargeDialog}
                 onResetPassword={openResetPasswordDialog}
+                onSetGroupPriceMultiplier={openGroupPriceMultiplierDialog}
             />
 
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

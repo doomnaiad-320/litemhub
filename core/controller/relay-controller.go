@@ -229,6 +229,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	requestModel := middleware.GetRequestModel(c)
 	mc := middleware.GetModelConfig(c)
 	group := middleware.GetGroup(c)
+	token := middleware.GetToken(c)
 
 	// Get initial channel
 	initialChannel, err := getInitialChannel(c, requestModel, mode)
@@ -253,7 +254,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 	}
-	price = price.ApplyMultiplier(group.GetPriceMultiplier())
+	price = price.ApplyMultiplier(token.GetPriceMultiplier(group))
 
 	meta := NewMetaByContext(c, initialChannel.channel, mode)
 

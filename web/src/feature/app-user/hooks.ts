@@ -6,6 +6,7 @@ import type {
     CreateAppUserRequest,
     RechargeAppUserBalanceRequest,
     ResetAppUserPasswordRequest,
+    UpdateAppUserGroupPriceMultiplierRequest,
     UpdateAppUserRequest,
     UpdateAppUserStatusRequest,
 } from '@/types/app-user'
@@ -16,6 +17,7 @@ const invalidateAppUserQueries = (queryClient: ReturnType<typeof useQueryClient>
     if (userId) {
         queryClient.invalidateQueries({ queryKey: ['appUser', userId] })
         queryClient.invalidateQueries({ queryKey: ['appUserWallet', userId] })
+        queryClient.invalidateQueries({ queryKey: ['appUserGroupPriceMultipliers', userId] })
     }
 }
 
@@ -92,6 +94,20 @@ export const useAppUserWallet = (id?: number | null, enabled = true) => {
     return {
         ...query,
     }
+}
+
+export const useAppUserGroupPriceMultipliers = (
+    id?: number | null,
+    page = 1,
+    perPage = 50,
+    keyword?: string,
+    enabled = true,
+) => {
+    return useQuery({
+        queryKey: ['appUserGroupPriceMultipliers', id, page, perPage, keyword],
+        queryFn: () => appUserApi.getAppUserGroupPriceMultipliers(id as number, page, perPage, keyword),
+        enabled: enabled && !!id,
+    })
 }
 
 export const useCreateAppUser = () => {
@@ -241,6 +257,32 @@ export const useRechargeAppUserBalance = () => {
 
     return {
         rechargeAppUserBalance: mutation.mutate,
+        isLoading: mutation.isPending,
+        error,
+        clearError: () => setError(null),
+    }
+}
+
+export const useUpdateAppUserGroupPriceMultiplier = () => {
+    const queryClient = useQueryClient()
+    const [error, setError] = useState<ApiError | null>(null)
+
+    const mutation = useMutation({
+        mutationFn: ({ id, data }: { id: number; data: UpdateAppUserGroupPriceMultiplierRequest }) =>
+            appUserApi.updateAppUserGroupPriceMultiplier(id, data),
+        onSuccess: (_, variables) => {
+            invalidateAppUserQueries(queryClient, variables.id)
+            setError(null)
+            toast.success('分组专属倍率已更新')
+        },
+        onError: (err: ApiError) => {
+            setError(err)
+            toast.error(err.message || '更新分组专属倍率失败')
+        },
+    })
+
+    return {
+        updateAppUserGroupPriceMultiplier: mutation.mutate,
         isLoading: mutation.isPending,
         error,
         clearError: () => setError(null),

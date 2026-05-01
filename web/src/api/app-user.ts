@@ -3,6 +3,7 @@ import type {
     AppUserDetailResponse,
     AppRechargeLogsResponse,
     AppRechargeStatsResponse,
+    AppUserGroupPriceMultipliersResponse,
     AppUserWalletLogsResponse,
     AppUserWalletResponse,
     AppUsersResponse,
@@ -10,6 +11,7 @@ import type {
     RechargeAppUserBalanceRequest,
     RechargeAppUserBalanceResponse,
     ResetAppUserPasswordRequest,
+    UpdateAppUserGroupPriceMultiplierRequest,
     UpdateAppUserRequest,
     UpdateAppUserStatusRequest,
 } from '@/types/app-user'
@@ -145,5 +147,32 @@ export const appUserApi = {
         data: RechargeAppUserBalanceRequest,
     ): Promise<RechargeAppUserBalanceResponse> => {
         return post<RechargeAppUserBalanceResponse>(`app_users/${id}/recharge`, data)
+    },
+
+    getAppUserGroupPriceMultipliers: async (
+        id: number,
+        page: number,
+        perPage: number,
+        keyword?: string,
+    ): Promise<AppUserGroupPriceMultipliersResponse> => {
+        const params: Record<string, string | number> = {
+            p: page,
+            per_page: perPage,
+        }
+        if (keyword) {
+            params.keyword = keyword
+        }
+
+        return get<AppUserGroupPriceMultipliersResponse>(
+            `app_users/${id}/group_price_multipliers`,
+            { params },
+        )
+    },
+
+    updateAppUserGroupPriceMultiplier: async (
+        id: number,
+        data: UpdateAppUserGroupPriceMultiplierRequest,
+    ): Promise<void> => {
+        await post(`app_users/${id}/group_price_multiplier`, data)
     },
 }
