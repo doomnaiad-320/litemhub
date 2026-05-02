@@ -137,15 +137,27 @@ func ResponseStreamHandler(
 		usage        model.Usage
 		responseID   string
 		lastResponse *relaymodel.Response
+		streamEvent  string
+		streamDone   bool
 	)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
+		if bytes.HasPrefix(data, []byte("event:")) {
+			streamEvent = string(bytes.TrimSpace(data[len("event:"):]))
+			continue
+		}
+
 		if !render.IsValidSSEData(data) {
 			continue
 		}
 
 		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
+			streamDone = true
+			render.OpenaiStringData(c, render.DONE)
+			break
+		}
 
 		// Parse the stream event
 		var event relaymodel.ResponseStreamEvent
@@ -178,14 +190,35 @@ func ResponseStreamHandler(
 		if event.Response != nil {
 			lastResponse = event.Response
 			usage = event.Response.ToModelUsage()
+			if event.Response.Status != relaymodel.ResponseStatusInProgress &&
+				event.Response.Status != relaymodel.ResponseStatusQueued {
+				streamDone = true
+			}
 		}
 
 		// Forward the event
-		render.ResponsesData(c, data)
+		if streamEvent != "" {
+			render.ResponsesEventData(c, streamEvent, data)
+			streamEvent = ""
+		} else {
+			render.ResponsesData(c, data)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading response stream: " + err.Error())
+	} else if !streamDone {
+		status := relaymodel.ResponseStatus("")
+		if lastResponse != nil {
+			status = lastResponse.Status
+		}
+		log.Warnf(
+			"response stream ended before completion: response_id=%s status=%s channel_id=%d model=%s",
+			responseID,
+			status,
+			meta.Channel.ID,
+			meta.ActualModel,
+		)
 	}
 
 	return adaptor.DoResponseResult{

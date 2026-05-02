@@ -1557,9 +1557,11 @@
       "itemListName": "LiteMHub AI Model Catalog"
     },
     "nav": {
-      "models": "Models",
-      "billing": "Billing",
-      "workflow": "Workflow",
+      "models": "AI Square",
+      "apiDocs": "API Docs",
+      "apiUpdates": "API Updates",
+      "blog": "Blog",
+      "github": "Github",
       "login": "Log in",
       "start": "Start",
       "console": "Console"
@@ -1638,10 +1640,22 @@
       "provider": "Provider",
       "context": "Context",
       "input": "Input price",
-      "output": "Output price"
+      "output": "Output price",
+      "routes": "Routes"
+    },
+    "hero": {
+      "kicker": "Public model detail",
+      "routeCard": "Routing endpoint"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "pricing": "Pricing",
+      "providers": "Providers",
+      "api": "API"
     },
     "overviewEyebrow": "Overview",
     "overviewTitle": "Model limits and capabilities",
+    "overviewDescription": "This page summarizes public invocation details, context limits, capabilities, pricing, and LiteMHub-compatible endpoints.",
     "capabilitiesTitle": "Capabilities",
     "limits": {
       "context": "Context window",
@@ -1658,6 +1672,10 @@
     "pricingTitle": "Public API pricing",
     "pricingUnit": "Token prices are normalized per {{unit}}. Image and request prices keep their native unit.",
     "pricingEmpty": "Pricing has not been published for this model yet.",
+    "pricingColumns": {
+      "type": "Meter",
+      "price": "Price"
+    },
     "pricing": {
       "input": "Text input",
       "output": "Text output",
@@ -1671,14 +1689,24 @@
       "webSearch": "Web search",
       "image": "Image"
     },
+    "providers": {
+      "eyebrow": "Providers",
+      "title": "Available routes and groups",
+      "description": "The public catalog currently shows aggregated availability. Upstream links and provider details can be filled in later.",
+      "available": "Available",
+      "accessGroups": "Access groups",
+      "defaultGroup": "Default group"
+    },
     "apiEyebrow": "API",
     "apiTitle": "OpenAI-compatible request",
+    "apiDescription": "Use your LiteMHub API key with an OpenAI-compatible SDK or HTTP request to call this model.",
     "quickStartTitle": "Quick start",
     "quickStart": {
       "register": "Create an account or open your console.",
       "key": "Create an API key from the user dashboard.",
       "call": "Send the model ID through the OpenAI-compatible endpoint."
     },
+    "relatedEyebrow": "Explore",
     "relatedTitle": "Related models",
     "relatedEmpty": "No related public models are available yet."
   },

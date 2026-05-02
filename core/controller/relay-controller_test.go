@@ -2,9 +2,14 @@
 package controller
 
 import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,4 +107,73 @@ func TestCalculateRelayBackoffDelay(t *testing.T) {
 	assert.Equal(t, 2500*time.Millisecond, calculateRelayBackoffDelay(2, 500*time.Millisecond))
 	assert.Equal(t, 5*time.Second, calculateRelayBackoffDelay(20, time.Second))
 	assert.Equal(t, 2*time.Second, calculateRelayBackoffDelay(1, time.Second))
+}
+
+func TestGetReserveOutputTokens(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	newContext := func(body string) *gin.Context {
+		recorder := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(recorder)
+		c.Request = httptest.NewRequestWithContext(
+			t.Context(),
+			http.MethodPost,
+			"/v1/responses",
+			bytes.NewBufferString(body),
+		)
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		return c
+	}
+
+	t.Run("uses explicit request output limit first", func(t *testing.T) {
+		t.Parallel()
+
+		outputTokens := getReserveOutputTokens(
+			newContext(`{"max_output_tokens":123}`),
+			model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigMaxOutputTokensKey:  4096,
+					model.ModelConfigMaxContextTokensKey: 200000,
+				},
+			},
+			model.Usage{},
+		)
+
+		assert.Equal(t, int64(123), outputTokens)
+	})
+
+	t.Run("uses configured max output tokens", func(t *testing.T) {
+		t.Parallel()
+
+		outputTokens := getReserveOutputTokens(
+			newContext(`{}`),
+			model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigMaxOutputTokensKey:  4096,
+					model.ModelConfigMaxContextTokensKey: 200000,
+				},
+			},
+			model.Usage{},
+		)
+
+		assert.Equal(t, int64(4096), outputTokens)
+	})
+
+	t.Run("does not treat context window as output budget", func(t *testing.T) {
+		t.Parallel()
+
+		outputTokens := getReserveOutputTokens(
+			newContext(`{}`),
+			model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigMaxContextTokensKey: 200000,
+				},
+			},
+			model.Usage{InputTokens: model.ZeroNullInt64(1000)},
+		)
+
+		assert.Zero(t, outputTokens)
+	})
 }

@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PublicSiteHeader } from "@/components/common/PublicSiteHeader";
 import { usePublicModel } from "@/feature/public-models/hooks";
 import { useUserPortalAuthStore } from "@/store/user-portal-auth";
 import { ROUTES } from "@/routes/constants";
@@ -445,12 +446,17 @@ const response = await client.chat.completions.create({
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#0b0b0d] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif] text-[#d7d8dd]">
-      <main className="mx-auto w-full max-w-[758px] px-4 pb-20 pt-8 sm:px-6 md:px-0 md:pt-[82px] xl:-translate-x-[10px]">
+    <div className="min-h-[100dvh] bg-[#f8fafc] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif] text-[#18181b] transition-colors duration-200 dark:bg-[#0b0b0d] dark:text-[#d7d8dd]">
+      <PublicSiteHeader
+        activeItem="models"
+        className="dark:border-[#24262b] dark:bg-[#0b0b0d]/92"
+      />
+
+      <main className="mx-auto w-full max-w-[976px] px-4 pb-20 pt-8 sm:px-6 md:px-0 md:pt-[32px]">
         {isLoading ? (
           <ModelDetailSkeleton />
         ) : modelQuery.isError || !model ? (
-          <Alert className="border-[#352629] bg-[#160f12] text-[#f1d5d8]">
+          <Alert className="border-red-200 bg-red-50 text-red-950 dark:border-[#352629] dark:bg-[#160f12] dark:text-[#f1d5d8]">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t("publicModelDetail.notFoundTitle")}</AlertTitle>
             <AlertDescription>
@@ -554,15 +560,15 @@ function ModelDetailContent({
       <section className="relative">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-semibold leading-[1.25] tracking-[-0.012em] text-[#e2e3e8]">
+            <h1 className="text-[24px] font-semibold leading-[1.25] tracking-[-0.012em] text-[#18181b] dark:text-[#e2e3e8]">
               {providerName}: {displayModel}
             </h1>
 
-            <div className="mt-[11px] flex min-w-0 items-center gap-2 text-[13px] font-medium leading-none text-[#6f7480]">
+            <div className="mt-[11px] flex min-w-0 items-center gap-2 text-[14px] font-medium leading-none text-[#6b7280] dark:text-[#6f7480]">
               <span className="truncate">{modelPath}</span>
               <button
                 type="button"
-                className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border border-[#2a2c31] bg-[#141519] text-[#818691] transition hover:border-[#3a3d44] hover:text-[#b8bcc7] active:scale-[0.98]"
+                className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border border-[#d8dce3] bg-white text-[#6b7280] transition hover:border-[#b8c0cc] hover:text-[#18181b] active:scale-[0.98] dark:border-[#2a2c31] dark:bg-[#141519] dark:text-[#818691] dark:hover:border-[#3a3d44] dark:hover:text-[#b8bcc7]"
                 aria-label={t("publicModelDetail.copyModel")}
                 onClick={() => copyText(model.model, "publicModels.copied")}
               >
@@ -574,7 +580,7 @@ function ModelDetailContent({
           <div className="flex shrink-0 items-center gap-[9px] sm:pt-0">
             <Button
               asChild
-              className="h-[32px] w-[105px] rounded-[5px] bg-[#5c5ce8] px-0 text-[12px] font-semibold text-white shadow-none transition hover:bg-[#6464f1] active:scale-[0.98]"
+              className="h-[32px] w-[105px] rounded-[5px] bg-[#1456f0] px-0 text-[14px] font-semibold text-white shadow-none transition hover:bg-[#0f49d4] active:scale-[0.98] dark:bg-[#5c5ce8] dark:hover:bg-[#6464f1]"
             >
               <Link to={signUpTarget}>
                 {isChinese ? "聊天" : "Chat"}
@@ -584,7 +590,7 @@ function ModelDetailContent({
             <Button
               type="button"
               variant="outline"
-              className="h-[32px] w-[96px] rounded-[5px] border-[#24262c] bg-transparent px-0 text-[12px] font-semibold text-[#9ca3b2] shadow-none transition hover:border-[#343742] hover:bg-[#111217] hover:text-[#c8cad3] active:scale-[0.98]"
+              className="h-[32px] w-[96px] rounded-[5px] border-[#d8dce3] bg-white px-0 text-[14px] font-semibold text-[#45515e] shadow-none transition hover:border-[#b8c0cc] hover:bg-[#f1f5f9] hover:text-[#18181b] active:scale-[0.98] dark:border-[#24262c] dark:bg-transparent dark:text-[#9ca3b2] dark:hover:border-[#343742] dark:hover:bg-[#111217] dark:hover:text-[#c8cad3]"
               onClick={() => copyText(model.model, "publicModels.copied")}
             >
               {isChinese ? "比较" : "Compare"}
@@ -593,10 +599,10 @@ function ModelDetailContent({
           </div>
         </div>
 
-        <div className="mt-[13px] flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[11px] font-medium leading-[1.45] text-[#656a75]">
+        <div className="mt-[13px] flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[14px] font-medium leading-[1.45] text-[#6b7280] dark:text-[#656a75]">
           {metaItems.map((item, index) => (
             <span key={`${item}-${index}`} className="inline-flex items-center gap-[7px]">
-              {index > 0 && <span className="text-[#333640]">|</span>}
+              {index > 0 && <span className="text-[#c8cdd6] dark:text-[#333640]">|</span>}
               <span>{item}</span>
             </span>
           ))}
@@ -611,31 +617,31 @@ function ModelDetailContent({
           <MoreCategoryPill isChinese={isChinese} />
         </div>
 
-        <div className="group relative mt-[18px] max-h-[41px] overflow-hidden pr-8 text-[13px] font-medium leading-[1.55] text-[#6f7480]">
+        <div className="group relative mt-[18px] max-h-[44px] overflow-hidden pr-8 text-[14px] font-medium leading-[1.55] text-[#5f6b7a] dark:text-[#6f7480]">
           <p>{model.description || t("publicModels.defaultDescription")}</p>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#0b0b0d] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#f8fafc] to-transparent dark:from-[#0b0b0d]" />
           <ChevronDown
-            className="absolute right-[3px] top-[3px] h-[14px] w-[14px] text-[#686d78]"
+            className="absolute right-[3px] top-[3px] h-[14px] w-[14px] text-[#7b8492] dark:text-[#686d78]"
             strokeWidth={1.8}
           />
         </div>
 
         <button
           type="button"
-          className="mt-[21px] inline-flex h-[27px] w-[125px] items-center justify-between rounded-full border border-[#24262b] bg-[#0f1013] px-[11px] text-[11px] font-medium text-[#777c87] transition hover:border-[#343741] hover:text-[#aeb3bf] active:scale-[0.98]"
+          className="mt-[21px] inline-flex h-[30px] w-[132px] items-center justify-between rounded-full border border-[#d8dce3] bg-white px-[11px] text-[14px] font-medium text-[#5f6b7a] transition hover:border-[#b8c0cc] hover:text-[#18181b] active:scale-[0.98] dark:border-[#24262b] dark:bg-[#0f1013] dark:text-[#777c87] dark:hover:border-[#343741] dark:hover:text-[#aeb3bf]"
         >
           <span>{isChinese ? "标准" : "Standard"}</span>
           <ChevronDown className="h-[12px] w-[12px]" strokeWidth={1.8} />
         </button>
       </section>
 
-      <div className="mt-[64px] border-b border-[#24262b]">
-        <TabsList className="h-[45px] w-full justify-start gap-[21px] overflow-x-auto rounded-none bg-transparent p-0 text-[#7d828e]">
+      <div className="mt-[64px] border-b border-[#d8dce3] dark:border-[#24262b]">
+        <TabsList className="h-[45px] w-full justify-start gap-[21px] overflow-x-auto rounded-none bg-transparent p-0 text-[#6b7280] dark:text-[#7d828e]">
           {tabLabels.map(([value, label]) => (
             <TabsTrigger
               key={value}
               value={value}
-              className="h-[45px] rounded-none border-b border-transparent px-0 pb-[10px] pt-[13px] text-[13px] font-semibold leading-none text-[#777c87] shadow-none transition data-[state=active]:border-[#9a9ca5] data-[state=active]:bg-transparent data-[state=active]:text-[#dfe1e7] data-[state=active]:shadow-none"
+              className="h-[45px] rounded-none border-b border-transparent px-0 pb-[10px] pt-[13px] text-[14px] font-semibold leading-none text-[#6b7280] shadow-none transition data-[state=active]:border-[#18181b] data-[state=active]:bg-transparent data-[state=active]:text-[#18181b] data-[state=active]:shadow-none dark:text-[#777c87] dark:data-[state=active]:border-[#9a9ca5] dark:data-[state=active]:text-[#dfe1e7]"
             >
               {label}
             </TabsTrigger>
@@ -701,16 +707,16 @@ function ProviderOverviewSection({
 }) {
   return (
     <section>
-      <h2 className="text-[17px] font-semibold leading-[1.35] tracking-[-0.01em] text-[#e4e5eb]">
+      <h2 className="text-[24px] font-semibold leading-[1.35] tracking-[-0.01em] text-[#18181b] dark:text-[#e4e5eb]">
         {displayModelTitle(model, isChinese)}
       </h2>
-      <p className="mt-[5px] text-[13px] font-medium leading-[1.6] text-[#737985]">
+      <p className="mt-[5px] text-[14px] font-medium leading-[1.6] text-[#5f6b7a] dark:text-[#737985]">
         {isChinese ? (
           <>
             OpenRouter将
-            <span className="text-[#5c5ce8]">请求路由</span>
+            <span className="text-[#1456f0] dark:text-[#5c5ce8]">请求路由</span>
             到能够处理您的提示大小和参数的最佳提供商，并设置回退机制以最大限度地延长
-            <span className="text-[#5c5ce8]">正常运行时间</span>。
+            <span className="text-[#1456f0] dark:text-[#5c5ce8]">正常运行时间</span>。
           </>
         ) : (
           <>
@@ -718,14 +724,14 @@ function ProviderOverviewSection({
             parameters, with fallbacks to maximize uptime.
           </>
         )}
-        <Info className="ml-2 inline h-[12px] w-[12px] translate-y-[1px] text-[#6e7480]" />
+        <Info className="ml-2 inline h-[12px] w-[12px] translate-y-[1px] text-[#7b8492] dark:text-[#6e7480]" />
       </p>
 
       <div className="mt-[18px] flex items-center gap-[10px]">
-        <Filter className="h-[13px] w-[13px] text-[#6a707b]" strokeWidth={1.8} />
+        <Filter className="h-[13px] w-[13px] text-[#7b8492] dark:text-[#6a707b]" strokeWidth={1.8} />
         <button
           type="button"
-          className="inline-flex h-[27px] w-[124px] items-center justify-between rounded-full border border-[#24262b] bg-[#0f1013] px-[11px] text-[11px] font-medium text-[#747985] transition hover:border-[#343741] hover:text-[#aeb3bf] active:scale-[0.98]"
+          className="inline-flex h-[30px] w-[132px] items-center justify-between rounded-full border border-[#d8dce3] bg-white px-[11px] text-[14px] font-medium text-[#5f6b7a] transition hover:border-[#b8c0cc] hover:text-[#18181b] active:scale-[0.98] dark:border-[#24262b] dark:bg-[#0f1013] dark:text-[#747985] dark:hover:border-[#343741] dark:hover:text-[#aeb3bf]"
         >
           <span>{isChinese ? "排序方式" : "Sort by"}</span>
           <ChevronDown className="h-[12px] w-[12px]" strokeWidth={1.8} />
@@ -762,8 +768,8 @@ function ProviderResultsCard({
   supportedEndpoints: string[];
 }) {
   return (
-    <div className="mt-[17px] overflow-x-auto rounded-[4px] border border-[#292b31] bg-[#0d0e11]">
-      <div className="min-w-[704px] divide-y divide-[#24262b]">
+    <div className="mt-[17px] overflow-x-auto rounded-[4px] border border-[#d8dce3] bg-white shadow-[rgba(15,23,42,0.04)_0px_8px_24px] dark:border-[#292b31] dark:bg-[#0d0e11] dark:shadow-none">
+      <div className="min-w-[704px] divide-y divide-[#e6e9ef] dark:divide-[#24262b]">
         {providerRoutes.map((route, index) => (
           <ProviderResultRow
             accessGroups={accessGroups}
@@ -821,7 +827,7 @@ function ProviderResultRow({
         <div className="min-w-0">
           <button
             type="button"
-            className="block truncate text-left text-[12px] font-semibold leading-none text-[#858b97] underline decoration-[#686d77] underline-offset-[2px] transition hover:text-[#c9ccd5]"
+            className="block truncate text-left text-[14px] font-semibold leading-none text-[#4b5563] underline decoration-[#9aa3b2] underline-offset-[2px] transition hover:text-[#18181b] dark:text-[#858b97] dark:decoration-[#686d77] dark:hover:text-[#c9ccd5]"
           >
             {route.name}
           </button>
@@ -830,7 +836,7 @@ function ProviderResultRow({
             <ProviderIconChip>
               <Eye className="h-[10px] w-[10px]" strokeWidth={2} />
             </ProviderIconChip>
-            <span className="inline-flex h-[19px] items-center rounded-[5px] bg-[#282a30] px-[7px] text-[10px] font-semibold leading-none text-[#858b96]">
+            <span className="inline-flex h-[24px] items-center rounded-[5px] bg-[#eef2f7] px-[8px] text-[14px] font-semibold leading-none text-[#5f6b7a] dark:bg-[#282a30] dark:text-[#858b96]">
               {isChinese ? "我们" : "Us"}
             </span>
             <ProviderIconChip>
@@ -849,7 +855,7 @@ function ProviderResultRow({
           <ProviderTopMetric label={metricLabels.latency} value={route.latency} />
           <ProviderTopMetric label={metricLabels.throughput} value={route.throughput} />
           <div>
-            <div className="text-[10px] font-semibold leading-none text-[#5e6370]">
+            <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
               {metricLabels.uptime}
             </div>
             <div className="mt-[8px] flex justify-end gap-[3px]">
@@ -861,7 +867,7 @@ function ProviderResultRow({
         </div>
       </div>
 
-      <div className="mt-[11px] grid grid-cols-5 border-t border-[#24262b] pt-[13px]">
+      <div className="mt-[11px] grid grid-cols-5 border-t border-[#e6e9ef] pt-[13px] dark:border-[#24262b]">
         <ProviderBottomMetric
           label={metricLabels.context}
           subValue={isChinese ? undefined : "tokens"}
@@ -886,7 +892,7 @@ function ProviderResultRow({
 
 function CategoryPill({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <span className="inline-flex h-[21px] items-center gap-[5px] rounded-full border border-[#2c2f35] bg-[#101114] px-[8px] text-[10px] font-semibold leading-none text-[#a1a6b2]">
+    <span className="inline-flex h-[25px] items-center gap-[6px] rounded-full border border-[#d8dce3] bg-white px-[9px] text-[14px] font-semibold leading-none text-[#4b5563] shadow-[rgba(15,23,42,0.04)_0px_2px_8px] dark:border-[#2c2f35] dark:bg-[#101114] dark:text-[#a1a6b2] dark:shadow-none">
       <span className="h-[6px] w-[6px] rounded-full" style={{ backgroundColor: color }} />
       {children}
     </span>
@@ -895,11 +901,11 @@ function CategoryPill({ children, color }: { children: ReactNode; color: string 
 
 function MoreCategoryPill({ isChinese }: { isChinese: boolean }) {
   return (
-    <span className="inline-flex h-[21px] items-center gap-[7px] rounded-full border border-[#2c2f35] bg-[#101114] px-[8px] text-[10px] font-semibold leading-none text-[#a1a6b2]">
+    <span className="inline-flex h-[25px] items-center gap-[7px] rounded-full border border-[#d8dce3] bg-white px-[9px] text-[14px] font-semibold leading-none text-[#4b5563] shadow-[rgba(15,23,42,0.04)_0px_2px_8px] dark:border-[#2c2f35] dark:bg-[#101114] dark:text-[#a1a6b2] dark:shadow-none">
       <span className="flex -space-x-[2px]">
-        <span className="h-[7px] w-[7px] rounded-full bg-[#8f5cff] ring-1 ring-[#101114]" />
-        <span className="h-[7px] w-[7px] rounded-full bg-[#09a271] ring-1 ring-[#101114]" />
-        <span className="h-[7px] w-[7px] rounded-full bg-[#00a4ff] ring-1 ring-[#101114]" />
+        <span className="h-[7px] w-[7px] rounded-full bg-[#8f5cff] ring-1 ring-white dark:ring-[#101114]" />
+        <span className="h-[7px] w-[7px] rounded-full bg-[#09a271] ring-1 ring-white dark:ring-[#101114]" />
+        <span className="h-[7px] w-[7px] rounded-full bg-[#00a4ff] ring-1 ring-white dark:ring-[#101114]" />
       </span>
       <span>+ 6</span>
       <span>{isChinese ? "个类别" : "categories"}</span>
@@ -909,7 +915,7 @@ function MoreCategoryPill({ isChinese }: { isChinese: boolean }) {
 
 function ProviderIconChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-[19px] w-[22px] items-center justify-center rounded-[5px] bg-[#282a30] text-[#858b96]">
+    <span className="inline-flex h-[19px] w-[22px] items-center justify-center rounded-[5px] bg-[#eef2f7] text-[#6b7280] dark:bg-[#282a30] dark:text-[#858b96]">
       {children}
     </span>
   );
@@ -918,8 +924,8 @@ function ProviderIconChip({ children }: { children: ReactNode }) {
 function ProviderTopMetric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold leading-none text-[#5e6370]">{label}</div>
-      <div className="mt-[8px] font-mono text-[12px] font-semibold leading-none text-[#c9ccd5]">
+      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">{label}</div>
+      <div className="mt-[8px] font-mono text-[14px] font-semibold leading-none text-[#18181b] dark:text-[#c9ccd5]">
         {value}
       </div>
     </div>
@@ -937,12 +943,12 @@ function ProviderBottomMetric({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold leading-none text-[#565b67]">{label}</div>
-      <div className="mt-[9px] break-words font-mono text-[12px] font-semibold leading-[1.05] text-[#c7cad2]">
+      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#565b67]">{label}</div>
+      <div className="mt-[9px] break-words font-mono text-[14px] font-semibold leading-[1.05] text-[#18181b] dark:text-[#c7cad2]">
         {value}
       </div>
       {subValue && (
-        <div className="mt-[5px] font-mono text-[10px] font-semibold leading-none text-[#5d626e]">
+        <div className="mt-[5px] font-mono text-[14px] font-semibold leading-none text-[#8b95a5] dark:text-[#5d626e]">
           {subValue}
         </div>
       )}
@@ -956,19 +962,19 @@ function PricingPanel({ isChinese, priceRows }: { isChinese: boolean; priceRows:
   }
 
   return (
-    <section className="rounded-[4px] border border-[#292b31] bg-[#0d0e11]">
-      <div className="grid grid-cols-[minmax(0,1fr)_180px] border-b border-[#24262b] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#626773]">
+    <section className="rounded-[4px] border border-[#d8dce3] bg-white shadow-[rgba(15,23,42,0.04)_0px_8px_24px] dark:border-[#292b31] dark:bg-[#0d0e11] dark:shadow-none">
+      <div className="grid grid-cols-[minmax(0,1fr)_180px] border-b border-[#e6e9ef] px-4 py-3 text-[14px] font-semibold uppercase tracking-[0.04em] text-[#7b8492] dark:border-[#24262b] dark:text-[#626773]">
         <span>{isChinese ? "计费项" : "Meter"}</span>
         <span>{isChinese ? "价格" : "Price"}</span>
       </div>
-      <div className="divide-y divide-[#24262b]">
+      <div className="divide-y divide-[#e6e9ef] dark:divide-[#24262b]">
         {priceRows.map((row) => (
           <div
             key={`${row.label}-${row.value}`}
-            className="grid grid-cols-[minmax(0,1fr)_180px] gap-4 px-4 py-3 text-[13px]"
+            className="grid grid-cols-[minmax(0,1fr)_180px] gap-4 px-4 py-3 text-[14px]"
           >
-            <span className="text-[#8b909c]">{row.label}</span>
-            <span className="break-words font-mono font-semibold text-[#d7d9e0]">
+            <span className="text-[#5f6b7a] dark:text-[#8b909c]">{row.label}</span>
+            <span className="break-words font-mono font-semibold text-[#18181b] dark:text-[#d7d9e0]">
               {row.value}
             </span>
           </div>
@@ -993,16 +999,16 @@ function ApiPanel({
 }) {
   return (
     <Tabs defaultValue="curl">
-      <TabsList className="h-[31px] rounded-[5px] border border-[#292b31] bg-[#0f1013] p-[3px] text-[#7d828e]">
+      <TabsList className="h-[31px] rounded-[5px] border border-[#d8dce3] bg-white p-[3px] text-[#6b7280] dark:border-[#292b31] dark:bg-[#0f1013] dark:text-[#7d828e]">
         <TabsTrigger
           value="curl"
-          className="h-[23px] rounded-[4px] px-3 text-[11px] data-[state=active]:bg-[#252832] data-[state=active]:text-[#dfe1e7]"
+          className="h-[26px] rounded-[4px] px-3 text-[14px] data-[state=active]:bg-[#eef2f7] data-[state=active]:text-[#18181b] dark:data-[state=active]:bg-[#252832] dark:data-[state=active]:text-[#dfe1e7]"
         >
           cURL
         </TabsTrigger>
         <TabsTrigger
           value="javascript"
-          className="h-[23px] rounded-[4px] px-3 text-[11px] data-[state=active]:bg-[#252832] data-[state=active]:text-[#dfe1e7]"
+          className="h-[26px] rounded-[4px] px-3 text-[14px] data-[state=active]:bg-[#eef2f7] data-[state=active]:text-[#18181b] dark:data-[state=active]:bg-[#252832] dark:data-[state=active]:text-[#dfe1e7]"
         >
           JavaScript
         </TabsTrigger>
@@ -1021,7 +1027,7 @@ function ApiPanel({
           onCopy={() => copyText(javascriptExample, "publicModelDetail.exampleCopied")}
         />
       </TabsContent>
-      <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-[#707682]">
+      <div className="mt-4 flex flex-wrap gap-2 text-[14px] text-[#5f6b7a] dark:text-[#707682]">
         <ApiBadge icon={<Code2 className="h-[11px] w-[11px]" />}>
           {isChinese ? "OpenAI 兼容" : "OpenAI compatible"}
         </ApiBadge>
@@ -1035,7 +1041,7 @@ function ApiPanel({
 
 function ApiBadge({ children, icon }: { children: ReactNode; icon: ReactNode }) {
   return (
-    <span className="inline-flex h-[24px] items-center gap-1 rounded-full border border-[#292b31] bg-[#0f1013] px-2">
+    <span className="inline-flex h-[24px] items-center gap-1 rounded-full border border-[#d8dce3] bg-white px-2 dark:border-[#292b31] dark:bg-[#0f1013]">
       {icon}
       {children}
     </span>
@@ -1044,12 +1050,12 @@ function ApiBadge({ children, icon }: { children: ReactNode; icon: ReactNode }) 
 
 function EmptyTabPanel({ isChinese }: { isChinese: boolean }) {
   return (
-    <div className="rounded-[4px] border border-dashed border-[#292b31] bg-[#0d0e11] px-4 py-8 text-center">
-      <Activity className="mx-auto h-5 w-5 text-[#686e7a]" strokeWidth={1.8} />
-      <div className="mt-3 text-[13px] font-semibold text-[#d3d5dc]">
+    <div className="rounded-[4px] border border-dashed border-[#cbd5e1] bg-white px-4 py-8 text-center dark:border-[#292b31] dark:bg-[#0d0e11]">
+      <Activity className="mx-auto h-5 w-5 text-[#7b8492] dark:text-[#686e7a]" strokeWidth={1.8} />
+      <div className="mt-3 text-[24px] font-semibold text-[#18181b] dark:text-[#d3d5dc]">
         {isChinese ? "该视图尚未开放" : "This view is not available yet"}
       </div>
-      <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-[1.6] text-[#707682]">
+      <p className="mx-auto mt-2 max-w-[360px] text-[14px] leading-[1.6] text-[#5f6b7a] dark:text-[#707682]">
         {isChinese
           ? "当前公开 API 暂未返回该标签页所需的细分指标。"
           : "The public API does not return the detailed metrics needed for this tab yet."}
@@ -1063,27 +1069,27 @@ function ModelDetailSkeleton() {
     <div className="space-y-[18px]">
       <div className="flex items-start justify-between gap-6">
         <div className="space-y-[12px]">
-          <Skeleton className="h-[24px] w-[230px] rounded-[5px] bg-[#17181d]" />
-          <Skeleton className="h-[16px] w-[180px] rounded-[4px] bg-[#17181d]" />
+          <Skeleton className="h-[24px] w-[230px] rounded-[5px] bg-[#e6e9ef] dark:bg-[#17181d]" />
+          <Skeleton className="h-[16px] w-[180px] rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
         </div>
         <div className="hidden gap-[9px] sm:flex">
-          <Skeleton className="h-[32px] w-[105px] rounded-[5px] bg-[#17181d]" />
-          <Skeleton className="h-[32px] w-[96px] rounded-[5px] bg-[#17181d]" />
+          <Skeleton className="h-[32px] w-[105px] rounded-[5px] bg-[#e6e9ef] dark:bg-[#17181d]" />
+          <Skeleton className="h-[32px] w-[96px] rounded-[5px] bg-[#e6e9ef] dark:bg-[#17181d]" />
         </div>
       </div>
-      <Skeleton className="h-[14px] w-full rounded-[4px] bg-[#17181d]" />
+      <Skeleton className="h-[14px] w-full rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
       <div className="flex gap-[7px]">
         {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-[21px] w-[80px] rounded-full bg-[#17181d]" />
+          <Skeleton key={index} className="h-[21px] w-[80px] rounded-full bg-[#e6e9ef] dark:bg-[#17181d]" />
         ))}
       </div>
-      <Skeleton className="h-[41px] w-full rounded-[4px] bg-[#17181d]" />
-      <Skeleton className="h-[27px] w-[125px] rounded-full bg-[#17181d]" />
+      <Skeleton className="h-[41px] w-full rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
+      <Skeleton className="h-[27px] w-[125px] rounded-full bg-[#e6e9ef] dark:bg-[#17181d]" />
       <div className="pt-[46px]">
-        <Skeleton className="h-[45px] w-full rounded-none bg-[#17181d]" />
+        <Skeleton className="h-[45px] w-full rounded-none bg-[#e6e9ef] dark:bg-[#17181d]" />
       </div>
       <div className="pt-[20px]">
-        <Skeleton className="h-[384px] w-full rounded-[4px] bg-[#17181d]" />
+        <Skeleton className="h-[384px] w-full rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
       </div>
     </div>
   );
@@ -1099,8 +1105,8 @@ function CodePanel({
   onCopy: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-[4px] border border-[#292b31] bg-[#0d0e11] text-[#d7d9e0]">
-      <div className="flex items-center justify-between border-b border-[#24262b] px-4 py-3">
+    <div className="overflow-hidden rounded-[4px] border border-[#d8dce3] bg-white text-[#18181b] shadow-[rgba(15,23,42,0.04)_0px_8px_24px] dark:border-[#292b31] dark:bg-[#0d0e11] dark:text-[#d7d9e0] dark:shadow-none">
+      <div className="flex items-center justify-between border-b border-[#e6e9ef] px-4 py-3 dark:border-[#24262b]">
         <div className="flex items-center gap-[6px]">
           <Circle className="h-[7px] w-[7px] fill-[#db6060] text-[#db6060]" />
           <Circle className="h-[7px] w-[7px] fill-[#d0a24a] text-[#d0a24a]" />
@@ -1110,7 +1116,7 @@ function CodePanel({
           type="button"
           size="sm"
           variant="outline"
-          className="h-[27px] rounded-[5px] border-[#30333a] bg-[#14161b] px-3 text-[11px] text-[#a4aab5] shadow-none hover:bg-[#1b1e25] hover:text-[#d7d9e0]"
+          className="h-[30px] rounded-[5px] border-[#d8dce3] bg-white px-3 text-[14px] text-[#5f6b7a] shadow-none hover:bg-[#f1f5f9] hover:text-[#18181b] dark:border-[#30333a] dark:bg-[#14161b] dark:text-[#a4aab5] dark:hover:bg-[#1b1e25] dark:hover:text-[#d7d9e0]"
           aria-label={copyLabel}
           onClick={onCopy}
         >
@@ -1118,7 +1124,7 @@ function CodePanel({
           {copyLabel}
         </Button>
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-[1.65] text-[#aeb4c0]">
+      <pre className="overflow-x-auto p-4 font-mono text-[14px] leading-[1.65] text-[#334155] dark:text-[#aeb4c0]">
         {code}
       </pre>
     </div>

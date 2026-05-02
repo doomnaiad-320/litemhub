@@ -7,10 +7,11 @@ import { AnimatedIcon } from "../ui/animation/components/animated-icon"
 import { cn } from "@/lib/utils"
 
 interface LanguageSelectorProps {
+    className?: string
     variant?: "default" | "minimal"
 }
 
-export function LanguageSelector({ variant = "default" }: LanguageSelectorProps) {
+export function LanguageSelector({ className, variant = "default" }: LanguageSelectorProps) {
     const { i18n } = useTranslation()
     const [language, setLanguage] = useState(i18n.language || 'zh')
 
@@ -21,7 +22,7 @@ export function LanguageSelector({ variant = "default" }: LanguageSelectorProps)
             setLanguage(savedLanguage)
             i18n.changeLanguage(savedLanguage)
         }
-    }, []) // 只在组件挂载时执行一次
+    }, [i18n, language]) // 只在组件挂载时执行一次
 
     const toggleLanguage = () => {
         const newLanguage = language === 'zh' ? 'en' : 'zh'
@@ -46,7 +47,8 @@ export function LanguageSelector({ variant = "default" }: LanguageSelectorProps)
                             "h-10 w-16 rounded-md",
                             isMinimal 
                                 ? "bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 backdrop-blur-sm"
-                                : "bg-primary/10 text-primary hover:bg-primary/20"
+                                : "bg-primary/10 text-primary hover:bg-primary/20",
+                            className
                         )}
                     >
                         <AnimatedIcon animationVariant="pulse" className="flex items-center justify-center">

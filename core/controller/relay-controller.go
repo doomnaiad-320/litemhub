@@ -536,13 +536,6 @@ func getReserveOutputTokens(
 		return int64(maxOutputTokens)
 	}
 
-	if maxContextTokens, ok := mc.MaxContextTokens(); ok && maxContextTokens > 0 {
-		remainingTokens := int64(maxContextTokens) - int64(requestUsage.InputTokens)
-		if remainingTokens > 0 {
-			return remainingTokens
-		}
-	}
-
 	return 0
 }
 

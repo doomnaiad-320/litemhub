@@ -1545,9 +1545,11 @@
       "itemListName": "LiteMHub AI 模型目录"
     },
     "nav": {
-      "models": "模型",
-      "billing": "计费",
-      "workflow": "流程",
+      "models": "AI广场",
+      "apiDocs": "API文档",
+      "apiUpdates": "API更新",
+      "blog": "博客",
+      "github": "Github",
       "login": "登录",
       "start": "开始使用",
       "console": "进入控制台"
@@ -1626,10 +1628,22 @@
       "provider": "供应商",
       "context": "上下文",
       "input": "输入价格",
-      "output": "输出价格"
+      "output": "输出价格",
+      "routes": "可用路由"
+    },
+    "hero": {
+      "kicker": "公开模型详情",
+      "routeCard": "路由入口"
+    },
+    "tabs": {
+      "overview": "概览",
+      "pricing": "价格",
+      "providers": "供应商",
+      "api": "API"
     },
     "overviewEyebrow": "Overview",
     "overviewTitle": "模型限制和能力",
+    "overviewDescription": "该页面展示模型的公开调用信息、上下文限制、能力标签、价格和 LiteMHub 兼容接口。",
     "capabilitiesTitle": "模型能力",
     "limits": {
       "context": "上下文窗口",
@@ -1646,6 +1660,10 @@
     "pricingTitle": "公开 API 价格",
     "pricingUnit": "Token 价格统一按 {{unit}} 展示；图片和请求价格保留原始单位。",
     "pricingEmpty": "该模型暂未发布价格。",
+    "pricingColumns": {
+      "type": "计费项",
+      "price": "价格"
+    },
     "pricing": {
       "input": "文本输入",
       "output": "文本输出",
@@ -1659,14 +1677,24 @@
       "webSearch": "联网搜索",
       "image": "图片"
     },
+    "providers": {
+      "eyebrow": "Providers",
+      "title": "可用路由和分组",
+      "description": "当前公开目录只展示可调用的聚合信息；具体上游链接和供应商详情后续再补全。",
+      "available": "可用",
+      "accessGroups": "可用分组",
+      "defaultGroup": "默认分组"
+    },
     "apiEyebrow": "API",
     "apiTitle": "OpenAI-compatible 请求",
+    "apiDescription": "使用你的 LiteMHub API Key，通过兼容 OpenAI SDK 的方式请求该模型。",
     "quickStartTitle": "快速开始",
     "quickStart": {
       "register": "注册账号或进入控制台。",
       "key": "在用户后台创建 API Key。",
       "call": "通过 OpenAI-compatible 端点传入该模型 ID。"
     },
+    "relatedEyebrow": "Explore",
     "relatedTitle": "相关模型",
     "relatedEmpty": "暂无相关公开模型。"
   },

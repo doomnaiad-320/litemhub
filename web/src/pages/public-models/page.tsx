@@ -3,8 +3,6 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowRight,
-  BrainCircuit,
   CheckCircle2,
   Code2,
   Copy,
@@ -28,8 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LanguageSelector } from "@/components/common/LanguageSelector";
-import { ThemeToggle } from "@/components/common/ThemeToggle";
+import { PublicSiteHeader } from "@/components/common/PublicSiteHeader";
 import { usePublicModels } from "@/feature/public-models/hooks";
 import { useUserPortalAuthStore } from "@/store/user-portal-auth";
 import { ROUTES } from "@/routes/constants";
@@ -259,60 +256,7 @@ export default function PublicModelsPage() {
 
   return (
     <div className="min-h-screen bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:bg-[#111827] dark:text-white">
-      <header className="sticky top-0 z-40 border-b border-[#f2f3f5] bg-white/92 backdrop-blur-xl dark:border-white/10 dark:bg-[#111827]/92">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[13px] bg-[#181e25] text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px]">
-              <BrainCircuit className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-base font-medium tracking-tight text-[#18181b] dark:text-white">
-                LiteMHub
-              </div>
-              <div className="text-xs leading-[1.7] text-[#8e8e93]">
-                AI Model Router
-              </div>
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-2 text-sm font-medium text-[#45515e] dark:text-white/70 md:flex">
-            <Link
-              to={ROUTES.PUBLIC_MODELS}
-              className="rounded-full bg-black/[0.05] px-4 py-2 text-[#18181b] dark:bg-white/10 dark:text-white"
-            >
-              {t("publicModels.nav.models")}
-            </Link>
-            <Link to="/#billing" className="rounded-full px-4 py-2 transition hover:bg-black/[0.05] hover:text-[#18181b] dark:hover:bg-white/10 dark:hover:text-white">
-              {t("publicModels.nav.billing")}
-            </Link>
-            <Link to="/#workflow" className="rounded-full px-4 py-2 transition hover:bg-black/[0.05] hover:text-[#18181b] dark:hover:bg-white/10 dark:hover:text-white">
-              {t("publicModels.nav.workflow")}
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
-            <div className="hidden sm:block">
-              <LanguageSelector variant="minimal" />
-            </div>
-            <Link to={ROUTES.USER_LOGIN}>
-              <Button variant="ghost" className="rounded-full text-[#18181b] dark:text-white">
-                {t("publicModels.nav.login")}
-              </Button>
-            </Link>
-            <Link to={isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_REGISTER}>
-              <Button className="rounded-lg bg-[#181e25] px-4 text-white shadow-[rgba(0,0,0,0.08)_0px_4px_6px] hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90 sm:px-5">
-                {isAuthenticated
-                  ? t("publicModels.nav.console")
-                  : t("publicModels.nav.start")}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicSiteHeader activeItem="models" />
 
       <main>
         <section className="relative overflow-hidden border-b border-[#f2f3f5] dark:border-white/10">

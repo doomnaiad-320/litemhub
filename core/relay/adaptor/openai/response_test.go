@@ -141,6 +141,8 @@ func TestResponseStreamHandlerPromptCacheRetention(t *testing.T) {
 	require.Empty(t, store.savedIfNotExist)
 	assert.Equal(t, "resp_123", result.UpstreamID)
 	assert.Equal(t, model.ZeroNullInt64(20), result.Usage.TotalTokens)
+	assert.Contains(t, recorder.Body.String(), "event: response.created")
+	assert.Contains(t, recorder.Body.String(), "event: response.completed")
 }
 
 func TestResponseHandlerWebSearchCountFromToolUsage(t *testing.T) {
@@ -559,4 +561,5 @@ func TestResponseStreamHandlerStoresOriginModelForMappedModel(t *testing.T) {
 	assert.Equal(t, "resp_stream_mapped", result.UpstreamID)
 	assert.Equal(t, model.ResponseStoreID("resp_stream_mapped"), store.saved[0].ID)
 	assert.Equal(t, "gpt-image-2", store.saved[0].Model)
+	assert.Contains(t, recorder.Body.String(), "data: [DONE]")
 }
