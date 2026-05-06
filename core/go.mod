@@ -25,7 +25,7 @@ require (
 	github.com/larksuite/oapi-sdk-go/v3 v3.5.3
 	github.com/mark3labs/mcp-go v0.48.0
 	github.com/maruel/natural v1.3.0
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.18.0
@@ -40,6 +40,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/testcontainers/testcontainers-go v0.39.0
 	github.com/tiktoken-go/tokenizer v0.7.0
+	golang.org/x/crypto v0.50.0
 	golang.org/x/image v0.39.0
 	golang.org/x/net v0.53.0
 	golang.org/x/oauth2 v0.36.0
@@ -178,7 +179,6 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.26.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
