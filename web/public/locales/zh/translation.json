@@ -1584,8 +1584,17 @@
       "capabilities": "能力类型",
       "groups": "可用分组"
     },
+    "typeMenu": {
+      "video": "视频",
+      "image": "图像",
+      "llm": "LLM"
+    },
     "sort": {
-      "label": "排序",
+      "label": "筛选",
+      "latest": "最新",
+      "popular": "热门",
+      "priceAsc": "价格从低到高",
+      "priceDesc": "价格从高到低",
       "name": "模型名",
       "provider": "供应商",
       "input": "输入价格",

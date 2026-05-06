@@ -41,7 +41,13 @@ import {
 } from "@/lib/model-catalog";
 
 const ALL_VALUE = "__all__";
-const FEATURED_CAPABILITIES = ["reasoning", "vision", "tools", "json", "image", "embedding"];
+const FEATURED_CAPABILITIES = ["reasoning", "vision", "tools", "json", "embedding", "coding"];
+const FEATURED_PROVIDERS_LIMIT = 8;
+const MODEL_TYPE_FILTERS = ["video", "image", "llm"] as const;
+const MODEL_SORT_FILTERS = ["latest", "popular", "priceAsc", "priceDesc"] as const;
+
+type ModelTypeFilter = (typeof MODEL_TYPE_FILTERS)[number];
+type ModelSortFilter = (typeof MODEL_SORT_FILTERS)[number];
 
 interface StatItem {
   icon: LucideIcon;
@@ -97,6 +103,58 @@ const getPriceNumber = (value?: string | null) => {
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
 };
 
+const compareModelName = (left: PublicModel, right: PublicModel) =>
+  left.model.localeCompare(right.model);
+
+const getComparableModelPrice = (model: PublicModel) =>
+  Math.min(getPriceNumber(getInputPrice(model)), getPriceNumber(getOutputPrice(model)));
+
+const compareModelPrice = (
+  left: PublicModel,
+  right: PublicModel,
+  direction: "asc" | "desc",
+) => {
+  const leftPrice = getComparableModelPrice(left);
+  const rightPrice = getComparableModelPrice(right);
+  const leftHasPrice = Number.isFinite(leftPrice);
+  const rightHasPrice = Number.isFinite(rightPrice);
+
+  if (!leftHasPrice && !rightHasPrice) {
+    return compareModelName(left, right);
+  }
+
+  if (!leftHasPrice) {
+    return 1;
+  }
+
+  if (!rightHasPrice) {
+    return -1;
+  }
+
+  return direction === "asc"
+    ? leftPrice - rightPrice || compareModelName(left, right)
+    : rightPrice - leftPrice || compareModelName(left, right);
+};
+
+const getModelRecency = (model: PublicModel) => model.updated_at || model.created_at || 0;
+
+const getModelPopularityScore = (model: PublicModel) =>
+  (model.available_groups || []).length * 10 + (model.available_sets || []).length;
+
+const isModelType = (model: PublicModel, type: ModelTypeFilter) => {
+  const capabilities = model.capabilities || [];
+
+  if (type === "video") {
+    return capabilities.includes("video");
+  }
+
+  if (type === "image") {
+    return capabilities.includes("image") && !capabilities.includes("video");
+  }
+
+  return !capabilities.includes("video") && !capabilities.includes("image");
+};
+
 const updateMetaTag = (selector: string, attribute: "content" | "href", value: string) => {
   const element = document.head.querySelector(selector);
   if (element) {
@@ -122,11 +180,12 @@ export default function PublicModelsPage() {
   const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
   const { data, isLoading, isError } = usePublicModels();
   const [keyword, setKeyword] = useState("");
+  const [modelTypeFilter, setModelTypeFilter] = useState<ModelTypeFilter>("llm");
   const [providerFilter, setProviderFilter] = useState(ALL_VALUE);
   const [capabilityFilter, setCapabilityFilter] = useState(ALL_VALUE);
-  const [sortBy, setSortBy] = useState("name");
+  const [sortBy, setSortBy] = useState<ModelSortFilter>("latest");
 
-  const models = data?.models || [];
+  const models = useMemo(() => data?.models || [], [data?.models]);
 
   useEffect(() => {
     const title = t("publicModels.seo.title");
@@ -177,9 +236,45 @@ export default function PublicModelsPage() {
     [models],
   );
 
+  const modelTypeOptions = useMemo(
+    () =>
+      MODEL_TYPE_FILTERS.map((type) => ({
+        type,
+        count: models.filter((model) => isModelType(model, type)).length,
+      })),
+    [models],
+  );
+
+  const visibleCapabilityOptions = useMemo(
+    () =>
+      FEATURED_CAPABILITIES.filter(
+        (capability) =>
+          capabilityOptions.includes(capability) &&
+          models.some(
+            (model) =>
+              isModelType(model, modelTypeFilter) &&
+              (model.capabilities || []).includes(capability),
+          ),
+      ),
+    [capabilityOptions, modelTypeFilter, models],
+  );
+
+  const visibleProviderOptions = useMemo(
+    () =>
+      providerOptions
+        .filter((provider) =>
+          models.some(
+            (model) => model.provider === provider && isModelType(model, modelTypeFilter),
+          ),
+        )
+        .slice(0, FEATURED_PROVIDERS_LIMIT),
+    [modelTypeFilter, models, providerOptions],
+  );
+
   const filteredModels = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     const filtered = models
+      .filter((model) => isModelType(model, modelTypeFilter))
       .filter((model) => providerFilter === ALL_VALUE || model.provider === providerFilter)
       .filter(
         (model) =>
@@ -205,22 +300,21 @@ export default function PublicModelsPage() {
 
     return [...filtered].sort((left, right) => {
       switch (sortBy) {
-        case "provider":
+        case "popular":
           return (
-            left.provider.localeCompare(right.provider) ||
-            left.model.localeCompare(right.model)
+            getModelPopularityScore(right) - getModelPopularityScore(left) ||
+            compareModelName(left, right)
           );
-        case "input":
-          return getPriceNumber(getInputPrice(left)) - getPriceNumber(getInputPrice(right));
-        case "output":
-          return getPriceNumber(getOutputPrice(left)) - getPriceNumber(getOutputPrice(right));
-        case "context":
-          return (right.context_length || 0) - (left.context_length || 0);
+        case "priceAsc":
+          return compareModelPrice(left, right, "asc");
+        case "priceDesc":
+          return compareModelPrice(left, right, "desc");
+        case "latest":
         default:
-          return left.model.localeCompare(right.model);
+          return getModelRecency(right) - getModelRecency(left) || compareModelName(left, right);
       }
     });
-  }, [capabilityFilter, keyword, models, providerFilter, sortBy, t]);
+  }, [capabilityFilter, keyword, modelTypeFilter, models, providerFilter, sortBy, t]);
 
   const stats = useMemo(
     () => ({
@@ -243,16 +337,18 @@ export default function PublicModelsPage() {
 
   const clearFilters = () => {
     setKeyword("");
+    setModelTypeFilter("llm");
     setProviderFilter(ALL_VALUE);
     setCapabilityFilter(ALL_VALUE);
-    setSortBy("name");
+    setSortBy("latest");
   };
 
   const hasActiveFilters =
     keyword.trim().length > 0 ||
+    modelTypeFilter !== "llm" ||
     providerFilter !== ALL_VALUE ||
     capabilityFilter !== ALL_VALUE ||
-    sortBy !== "name";
+    sortBy !== "latest";
 
   return (
     <div className="min-h-screen bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:bg-[#111827] dark:text-white">
@@ -321,220 +417,222 @@ export default function PublicModelsPage() {
         </section>
 
         <section id="model-catalog" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
-          <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="text-sm font-medium text-[#1456f0]">
-                {t("publicModels.catalogEyebrow")}
-              </div>
-              <h2 className="mt-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[31px] font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white">
-                {t("publicModels.catalogTitle")}
-              </h2>
-            </div>
-            <div className="text-sm text-[#8e8e93]" aria-live="polite">
-              {t("publicModels.results", { count: filteredModels.length })}
-            </div>
-          </div>
-
-          <div className="mb-8 rounded-[24px] bg-white p-4 shadow-[rgba(0,0,0,0.08)_0px_0px_22.576px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10 sm:p-5">
-            <div className="space-y-4">
-              <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_180px_180px_160px_auto]">
-                <div className="relative">
-                  <label className="sr-only" htmlFor="public-model-search">
-                    {t("publicModels.searchLabel")}
-                  </label>
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
-                  <Input
-                    id="public-model-search"
-                    value={keyword}
-                    onChange={(event) => setKeyword(event.target.value)}
-                    placeholder={t("publicModels.searchPlaceholder")}
-                    className="h-11 rounded-[13px] border-[#e5e7eb] bg-white pl-10 text-[#222222] shadow-none placeholder:text-[#8e8e93] dark:border-white/10 dark:bg-white/5 dark:text-white"
-                  />
+          <div className="-mx-4 mb-8 overflow-hidden rounded-[20px] bg-white shadow-[rgba(15,23,42,0.04)_0px_12px_24px] dark:bg-[#0b0f18] dark:shadow-none sm:-mx-6">
+            <div className="border-b border-[#f2f3f5] px-4 py-3 dark:border-white/10">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex gap-1 overflow-x-auto">
+                  {modelTypeOptions.map(({ type, count }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={cn(
+                        "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition active:scale-[0.98]",
+                        modelTypeFilter === type
+                          ? "bg-[#181e25] text-white dark:bg-white dark:text-[#181e25]"
+                          : "bg-transparent text-[#45515e] hover:bg-black/[0.05] dark:text-white/60 dark:hover:bg-white/10",
+                      )}
+                      onClick={() => {
+                        setModelTypeFilter(type);
+                        setCapabilityFilter(ALL_VALUE);
+                        setProviderFilter(ALL_VALUE);
+                      }}
+                    >
+                      <span>{t(`publicModels.typeMenu.${type}`)}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[11px] leading-none",
+                          modelTypeFilter === type
+                            ? "bg-white/15 text-white dark:bg-[#181e25]/10 dark:text-[#181e25]"
+                            : "bg-black/[0.06] text-[#8e8e93] dark:bg-white/10 dark:text-white/45",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  ))}
                 </div>
 
-                <Select value={providerFilter} onValueChange={setProviderFilter}>
-                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
-                    <SelectValue placeholder={t("publicModels.provider")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUE}>{t("publicModels.allProviders")}</SelectItem>
-                    {providerOptions.map((provider) => (
-                      <SelectItem key={provider} value={provider}>
-                        {provider}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
+                  <div className="relative w-full sm:min-w-[260px] lg:w-[320px]">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
+                    <Input
+                      id="public-model-search"
+                      value={keyword}
+                      onChange={(event) => setKeyword(event.target.value)}
+                      placeholder={t("publicModels.searchPlaceholder")}
+                      aria-label={t("publicModels.searchLabel")}
+                      className="h-10 rounded-full border-[#e5e7eb] bg-white pl-10 text-[#222222] shadow-none placeholder:text-[#8e8e93] dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                  </div>
 
-                <Select value={capabilityFilter} onValueChange={setCapabilityFilter}>
-                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
-                    <SelectValue placeholder={t("publicModels.capability")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_VALUE}>{t("publicModels.allCapabilities")}</SelectItem>
-                    {capabilityOptions.map((capability) => (
-                      <SelectItem key={capability} value={capability}>
-                        {t(`portal.models.capability.${capability}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-11 rounded-[13px] border-[#e5e7eb] bg-white dark:border-white/10 dark:bg-white/5">
-                    <SelectValue placeholder={t("publicModels.sort.label")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">{t("publicModels.sort.name")}</SelectItem>
-                    <SelectItem value="provider">{t("publicModels.sort.provider")}</SelectItem>
-                    <SelectItem value="input">{t("publicModels.sort.input")}</SelectItem>
-                    <SelectItem value="output">{t("publicModels.sort.output")}</SelectItem>
-                    <SelectItem value="context">{t("publicModels.sort.context")}</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-lg border-0 bg-[#f0f0f0] px-5 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white"
-                  onClick={clearFilters}
-                  disabled={!hasActiveFilters}
-                >
-                  {t("publicModels.clear")}
-                </Button>
-              </div>
-
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-9 shrink-0 rounded-full border-transparent bg-black/[0.05] px-3 text-[#45515e] shadow-none hover:bg-black/[0.08] dark:bg-white/10 dark:text-white/70",
-                    capabilityFilter === ALL_VALUE && "bg-[#181e25] text-white hover:bg-[#181e25] dark:bg-white dark:text-[#181e25]",
-                  )}
-                  onClick={() => setCapabilityFilter(ALL_VALUE)}
-                >
-                  {t("common.all")}
-                </Button>
-                {FEATURED_CAPABILITIES.filter((item) =>
-                  capabilityOptions.includes(item),
-                ).map((capability) => (
-                  <Button
-                    key={capability}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-9 shrink-0 rounded-full border-transparent bg-black/[0.05] px-3 text-[#45515e] shadow-none hover:bg-black/[0.08] dark:bg-white/10 dark:text-white/70",
-                      capabilityFilter === capability && "bg-[#181e25] text-white hover:bg-[#181e25] dark:bg-white dark:text-[#181e25]",
-                    )}
-                    onClick={() => setCapabilityFilter(capability)}
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as ModelSortFilter)}
                   >
-                    {t(`portal.models.capability.${capability}`)}
-                  </Button>
-                ))}
+                    <SelectTrigger
+                      aria-label={t("publicModels.sort.label")}
+                      className="h-10 w-full rounded-full border-[#e5e7eb] bg-white px-4 text-[#222222] shadow-none dark:border-white/10 dark:bg-white/5 dark:text-white sm:w-[176px]"
+                    >
+                      <SelectValue placeholder={t("publicModels.sort.label")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MODEL_SORT_FILTERS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {t(`publicModels.sort.${option}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, index) => (
-                <Skeleton key={index} className="h-[286px] rounded-[20px]" />
-              ))
-            ) : isError ? (
-              <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
-                {t("publicModels.loadError")}
-              </div>
-            ) : filteredModels.length === 0 ? (
-              <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
-                {t("publicModels.empty")}
-              </div>
-            ) : (
-              filteredModels.map((model) => (
-                <article
-                  key={model.model}
-                  id={encodeURIComponent(model.model)}
-                  className="group flex min-h-[286px] flex-col rounded-[20px] bg-white p-5 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:bg-white/5 dark:ring-white/10"
-                >
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
-                      {model.provider}
-                    </Badge>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
-                      aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
-                      onClick={() => copyModelId(model.model)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+            <div className="grid gap-5 p-4 lg:grid-cols-[224px_minmax(0,1fr)] lg:p-5">
+              <aside className="space-y-5 lg:pr-5">
+                <FilterPillGroup
+                  label={t("publicModels.provider")}
+                  options={[
+                    { value: ALL_VALUE, label: t("publicModels.allProviders") },
+                    ...visibleProviderOptions.map((provider) => ({
+                      value: provider,
+                      label: provider,
+                    })),
+                  ]}
+                  value={providerFilter}
+                  onChange={setProviderFilter}
+                />
+
+                <FilterPillGroup
+                  label={t("publicModels.capability")}
+                  options={[
+                    { value: ALL_VALUE, label: t("publicModels.allCapabilities") },
+                    ...visibleCapabilityOptions.map((capability) => ({
+                      value: capability,
+                      label: t(`portal.models.capability.${capability}`),
+                    })),
+                  ]}
+                  value={capabilityFilter}
+                  onChange={setCapabilityFilter}
+                />
+              </aside>
+
+              <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="rounded-[16px] border border-[#f2f3f5] bg-[#fbfbfc] px-4 py-3 text-sm text-[#8e8e93] dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45" aria-live="polite">
+                    {t("publicModels.results", { count: filteredModels.length })}
                   </div>
 
-                  <Link
-                    to={getPublicModelDetailPath(model.model)}
-                    className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-lg border-0 bg-[#f0f0f0] px-5 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white sm:w-auto"
+                    onClick={clearFilters}
+                    disabled={!hasActiveFilters}
                   >
-                    {model.model}
-                  </Link>
-                  <p className="mt-3 line-clamp-2 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
-                    {model.description || t("publicModels.defaultDescription")}
-                  </p>
+                    {t("publicModels.clear")}
+                  </Button>
+                </div>
 
-                  <div className="mt-5 flex flex-wrap gap-1.5">
-                    {(model.capabilities || []).slice(0, 5).map((capability) => (
-                      <Badge
-                        key={capability}
-                        variant="outline"
-                        className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {isLoading ? (
+                    Array.from({ length: 6 }).map((_, index) => (
+                      <Skeleton key={index} className="h-[286px] rounded-[20px]" />
+                    ))
+                  ) : isError ? (
+                    <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
+                      {t("publicModels.loadError")}
+                    </div>
+                  ) : filteredModels.length === 0 ? (
+                    <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
+                      {t("publicModels.empty")}
+                    </div>
+                  ) : (
+                    filteredModels.map((model) => (
+                      <article
+                        key={model.model}
+                        id={encodeURIComponent(model.model)}
+                        className="group flex min-h-[286px] flex-col rounded-[20px] bg-white p-5 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:bg-white/5 dark:ring-white/10"
                       >
-                        {t(`portal.models.capability.${capability}`)}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="mt-auto grid grid-cols-3 gap-3 pt-6">
-                    {[
-                      {
-                        label: t("publicModels.table.context"),
-                        value: formatContextLength(model.context_length),
-                      },
-                      {
-                        label: t("publicModels.table.input"),
-                        value: getInputPrice(model) || "-",
-                      },
-                      {
-                        label: t("publicModels.table.output"),
-                        value: getOutputPrice(model) || "-",
-                      },
-                    ].map((item) => (
-                      <div key={item.label} className="min-w-0">
-                        <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
-                        <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-semibold text-[#18181b] dark:text-white">
-                          {item.value}
+                        <div className="mb-5 flex items-start justify-between gap-3">
+                          <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
+                            {model.provider}
+                          </Badge>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
+                            aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
+                            onClick={() => copyModelId(model.model)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
 
-                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                    <Link to={getPublicModelDetailPath(model.model)}>
-                      <Button variant="outline" className="h-10 w-full rounded-lg border-0 bg-[#f0f0f0] text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white">
-                        {t("publicModels.viewDetails")}
-                      </Button>
-                    </Link>
-                    <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                      <Button className="h-10 w-full rounded-lg bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
-                        {t("publicModels.startUsing")}
-                      </Button>
-                    </Link>
-                  </div>
-                </article>
-              ))
-            )}
+                        <Link
+                          to={getPublicModelDetailPath(model.model)}
+                          className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                        >
+                          {model.model}
+                        </Link>
+                        <p className="mt-3 line-clamp-2 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
+                          {model.description || t("publicModels.defaultDescription")}
+                        </p>
+
+                        <div className="mt-5 flex flex-wrap gap-1.5">
+                          {(model.capabilities || []).slice(0, 5).map((capability) => (
+                            <Badge
+                              key={capability}
+                              variant="outline"
+                              className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+                            >
+                              {t(`portal.models.capability.${capability}`)}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        <div className="mt-auto grid grid-cols-3 gap-3 pt-6">
+                          {[
+                            {
+                              label: t("publicModels.table.context"),
+                              value: formatContextLength(model.context_length),
+                            },
+                            {
+                              label: t("publicModels.table.input"),
+                              value: getInputPrice(model) || "-",
+                            },
+                            {
+                              label: t("publicModels.table.output"),
+                              value: getOutputPrice(model) || "-",
+                            },
+                          ].map((item) => (
+                            <div key={item.label} className="min-w-0">
+                              <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
+                              <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-semibold text-[#18181b] dark:text-white">
+                                {item.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                          <Link to={getPublicModelDetailPath(model.model)}>
+                            <Button variant="outline" className="h-10 w-full rounded-lg border-0 bg-[#f0f0f0] text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white">
+                              {t("publicModels.viewDetails")}
+                            </Button>
+                          </Link>
+                          <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
+                            <Button className="h-10 w-full rounded-lg bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
+                              {t("publicModels.startUsing")}
+                            </Button>
+                          </Link>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -586,6 +684,53 @@ export default function PublicModelsPage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function FilterPillGroup({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  value: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[#8e8e93] dark:text-white/45">
+        {label}
+      </div>
+      <div className="space-y-1">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={cn(
+              "flex h-8 w-full min-w-0 items-center gap-2 rounded-[6px] px-1.5 text-left text-sm font-medium transition active:scale-[0.98]",
+              value === option.value
+                ? "text-[#18181b] dark:text-white"
+                : "text-[#45515e] hover:bg-black/[0.04] dark:text-white/70 dark:hover:bg-white/[0.06]",
+            )}
+            onClick={() => onChange(option.value)}
+          >
+            <span
+              className={cn(
+                "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition",
+                value === option.value
+                  ? "border-[#181e25] bg-[#181e25] text-white dark:border-white dark:bg-white dark:text-[#181e25]"
+                  : "border-[#d8dce3] bg-white dark:border-white/15 dark:bg-white/5",
+              )}
+            >
+              {value === option.value && <CheckCircle2 className="h-3 w-3" strokeWidth={3} />}
+            </span>
+            <span className="truncate">{option.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1596,8 +1596,17 @@
       "capabilities": "Capability types",
       "groups": "Available groups"
     },
+    "typeMenu": {
+      "video": "Video",
+      "image": "Image",
+      "llm": "LLM"
+    },
     "sort": {
-      "label": "Sort",
+      "label": "Filter",
+      "latest": "Latest",
+      "popular": "Popular",
+      "priceAsc": "Price low to high",
+      "priceDesc": "Price high to low",
       "name": "Model name",
       "provider": "Provider",
       "input": "Input price",

@@ -42,6 +42,8 @@ type PublicModelResponse struct {
 	ContextLength      int                           `json:"context_length,omitempty"`
 	MaxInputTokens     int                           `json:"max_input_tokens,omitempty"`
 	MaxOutputTokens    int                           `json:"max_output_tokens,omitempty"`
+	CreatedAt          int64                         `json:"created_at,omitempty"`
+	UpdatedAt          int64                         `json:"updated_at,omitempty"`
 	Price              PublicModelPriceResponse      `json:"price,omitempty"`
 	ImagePrices        map[string]float64            `json:"image_prices,omitempty"`
 	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
@@ -163,6 +165,12 @@ func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResp
 		Description:        strings.TrimSpace(config.Description),
 	}
 
+	if !config.CreatedAt.IsZero() {
+		response.CreatedAt = config.CreatedAt.UnixMilli()
+	}
+	if !config.UpdatedAt.IsZero() {
+		response.UpdatedAt = config.UpdatedAt.UnixMilli()
+	}
 	if maxContextTokens, ok := config.MaxContextTokens(); ok {
 		response.ContextLength = maxContextTokens
 	}

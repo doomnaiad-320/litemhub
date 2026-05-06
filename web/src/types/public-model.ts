@@ -9,6 +9,8 @@ export interface PublicModel {
   context_length?: number;
   max_input_tokens?: number;
   max_output_tokens?: number;
+  created_at?: number;
+  updated_at?: number;
   price?: ModelPrice;
   image_prices?: Record<string, number>;
   image_quality_prices?: Record<string, Record<string, number>>;

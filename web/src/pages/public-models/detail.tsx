@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -6,15 +6,11 @@ import {
   AlertCircle,
   ChevronDown,
   Circle,
-  Clock3,
   Code2,
   Copy,
-  Eye,
-  FileText,
   Filter,
   Globe2,
   Info,
-  Link2,
   MessageSquare,
   Scale,
 } from "lucide-react";
@@ -34,20 +30,21 @@ import {
   formatTokenPriceValue,
   getPublicModelDetailPath,
 } from "@/lib/model-catalog";
+import { cn } from "@/lib/utils";
 
 interface PriceRow {
   label: string;
   value: string;
 }
 
-interface ProviderRoute {
-  name: string;
-  latency: string;
-  throughput: string;
-  uptime: number;
-}
+const uniqueTags = (values: string[]) =>
+  Array.from(new Set(values.filter(Boolean)));
 
-const uniqueTags = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+const defaultProviderMetrics = {
+  latency: "0.82秒",
+  throughput: "64吨/秒",
+  uptime: 3,
+};
 
 const categoryColors = ["#9b5cff", "#2f8cff", "#6668ff", "#00a2ff", "#d8951b"];
 
@@ -97,7 +94,11 @@ const decodeModelPath = (value?: string) => {
     .join("/");
 };
 
-const updateMetaTag = (selector: string, attribute: "content" | "href", value: string) => {
+const updateMetaTag = (
+  selector: string,
+  attribute: "content" | "href",
+  value: string,
+) => {
   const element = document.head.querySelector(selector);
   if (element) {
     element.setAttribute(attribute, value);
@@ -162,11 +163,14 @@ const buildPriceRows = (
   const rows: PriceRow[] = [
     {
       label: t("publicModelDetail.pricing.input"),
-      value: formatTokenPriceValue(price.input_price, price.input_price_unit) || "",
+      value:
+        formatTokenPriceValue(price.input_price, price.input_price_unit) || "",
     },
     {
       label: t("publicModelDetail.pricing.output"),
-      value: formatTokenPriceValue(price.output_price, price.output_price_unit) || "",
+      value:
+        formatTokenPriceValue(price.output_price, price.output_price_unit) ||
+        "",
     },
     {
       label: t("publicModelDetail.pricing.request"),
@@ -174,29 +178,41 @@ const buildPriceRows = (
     },
     {
       label: t("publicModelDetail.pricing.cached"),
-      value: formatTokenPriceValue(price.cached_price, price.cached_price_unit) || "",
+      value:
+        formatTokenPriceValue(price.cached_price, price.cached_price_unit) ||
+        "",
     },
     {
       label: t("publicModelDetail.pricing.cacheCreation"),
       value:
-        formatTokenPriceValue(price.cache_creation_price, price.cache_creation_price_unit) ||
-        "",
+        formatTokenPriceValue(
+          price.cache_creation_price,
+          price.cache_creation_price_unit,
+        ) || "",
     },
     {
       label: t("publicModelDetail.pricing.imageInput"),
       value:
-        formatTokenPriceValue(price.image_input_price, price.image_input_price_unit) || "",
+        formatTokenPriceValue(
+          price.image_input_price,
+          price.image_input_price_unit,
+        ) || "",
     },
     {
       label: t("publicModelDetail.pricing.imageOutput"),
       value:
-        formatTokenPriceValue(price.image_output_price, price.image_output_price_unit) ||
-        "",
+        formatTokenPriceValue(
+          price.image_output_price,
+          price.image_output_price_unit,
+        ) || "",
     },
     {
       label: t("publicModelDetail.pricing.audioInput"),
       value:
-        formatTokenPriceValue(price.audio_input_price, price.audio_input_price_unit) || "",
+        formatTokenPriceValue(
+          price.audio_input_price,
+          price.audio_input_price_unit,
+        ) || "",
     },
     {
       label: t("publicModelDetail.pricing.thinking"),
@@ -209,7 +225,10 @@ const buildPriceRows = (
     {
       label: t("publicModelDetail.pricing.webSearch"),
       value:
-        formatTokenPriceValue(price.web_search_price, price.web_search_price_unit) || "",
+        formatTokenPriceValue(
+          price.web_search_price,
+          price.web_search_price_unit,
+        ) || "",
     },
   ].filter((row) => row.value);
 
@@ -235,13 +254,22 @@ const formatCurrencyTokenPrice = (price?: number, unit?: number) => {
 };
 
 const getInputPrice = (model?: PublicModel) =>
-  formatCurrencyTokenPrice(model?.price?.input_price, model?.price?.input_price_unit);
+  formatCurrencyTokenPrice(
+    model?.price?.input_price,
+    model?.price?.input_price_unit,
+  );
 
 const getOutputPrice = (model?: PublicModel) =>
-  formatCurrencyTokenPrice(model?.price?.output_price, model?.price?.output_price_unit);
+  formatCurrencyTokenPrice(
+    model?.price?.output_price,
+    model?.price?.output_price_unit,
+  );
 
 const getCachedPrice = (model?: PublicModel) =>
-  formatCurrencyTokenPrice(model?.price?.cached_price, model?.price?.cached_price_unit);
+  formatCurrencyTokenPrice(
+    model?.price?.cached_price,
+    model?.price?.cached_price_unit,
+  );
 
 const humanizeModelName = (value: string) => {
   const parts = value.split("/");
@@ -294,10 +322,23 @@ const buildCategoryPills = (
   isChinese: boolean,
 ): Array<{ color: string; label: string }> => {
   const defaults = isChinese
-    ? ["学术界 (#4)", "金融 (#34)", "健康 (#37)", "法律 (#17)", "市场营销 (#34)"]
-    : ["Academia (#4)", "Finance (#34)", "Health (#37)", "Legal (#17)", "Marketing (#34)"];
+    ? [
+        "学术界 (#4)",
+        "金融 (#34)",
+        "健康 (#37)",
+        "法律 (#17)",
+        "市场营销 (#34)",
+      ]
+    : [
+        "Academia (#4)",
+        "Finance (#34)",
+        "Health (#37)",
+        "Legal (#17)",
+        "Marketing (#34)",
+      ];
 
-  const source = capabilityTags.length >= 5 ? capabilityTags.slice(0, 5) : defaults;
+  const source =
+    capabilityTags.length >= 5 ? capabilityTags.slice(0, 5) : defaults;
 
   return source.slice(0, 5).map((label, index) => ({
     color: categoryColors[index % categoryColors.length],
@@ -305,46 +346,52 @@ const buildCategoryPills = (
   }));
 };
 
-const buildProviderRoutes = (providerName: string): ProviderRoute[] => {
-  const normalized = providerName.toLowerCase();
-  if (normalized.includes("openai")) {
-    return [
-      { name: "Azure", latency: "0.89秒", throughput: "71吨/秒", uptime: 3 },
-      { name: "OpenAI", latency: "0.75秒", throughput: "50吨/秒", uptime: 3 },
-    ];
-  }
-
-  return [{ name: providerName, latency: "0.82秒", throughput: "64吨/秒", uptime: 3 }];
-};
-
 export default function PublicModelDetailPage() {
   const { t: rawT, i18n } = useTranslation();
   const t = rawT as (key: string, options?: Record<string, unknown>) => string;
   const params = useParams();
   const modelId = decodeModelPath(params["*"]);
-  const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
+  const isAuthenticated = useUserPortalAuthStore(
+    (state) => state.isAuthenticated,
+  );
   const modelQuery = usePublicModel(modelId);
   const model = modelQuery.data;
   const isLoading = modelQuery.isLoading || !modelId;
-  const signUpTarget = isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER;
+  const signUpTarget = isAuthenticated
+    ? ROUTES.USER_KEYS
+    : ROUTES.USER_REGISTER;
   const apiBase = typeof window === "undefined" ? "" : window.location.origin;
-  const isChinese = (i18n.resolvedLanguage || i18n.language || "").startsWith("zh");
+  const isChinese = (i18n.resolvedLanguage || i18n.language || "").startsWith(
+    "zh",
+  );
 
   const priceRows = useMemo(() => buildPriceRows(model, t), [model, t]);
   const capabilityTags = useMemo(
     () =>
       uniqueTags(model?.capabilities || []).map((capability) => {
         const translated = t(`portal.models.capability.${capability}`);
-        if (translated && translated !== `portal.models.capability.${capability}`) {
+        if (
+          translated &&
+          translated !== `portal.models.capability.${capability}`
+        ) {
           return translated;
         }
-        return capabilityLabels[capability]?.[isChinese ? "zh" : "en"] || capability;
+        return (
+          capabilityLabels[capability]?.[isChinese ? "zh" : "en"] || capability
+        );
       }),
     [model?.capabilities, t, isChinese],
   );
-  const supportedEndpoints = useMemo(() => getSupportedEndpoints(model), [model]);
+  const supportedEndpoints = useMemo(
+    () => getSupportedEndpoints(model),
+    [model],
+  );
   const accessGroups = useMemo(
-    () => uniqueTags([...(model?.available_groups || []), ...(model?.available_sets || [])]),
+    () =>
+      uniqueTags([
+        ...(model?.available_groups || []),
+        ...(model?.available_sets || []),
+      ]),
     [model?.available_groups, model?.available_sets],
   );
 
@@ -386,7 +433,8 @@ const response = await client.chat.completions.create({
   }, [apiBase, model?.model, modelId]);
 
   useEffect(() => {
-    const readableName = model?.model || modelId || t("publicModelDetail.fallbackModel");
+    const readableName =
+      model?.model || modelId || t("publicModelDetail.fallbackModel");
     const title = t("publicModelDetail.seo.title", { model: readableName });
     const description = t("publicModelDetail.seo.description", {
       model: readableName,
@@ -460,7 +508,9 @@ const response = await client.chat.completions.create({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t("publicModelDetail.notFoundTitle")}</AlertTitle>
             <AlertDescription>
-              {t("publicModelDetail.notFoundDescription", { model: modelId || "-" })}
+              {t("publicModelDetail.notFoundDescription", {
+                model: modelId || "-",
+              })}
             </AlertDescription>
           </Alert>
         ) : (
@@ -508,11 +558,12 @@ function ModelDetailContent({
   supportedEndpoints: string[];
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  const providerName = model.provider || t("publicModelDetail.fallbackProvider");
+  const providerName =
+    model.provider || t("publicModelDetail.fallbackProvider");
   const displayModel = humanizeModelName(model.model);
   const modelPath = formatModelPath(model, providerName);
   const categoryPills = buildCategoryPills(capabilityTags, isChinese);
-  const providerRoutes = buildProviderRoutes(providerName);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const tabLabels = isChinese
     ? [
         ["overview", "概述"],
@@ -584,7 +635,10 @@ function ModelDetailContent({
             >
               <Link to={signUpTarget}>
                 {isChinese ? "聊天" : "Chat"}
-                <MessageSquare className="h-[12px] w-[12px]" strokeWidth={2.2} />
+                <MessageSquare
+                  className="h-[12px] w-[12px]"
+                  strokeWidth={2.2}
+                />
               </Link>
             </Button>
             <Button
@@ -601,8 +655,13 @@ function ModelDetailContent({
 
         <div className="mt-[13px] flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[14px] font-medium leading-[1.45] text-[#6b7280] dark:text-[#656a75]">
           {metaItems.map((item, index) => (
-            <span key={`${item}-${index}`} className="inline-flex items-center gap-[7px]">
-              {index > 0 && <span className="text-[#c8cdd6] dark:text-[#333640]">|</span>}
+            <span
+              key={`${item}-${index}`}
+              className="inline-flex items-center gap-[7px]"
+            >
+              {index > 0 && (
+                <span className="text-[#c8cdd6] dark:text-[#333640]">|</span>
+              )}
               <span>{item}</span>
             </span>
           ))}
@@ -617,21 +676,26 @@ function ModelDetailContent({
           <MoreCategoryPill isChinese={isChinese} />
         </div>
 
-        <div className="group relative mt-[18px] max-h-[44px] overflow-hidden pr-8 text-[14px] font-medium leading-[1.55] text-[#5f6b7a] dark:text-[#6f7480]">
-          <p>{model.description || t("publicModels.defaultDescription")}</p>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#f8fafc] to-transparent dark:from-[#0b0b0d]" />
-          <ChevronDown
-            className="absolute right-[3px] top-[3px] h-[14px] w-[14px] text-[#7b8492] dark:text-[#686d78]"
-            strokeWidth={1.8}
-          />
-        </div>
-
         <button
           type="button"
-          className="mt-[21px] inline-flex h-[30px] w-[132px] items-center justify-between rounded-full border border-[#d8dce3] bg-white px-[11px] text-[14px] font-medium text-[#5f6b7a] transition hover:border-[#b8c0cc] hover:text-[#18181b] active:scale-[0.98] dark:border-[#24262b] dark:bg-[#0f1013] dark:text-[#777c87] dark:hover:border-[#343741] dark:hover:text-[#aeb3bf]"
+          className={cn(
+            "group relative mt-[18px] w-full overflow-hidden pr-8 text-left text-[14px] font-medium leading-[1.55] text-[#5f6b7a] transition active:scale-[0.998] dark:text-[#6f7480]",
+            isDescriptionExpanded ? "max-h-none" : "max-h-[44px]",
+          )}
+          aria-expanded={isDescriptionExpanded}
+          onClick={() => setIsDescriptionExpanded((expanded) => !expanded)}
         >
-          <span>{isChinese ? "标准" : "Standard"}</span>
-          <ChevronDown className="h-[12px] w-[12px]" strokeWidth={1.8} />
+          <p>{model.description || t("publicModels.defaultDescription")}</p>
+          {!isDescriptionExpanded && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#f8fafc] to-transparent dark:from-[#0b0b0d]" />
+          )}
+          <ChevronDown
+            className={cn(
+              "absolute right-[3px] top-[3px] h-[14px] w-[14px] text-[#7b8492] transition-transform dark:text-[#686d78]",
+              isDescriptionExpanded && "rotate-180",
+            )}
+            strokeWidth={1.8}
+          />
         </button>
       </section>
 
@@ -654,7 +718,6 @@ function ModelDetailContent({
           accessGroups={accessGroups}
           isChinese={isChinese}
           model={model}
-          providerRoutes={providerRoutes}
           supportedEndpoints={supportedEndpoints}
         />
       </TabsContent>
@@ -664,7 +727,6 @@ function ModelDetailContent({
           accessGroups={accessGroups}
           isChinese={isChinese}
           model={model}
-          providerRoutes={providerRoutes}
           supportedEndpoints={supportedEndpoints}
         />
       </TabsContent>
@@ -683,8 +745,19 @@ function ModelDetailContent({
         />
       </TabsContent>
 
-      {["playground", "performance", "benchmarks", "apps", "activity", "uptime"].map((value) => (
-        <TabsContent key={value} value={value} className="mt-[38px] focus-visible:ring-0">
+      {[
+        "playground",
+        "performance",
+        "benchmarks",
+        "apps",
+        "activity",
+        "uptime",
+      ].map((value) => (
+        <TabsContent
+          key={value}
+          value={value}
+          className="mt-[38px] focus-visible:ring-0"
+        >
           <EmptyTabPanel isChinese={isChinese} />
         </TabsContent>
       ))}
@@ -696,13 +769,11 @@ function ProviderOverviewSection({
   accessGroups,
   isChinese,
   model,
-  providerRoutes,
   supportedEndpoints,
 }: {
   accessGroups: string[];
   isChinese: boolean;
   model: PublicModel;
-  providerRoutes: ProviderRoute[];
   supportedEndpoints: string[];
 }) {
   return (
@@ -716,19 +787,25 @@ function ProviderOverviewSection({
             OpenRouter将
             <span className="text-[#1456f0] dark:text-[#5c5ce8]">请求路由</span>
             到能够处理您的提示大小和参数的最佳提供商，并设置回退机制以最大限度地延长
-            <span className="text-[#1456f0] dark:text-[#5c5ce8]">正常运行时间</span>。
+            <span className="text-[#1456f0] dark:text-[#5c5ce8]">
+              正常运行时间
+            </span>
+            。
           </>
         ) : (
           <>
-            OpenRouter routes requests to the best provider for your prompt size and
-            parameters, with fallbacks to maximize uptime.
+            OpenRouter routes requests to the best provider for your prompt size
+            and parameters, with fallbacks to maximize uptime.
           </>
         )}
         <Info className="ml-2 inline h-[12px] w-[12px] translate-y-[1px] text-[#7b8492] dark:text-[#6e7480]" />
       </p>
 
       <div className="mt-[18px] flex items-center gap-[10px]">
-        <Filter className="h-[13px] w-[13px] text-[#7b8492] dark:text-[#6a707b]" strokeWidth={1.8} />
+        <Filter
+          className="h-[13px] w-[13px] text-[#7b8492] dark:text-[#6a707b]"
+          strokeWidth={1.8}
+        />
         <button
           type="button"
           className="inline-flex h-[30px] w-[132px] items-center justify-between rounded-full border border-[#d8dce3] bg-white px-[11px] text-[14px] font-medium text-[#5f6b7a] transition hover:border-[#b8c0cc] hover:text-[#18181b] active:scale-[0.98] dark:border-[#24262b] dark:bg-[#0f1013] dark:text-[#747985] dark:hover:border-[#343741] dark:hover:text-[#aeb3bf]"
@@ -742,7 +819,6 @@ function ProviderOverviewSection({
         accessGroups={accessGroups}
         isChinese={isChinese}
         model={model}
-        providerRoutes={providerRoutes}
         supportedEndpoints={supportedEndpoints}
       />
     </section>
@@ -758,25 +834,27 @@ function ProviderResultsCard({
   accessGroups,
   isChinese,
   model,
-  providerRoutes,
   supportedEndpoints,
 }: {
   accessGroups: string[];
   isChinese: boolean;
   model: PublicModel;
-  providerRoutes: ProviderRoute[];
   supportedEndpoints: string[];
 }) {
+  const groupRows = model.available_groups?.length
+    ? model.available_groups
+    : [""];
+
   return (
     <div className="mt-[17px] overflow-x-auto rounded-[4px] border border-[#d8dce3] bg-white shadow-[rgba(15,23,42,0.04)_0px_8px_24px] dark:border-[#292b31] dark:bg-[#0d0e11] dark:shadow-none">
-      <div className="min-w-[704px] divide-y divide-[#e6e9ef] dark:divide-[#24262b]">
-        {providerRoutes.map((route, index) => (
+      <div className="min-w-full divide-y divide-[#e6e9ef] dark:divide-[#24262b]">
+        {groupRows.map((groupName, index) => (
           <ProviderResultRow
             accessGroups={accessGroups}
+            groupName={groupName}
             isChinese={isChinese}
-            key={`${route.name}-${index}`}
+            key={`${groupName || "empty-group"}-${index}`}
             model={model}
-            route={route}
             supportedEndpoints={supportedEndpoints}
           />
         ))}
@@ -787,26 +865,26 @@ function ProviderResultsCard({
 
 function ProviderResultRow({
   accessGroups,
+  groupName,
   isChinese,
   model,
-  route,
   supportedEndpoints,
 }: {
   accessGroups: string[];
+  groupName: string;
   isChinese: boolean;
   model: PublicModel;
-  route: ProviderRoute;
   supportedEndpoints: string[];
 }) {
   const metricLabels = isChinese
     ? {
         cache: "缓存读取",
-        context: "整体背景",
-        input: "投入价格",
-        output: "产出价格",
+        context: "上下文",
+        input: "输入价格",
+        output: "输出价格",
         maxOutput: "最大输出",
         throughput: "吞吐量",
-        uptime: "正常运行时间",
+        uptime: "Uptime",
         latency: "延迟",
       }
     : {
@@ -820,48 +898,42 @@ function ProviderResultRow({
         latency: "Latency",
       };
   const unit = isChinese ? "/M 代币" : "/M tokens";
+  const displayGroupName = groupName ? `${groupName} 分组` : "";
 
   return (
-    <article className="min-h-[138px] px-[12px] pb-[14px] pt-[14px]">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
+    <article className="min-h-[138px] w-full min-w-0 px-[12px] pb-[14px] pt-[14px]">
+      <div className="flex items-center justify-between gap-6">
+        <div className="flex min-h-[35px] min-w-0 items-center">
           <button
             type="button"
             className="block truncate text-left text-[14px] font-semibold leading-none text-[#4b5563] underline decoration-[#9aa3b2] underline-offset-[2px] transition hover:text-[#18181b] dark:text-[#858b97] dark:decoration-[#686d77] dark:hover:text-[#c9ccd5]"
           >
-            {route.name}
+            {displayGroupName}
           </button>
-
-          <div className="mt-[10px] flex items-center gap-[5px]">
-            <ProviderIconChip>
-              <Eye className="h-[10px] w-[10px]" strokeWidth={2} />
-            </ProviderIconChip>
-            <span className="inline-flex h-[24px] items-center rounded-[5px] bg-[#eef2f7] px-[8px] text-[14px] font-semibold leading-none text-[#5f6b7a] dark:bg-[#282a30] dark:text-[#858b96]">
-              {isChinese ? "我们" : "Us"}
-            </span>
-            <ProviderIconChip>
-              <FileText className="h-[10px] w-[10px]" strokeWidth={2} />
-            </ProviderIconChip>
-            <ProviderIconChip>
-              <Clock3 className="h-[10px] w-[10px]" strokeWidth={2} />
-            </ProviderIconChip>
-            <ProviderIconChip>
-              <Link2 className="h-[10px] w-[10px]" strokeWidth={2} />
-            </ProviderIconChip>
-          </div>
         </div>
 
-        <div className="grid w-[215px] grid-cols-[55px_76px_74px] gap-2 text-right">
-          <ProviderTopMetric label={metricLabels.latency} value={route.latency} />
-          <ProviderTopMetric label={metricLabels.throughput} value={route.throughput} />
-          <div>
+        <div className="mr-4 grid w-[215px] grid-cols-[55px_76px_74px] items-center gap-2 whitespace-nowrap text-right">
+          <ProviderTopMetric
+            label={metricLabels.latency}
+            value={defaultProviderMetrics.latency}
+          />
+          <ProviderTopMetric
+            label={metricLabels.throughput}
+            value={defaultProviderMetrics.throughput}
+          />
+          <div className="flex min-h-[35px] flex-col justify-center">
             <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
               {metricLabels.uptime}
             </div>
             <div className="mt-[8px] flex justify-end gap-[3px]">
-              {Array.from({ length: route.uptime }).map((_, index) => (
-                <span key={index} className="h-[10px] w-[4px] rounded-[1px] bg-[#24c37a]" />
-              ))}
+              {Array.from({ length: defaultProviderMetrics.uptime }).map(
+                (_, index) => (
+                  <span
+                    key={index}
+                    className="h-[10px] w-[4px] rounded-[1px] bg-[#24c37a]"
+                  />
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -878,9 +950,21 @@ function ProviderResultRow({
           subValue={isChinese ? undefined : "tokens"}
           value={formatCompactTokenCount(model.max_output_tokens)}
         />
-        <ProviderBottomMetric label={metricLabels.input} subValue={unit} value={getInputPrice(model)} />
-        <ProviderBottomMetric label={metricLabels.output} subValue={unit} value={getOutputPrice(model)} />
-        <ProviderBottomMetric label={metricLabels.cache} subValue={unit} value={getCachedPrice(model)} />
+        <ProviderBottomMetric
+          label={metricLabels.input}
+          subValue={unit}
+          value={getInputPrice(model)}
+        />
+        <ProviderBottomMetric
+          label={metricLabels.output}
+          subValue={unit}
+          value={getOutputPrice(model)}
+        />
+        <ProviderBottomMetric
+          label={metricLabels.cache}
+          subValue={unit}
+          value={getCachedPrice(model)}
+        />
       </div>
 
       <div className="sr-only">
@@ -890,10 +974,19 @@ function ProviderResultRow({
   );
 }
 
-function CategoryPill({ children, color }: { children: ReactNode; color: string }) {
+function CategoryPill({
+  children,
+  color,
+}: {
+  children: ReactNode;
+  color: string;
+}) {
   return (
     <span className="inline-flex h-[25px] items-center gap-[6px] rounded-full border border-[#d8dce3] bg-white px-[9px] text-[14px] font-semibold leading-none text-[#4b5563] shadow-[rgba(15,23,42,0.04)_0px_2px_8px] dark:border-[#2c2f35] dark:bg-[#101114] dark:text-[#a1a6b2] dark:shadow-none">
-      <span className="h-[6px] w-[6px] rounded-full" style={{ backgroundColor: color }} />
+      <span
+        className="h-[6px] w-[6px] rounded-full"
+        style={{ backgroundColor: color }}
+      />
       {children}
     </span>
   );
@@ -913,18 +1006,12 @@ function MoreCategoryPill({ isChinese }: { isChinese: boolean }) {
   );
 }
 
-function ProviderIconChip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex h-[19px] w-[22px] items-center justify-center rounded-[5px] bg-[#eef2f7] text-[#6b7280] dark:bg-[#282a30] dark:text-[#858b96]">
-      {children}
-    </span>
-  );
-}
-
 function ProviderTopMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">{label}</div>
+    <div className="flex min-h-[35px] min-w-0 flex-col justify-center whitespace-nowrap">
+      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
+        {label}
+      </div>
       <div className="mt-[8px] font-mono text-[14px] font-semibold leading-none text-[#18181b] dark:text-[#c9ccd5]">
         {value}
       </div>
@@ -943,7 +1030,9 @@ function ProviderBottomMetric({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#565b67]">{label}</div>
+      <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#565b67]">
+        {label}
+      </div>
       <div className="mt-[9px] break-words font-mono text-[14px] font-semibold leading-[1.05] text-[#18181b] dark:text-[#c7cad2]">
         {value}
       </div>
@@ -956,7 +1045,13 @@ function ProviderBottomMetric({
   );
 }
 
-function PricingPanel({ isChinese, priceRows }: { isChinese: boolean; priceRows: PriceRow[] }) {
+function PricingPanel({
+  isChinese,
+  priceRows,
+}: {
+  isChinese: boolean;
+  priceRows: PriceRow[];
+}) {
   if (priceRows.length === 0) {
     return <EmptyTabPanel isChinese={isChinese} />;
   }
@@ -973,7 +1068,9 @@ function PricingPanel({ isChinese, priceRows }: { isChinese: boolean; priceRows:
             key={`${row.label}-${row.value}`}
             className="grid grid-cols-[minmax(0,1fr)_180px] gap-4 px-4 py-3 text-[14px]"
           >
-            <span className="text-[#5f6b7a] dark:text-[#8b909c]">{row.label}</span>
+            <span className="text-[#5f6b7a] dark:text-[#8b909c]">
+              {row.label}
+            </span>
             <span className="break-words font-mono font-semibold text-[#18181b] dark:text-[#d7d9e0]">
               {row.value}
             </span>
@@ -1017,14 +1114,18 @@ function ApiPanel({
         <CodePanel
           code={curlExample}
           copyLabel={t("publicModelDetail.copyExample")}
-          onCopy={() => copyText(curlExample, "publicModelDetail.exampleCopied")}
+          onCopy={() =>
+            copyText(curlExample, "publicModelDetail.exampleCopied")
+          }
         />
       </TabsContent>
       <TabsContent value="javascript" className="mt-4 focus-visible:ring-0">
         <CodePanel
           code={javascriptExample}
           copyLabel={t("publicModelDetail.copyExample")}
-          onCopy={() => copyText(javascriptExample, "publicModelDetail.exampleCopied")}
+          onCopy={() =>
+            copyText(javascriptExample, "publicModelDetail.exampleCopied")
+          }
         />
       </TabsContent>
       <div className="mt-4 flex flex-wrap gap-2 text-[14px] text-[#5f6b7a] dark:text-[#707682]">
@@ -1039,7 +1140,13 @@ function ApiPanel({
   );
 }
 
-function ApiBadge({ children, icon }: { children: ReactNode; icon: ReactNode }) {
+function ApiBadge({
+  children,
+  icon,
+}: {
+  children: ReactNode;
+  icon: ReactNode;
+}) {
   return (
     <span className="inline-flex h-[24px] items-center gap-1 rounded-full border border-[#d8dce3] bg-white px-2 dark:border-[#292b31] dark:bg-[#0f1013]">
       {icon}
@@ -1051,7 +1158,10 @@ function ApiBadge({ children, icon }: { children: ReactNode; icon: ReactNode }) 
 function EmptyTabPanel({ isChinese }: { isChinese: boolean }) {
   return (
     <div className="rounded-[4px] border border-dashed border-[#cbd5e1] bg-white px-4 py-8 text-center dark:border-[#292b31] dark:bg-[#0d0e11]">
-      <Activity className="mx-auto h-5 w-5 text-[#7b8492] dark:text-[#686e7a]" strokeWidth={1.8} />
+      <Activity
+        className="mx-auto h-5 w-5 text-[#7b8492] dark:text-[#686e7a]"
+        strokeWidth={1.8}
+      />
       <div className="mt-3 text-[24px] font-semibold text-[#18181b] dark:text-[#d3d5dc]">
         {isChinese ? "该视图尚未开放" : "This view is not available yet"}
       </div>
@@ -1080,7 +1190,10 @@ function ModelDetailSkeleton() {
       <Skeleton className="h-[14px] w-full rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
       <div className="flex gap-[7px]">
         {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-[21px] w-[80px] rounded-full bg-[#e6e9ef] dark:bg-[#17181d]" />
+          <Skeleton
+            key={index}
+            className="h-[21px] w-[80px] rounded-full bg-[#e6e9ef] dark:bg-[#17181d]"
+          />
         ))}
       </div>
       <Skeleton className="h-[41px] w-full rounded-[4px] bg-[#e6e9ef] dark:bg-[#17181d]" />
