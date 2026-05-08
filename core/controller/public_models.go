@@ -34,20 +34,21 @@ type PublicModelPriceResponse struct {
 }
 
 type PublicModelResponse struct {
-	Model              string                        `json:"model"`
-	Provider           string                        `json:"provider"`
-	Capabilities       []string                      `json:"capabilities"`
-	AvailableGroups    []string                      `json:"available_groups"`
-	AvailableSets      []string                      `json:"available_sets"`
-	ContextLength      int                           `json:"context_length,omitempty"`
-	MaxInputTokens     int                           `json:"max_input_tokens,omitempty"`
-	MaxOutputTokens    int                           `json:"max_output_tokens,omitempty"`
-	CreatedAt          int64                         `json:"created_at,omitempty"`
-	UpdatedAt          int64                         `json:"updated_at,omitempty"`
-	Price              PublicModelPriceResponse      `json:"price,omitempty"`
-	ImagePrices        map[string]float64            `json:"image_prices,omitempty"`
-	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
-	Description        string                        `json:"description,omitempty"`
+	Model                     string                        `json:"model"`
+	Provider                  string                        `json:"provider"`
+	Capabilities              []string                      `json:"capabilities"`
+	AvailableGroups           []string                      `json:"available_groups"`
+	AvailableGroupMultipliers map[string]float64            `json:"available_group_multipliers,omitempty"`
+	AvailableSets             []string                      `json:"available_sets"`
+	ContextLength             int                           `json:"context_length,omitempty"`
+	MaxInputTokens            int                           `json:"max_input_tokens,omitempty"`
+	MaxOutputTokens           int                           `json:"max_output_tokens,omitempty"`
+	CreatedAt                 int64                         `json:"created_at,omitempty"`
+	UpdatedAt                 int64                         `json:"updated_at,omitempty"`
+	Price                     PublicModelPriceResponse      `json:"price,omitempty"`
+	ImagePrices               map[string]float64            `json:"image_prices,omitempty"`
+	ImageQualityPrices        map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
+	Description               string                        `json:"description,omitempty"`
 }
 
 func GetPublicModels(c *gin.Context) {
@@ -129,6 +130,11 @@ func buildPublicModels() ([]PublicModelResponse, error) {
 			}
 
 			item.AvailableGroups = appendUniqueString(item.AvailableGroups, group.ID)
+			if item.AvailableGroupMultipliers == nil {
+				item.AvailableGroupMultipliers = make(map[string]float64)
+			}
+			item.AvailableGroupMultipliers[group.ID] = group.PriceMultiplier
+
 			for _, setName := range groupCache.GetAvailableSets() {
 				item.AvailableSets = appendUniqueString(item.AvailableSets, setName)
 			}
@@ -156,13 +162,14 @@ func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResp
 	}
 
 	response := &PublicModelResponse{
-		Model:              modelName,
-		Provider:           inferPublicModelProvider(modelName),
-		Capabilities:       inferPublicModelCapabilities(modelName, config),
-		Price:              publicModelPriceFromModelPrice(config.Price),
-		ImagePrices:        config.ImagePrices,
-		ImageQualityPrices: config.ImageQualityPrices,
-		Description:        strings.TrimSpace(config.Description),
+		Model:                     modelName,
+		Provider:                  inferPublicModelProvider(modelName),
+		Capabilities:              inferPublicModelCapabilities(modelName, config),
+		AvailableGroupMultipliers: make(map[string]float64),
+		Price:                     publicModelPriceFromModelPrice(config.Price),
+		ImagePrices:               config.ImagePrices,
+		ImageQualityPrices:        config.ImageQualityPrices,
+		Description:               strings.TrimSpace(config.Description),
 	}
 
 	if !config.CreatedAt.IsZero() {

@@ -34,6 +34,9 @@ func SetUserAPIRouter(router *gin.Engine) {
 		logsRouter.GET("", controller.GetCurrentUserModelLogs)
 		logsRouter.GET("/detail/:log_id", controller.GetCurrentUserModelLogDetail)
 
+		playgroundRouter := protectedUserAPI.Group("/playground")
+		playgroundRouter.POST("/chat", controller.UserPlaygroundChat()...)
+
 		keysRouter := protectedUserAPI.Group("/keys")
 		keysRouter.GET("", controller.GetCurrentUserKeys)
 		keysRouter.POST("", controller.CreateCurrentUserKey)

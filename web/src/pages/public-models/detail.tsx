@@ -12,6 +12,7 @@ import {
   Globe2,
   Info,
   MessageSquare,
+  Send,
   Scale,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,11 +20,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { PublicSiteHeader } from "@/components/common/PublicSiteHeader";
 import { usePublicModel } from "@/feature/public-models/hooks";
+import {
+  useUserPortalGroups,
+  useUserPortalPlaygroundChat,
+  useUserPortalWallet,
+} from "@/feature/user-portal/hooks";
 import { useUserPortalAuthStore } from "@/store/user-portal-auth";
 import { ROUTES } from "@/routes/constants";
 import type { PublicModel } from "@/types/public-model";
+import type { UserPortalPlaygroundMessage } from "@/types/user-portal";
 import {
   buildImagePriceEntries,
   formatPriceValue,
@@ -722,6 +730,14 @@ function ModelDetailContent({
         />
       </TabsContent>
 
+      <TabsContent value="playground" className="mt-[38px] focus-visible:ring-0">
+        <PlaygroundPanel
+          isChinese={isChinese}
+          model={model}
+          signUpTarget={signUpTarget}
+        />
+      </TabsContent>
+
       <TabsContent value="providers" className="mt-[38px] focus-visible:ring-0">
         <ProviderOverviewSection
           accessGroups={accessGroups}
@@ -745,14 +761,7 @@ function ModelDetailContent({
         />
       </TabsContent>
 
-      {[
-        "playground",
-        "performance",
-        "benchmarks",
-        "apps",
-        "activity",
-        "uptime",
-      ].map((value) => (
+      {["performance", "benchmarks", "apps", "activity", "uptime"].map((value) => (
         <TabsContent
           key={value}
           value={value}
@@ -830,6 +839,299 @@ function displayModelTitle(model: PublicModel, isChinese: boolean) {
   return isChinese ? `${displayModel} 的提供商` : `${displayModel} providers`;
 }
 
+function formatWalletAmount(value?: number) {
+  return `$${(value || 0).toFixed(4)}`;
+}
+
+function formatGroupMultiplier(value?: number, fallback = 1) {
+  const multiplier =
+    typeof value === "number" && !Number.isNaN(value) ? value : fallback;
+
+  if (multiplier < 0) {
+    return "";
+  }
+
+  return `x${multiplier.toFixed(2)}`;
+}
+
+function getPlaygroundErrorMessage(error: unknown, isChinese: boolean) {
+  if (error instanceof Error) {
+    if (error.message === "wallet balance not enough") {
+      return isChinese ? "余额不足，请先充值后再试。" : "Wallet balance is not enough.";
+    }
+
+    return error.message;
+  }
+
+  return isChinese ? "请求失败，请稍后再试。" : "Request failed. Please try again.";
+}
+
+function isPlaygroundIntroMessage(message: UserPortalPlaygroundMessage, modelName: string) {
+  return (
+    message.role === "assistant" &&
+    (message.content === `当前模型：${modelName}。` ||
+      message.content === `Current model: ${modelName}.`)
+  );
+}
+
+function PlaygroundPanel({
+  isChinese,
+  model,
+  signUpTarget,
+}: {
+  isChinese: boolean;
+  model: PublicModel;
+  signUpTarget: string;
+}) {
+  const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
+  const [input, setInput] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState(model.available_groups?.[0] || "");
+  const introMessage = useMemo<UserPortalPlaygroundMessage>(
+    () => ({
+      role: "assistant",
+      content: isChinese ? `当前模型：${model.model}。` : `Current model: ${model.model}.`,
+    }),
+    [isChinese, model.model],
+  );
+  const [messages, setMessages] = useState<UserPortalPlaygroundMessage[]>([introMessage]);
+  const walletQuery = useUserPortalWallet(isAuthenticated);
+  const groupsQuery = useUserPortalGroups(isAuthenticated);
+  const chatMutation = useUserPortalPlaygroundChat();
+
+  const modelGroups = useMemo(
+    () =>
+      (groupsQuery.data?.groups || []).filter((group) =>
+        group.models.some((groupModel) => groupModel.toLowerCase() === model.model.toLowerCase()),
+      ),
+    [groupsQuery.data?.groups, model.model],
+  );
+  const visibleGroups = useMemo(
+    () => (modelGroups.length ? modelGroups.map((group) => group.group) : model.available_groups || []),
+    [model.available_groups, modelGroups],
+  );
+  const activeGroup = selectedGroup || visibleGroups[0] || "";
+  const wallet = walletQuery.data?.wallet;
+  const canSend =
+    isAuthenticated &&
+    input.trim().length > 0 &&
+    !chatMutation.isPending &&
+    (visibleGroups.length > 0 || model.available_groups?.length === 0);
+
+  useEffect(() => {
+    const nextGroup = visibleGroups[0] || "";
+    setSelectedGroup((current) => {
+      if (!current || (visibleGroups.length > 0 && !visibleGroups.includes(current))) {
+        return nextGroup;
+      }
+
+      return current;
+    });
+  }, [visibleGroups]);
+
+  useEffect(() => {
+    setMessages([introMessage]);
+    setInput("");
+  }, [introMessage]);
+
+  const sendMessage = async () => {
+    const content = input.trim();
+    if (!content || !isAuthenticated) {
+      return;
+    }
+
+    const nextMessages: UserPortalPlaygroundMessage[] = [
+      ...messages.filter((message) => message.role !== "assistant" || message.content.trim()),
+      { role: "user", content },
+    ];
+    setMessages(nextMessages);
+    setInput("");
+
+    try {
+      const response = await chatMutation.mutateAsync({
+        group: activeGroup || undefined,
+        max_tokens: 1024,
+        messages: nextMessages.filter(
+          (message) => !isPlaygroundIntroMessage(message, model.model),
+        ),
+        model: model.model,
+        temperature: 0.7,
+      });
+      const assistantContent =
+        response.choices?.[0]?.message?.content ||
+        (isChinese ? "模型没有返回内容。" : "The model returned no content.");
+      setMessages((current) => [...current, { role: "assistant", content: assistantContent }]);
+    } catch (error) {
+      const errorMessage = getPlaygroundErrorMessage(error, isChinese);
+      setMessages((current) => [...current, { role: "assistant", content: errorMessage }]);
+      toast.error(errorMessage);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-[4px] border border-[#d8dce3] bg-white shadow-[rgba(15,23,42,0.04)_0px_8px_24px] dark:border-[#292b31] dark:bg-[#0d0e11] dark:shadow-none">
+      <div className="grid min-h-[520px] lg:grid-cols-[minmax(0,1fr)_246px]">
+        <div className="flex min-h-[520px] flex-col border-b border-[#e6e9ef] dark:border-[#24262b] lg:border-b-0 lg:border-r">
+          <div className="flex items-center justify-between border-b border-[#e6e9ef] px-4 py-3 dark:border-[#24262b]">
+            <div className="min-w-0">
+              <h2 className="truncate text-[24px] font-semibold leading-[1.25] text-[#18181b] dark:text-[#e4e5eb]">
+                {isChinese ? "模型操练场" : "Model Playground"}
+              </h2>
+              <p className="mt-1 truncate text-[14px] font-medium text-[#6b7280] dark:text-[#737985]">
+                {model.model}
+              </p>
+            </div>
+            <span className="ml-3 inline-flex h-[24px] shrink-0 items-center rounded-full border border-[#d8dce3] px-2 text-[14px] font-semibold text-[#5f6b7a] dark:border-[#292b31] dark:text-[#818792]">
+              {isChinese ? "扣余额" : "Wallet"}
+            </span>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {!isAuthenticated ? (
+              <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
+                <MessageSquare className="h-5 w-5 text-[#7b8492] dark:text-[#686e7a]" strokeWidth={1.8} />
+                <div className="mt-3 text-[24px] font-semibold text-[#18181b] dark:text-[#d3d5dc]">
+                  {isChinese ? "登录后开始对话" : "Sign in to chat"}
+                </div>
+                <p className="mt-2 max-w-[360px] text-[14px] leading-[1.6] text-[#5f6b7a] dark:text-[#707682]">
+                  {isChinese
+                    ? "操练场会使用你的账户余额结算本次模型调用。"
+                    : "Playground calls are charged against your wallet balance."}
+                </p>
+                <Button
+                  asChild
+                  className="mt-5 h-[32px] rounded-[5px] bg-[#1456f0] px-4 text-[14px] font-semibold text-white shadow-none hover:bg-[#0f49d4] active:scale-[0.98] dark:bg-[#5c5ce8] dark:hover:bg-[#6464f1]"
+                >
+                  <Link to={signUpTarget}>{isChinese ? "开始使用" : "Get started"}</Link>
+                </Button>
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <PlaygroundMessageBubble key={`${message.role}-${index}`} message={message} />
+              ))
+            )}
+            {chatMutation.isPending && (
+              <div className="flex justify-start">
+                <div className="rounded-[7px] border border-[#e6e9ef] bg-[#f8fafc] px-3 py-2 text-[14px] font-medium text-[#6b7280] dark:border-[#24262b] dark:bg-[#111217] dark:text-[#858b96]">
+                  {isChinese ? "模型正在生成..." : "Generating..."}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isAuthenticated && (
+            <div className="border-t border-[#e6e9ef] p-4 dark:border-[#24262b]">
+              <Textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={isChinese ? "输入一条消息..." : "Type a message..."}
+                className="min-h-[92px] resize-none rounded-[5px] border-[#d8dce3] bg-white text-[14px] font-medium leading-[1.5] text-[#18181b] shadow-none focus-visible:ring-[#1456f0] dark:border-[#292b31] dark:bg-[#0f1013] dark:text-[#d7d9e0]"
+              />
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  className="text-[14px] font-semibold text-[#6b7280] transition hover:text-[#18181b] active:scale-[0.98] dark:text-[#777c87] dark:hover:text-[#dfe1e7]"
+                  onClick={() =>
+                    setMessages([introMessage])
+                  }
+                >
+                  {isChinese ? "清空上下文" : "Clear context"}
+                </button>
+                <Button
+                  type="button"
+                  disabled={!canSend}
+                  className="h-[32px] w-[96px] rounded-[5px] bg-[#1456f0] px-0 text-[14px] font-semibold text-white shadow-none transition hover:bg-[#0f49d4] active:scale-[0.98] disabled:opacity-50 dark:bg-[#5c5ce8] dark:hover:bg-[#6464f1]"
+                  onClick={sendMessage}
+                >
+                  {isChinese ? "发送" : "Send"}
+                  <Send className="h-[12px] w-[12px]" strokeWidth={2.1} />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-4 bg-[#fbfcfe] p-4 dark:bg-[#0b0c0f]">
+          <PlaygroundSideMetric
+            label={isChinese ? "可用余额" : "Available"}
+            value={walletQuery.isLoading ? "-" : formatWalletAmount(wallet?.available_balance)}
+          />
+          <PlaygroundSideMetric
+            label={isChinese ? "冻结余额" : "Frozen"}
+            value={walletQuery.isLoading ? "-" : formatWalletAmount(wallet?.frozen_balance)}
+          />
+          <div>
+            <div className="text-[14px] font-semibold text-[#7b8492] dark:text-[#626773]">
+              {isChinese ? "分组" : "Group"}
+            </div>
+            <select
+              value={activeGroup}
+              disabled={!isAuthenticated || visibleGroups.length <= 1}
+              onChange={(event) => setSelectedGroup(event.target.value)}
+              className="mt-2 h-[34px] w-full rounded-[5px] border border-[#d8dce3] bg-white px-2 text-[14px] font-semibold text-[#18181b] outline-none transition focus:border-[#1456f0] disabled:opacity-60 dark:border-[#292b31] dark:bg-[#0f1013] dark:text-[#d7d9e0]"
+            >
+              {visibleGroups.length ? (
+                visibleGroups.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))
+              ) : (
+                <option value="">{isChinese ? "自动选择" : "Auto select"}</option>
+              )}
+            </select>
+          </div>
+          <div className="rounded-[5px] border border-[#e6e9ef] bg-white p-3 dark:border-[#24262b] dark:bg-[#0f1013]">
+            <div className="text-[14px] font-semibold text-[#18181b] dark:text-[#d7d9e0]">
+              {isChinese ? "本次调用" : "Request"}
+            </div>
+            <p className="mt-2 text-[14px] font-medium leading-[1.55] text-[#6b7280] dark:text-[#777c87]">
+              {isChinese
+                ? "调用会经过当前账户钱包预占，并在模型返回后按实际用量结算。"
+                : "Calls reserve wallet balance first and settle after the model response returns."}
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function PlaygroundMessageBubble({ message }: { message: UserPortalPlaygroundMessage }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "max-w-[78%] whitespace-pre-wrap rounded-[7px] px-3 py-2 text-[14px] font-medium leading-[1.55]",
+          isUser
+            ? "bg-[#1456f0] text-white dark:bg-[#5c5ce8]"
+            : "border border-[#e6e9ef] bg-[#f8fafc] text-[#4b5563] dark:border-[#24262b] dark:bg-[#111217] dark:text-[#b8bdc8]",
+        )}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}
+
+function PlaygroundSideMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[14px] font-semibold text-[#7b8492] dark:text-[#626773]">{label}</div>
+      <div className="mt-1 font-mono text-[24px] font-semibold leading-[1.15] text-[#18181b] dark:text-[#d7d9e0]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function ProviderResultsCard({
   accessGroups,
   isChinese,
@@ -896,20 +1198,26 @@ function ProviderResultRow({
         throughput: "Throughput",
         uptime: "Uptime",
         latency: "Latency",
-      };
+  };
   const unit = isChinese ? "/M 代币" : "/M tokens";
   const displayGroupName = groupName ? `${groupName} 分组` : "";
+  const multiplierLabel = formatGroupMultiplier(
+    model.available_group_multipliers?.[groupName],
+  );
 
   return (
     <article className="min-h-[138px] w-full min-w-0 px-[12px] pb-[14px] pt-[14px]">
       <div className="flex items-center justify-between gap-6">
-        <div className="flex min-h-[35px] min-w-0 items-center">
+        <div className="flex min-h-[35px] min-w-0 flex-1 items-center gap-[10px]">
           <button
             type="button"
-            className="block truncate text-left text-[14px] font-semibold leading-none text-[#4b5563] underline decoration-[#9aa3b2] underline-offset-[2px] transition hover:text-[#18181b] dark:text-[#858b97] dark:decoration-[#686d77] dark:hover:text-[#c9ccd5]"
+            className="block min-w-0 max-w-[260px] truncate text-left text-[14px] font-semibold leading-none text-[#4b5563] underline decoration-[#9aa3b2] underline-offset-[2px] transition hover:text-[#18181b] dark:text-[#858b97] dark:decoration-[#686d77] dark:hover:text-[#c9ccd5]"
           >
             {displayGroupName}
           </button>
+          <span className="inline-flex h-[26px] shrink-0 items-center rounded-full border border-[#1456f0]/25 bg-[#1456f0]/10 px-[9px] font-mono text-[14px] font-semibold leading-none text-[#1456f0] shadow-[rgba(20,86,240,0.12)_0px_4px_12px] dark:border-[#5c5ce8]/35 dark:bg-[#5c5ce8]/16 dark:text-[#aeb2ff] dark:shadow-none">
+            {isChinese ? "倍率" : "Rate"} {multiplierLabel}
+          </span>
         </div>
 
         <div className="mr-4 grid w-[215px] grid-cols-[55px_76px_74px] items-center gap-2 whitespace-nowrap text-right">

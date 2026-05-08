@@ -6,6 +6,7 @@ import {
     ChevronLeft,
     ChevronRight,
     CreditCard,
+    Home,
     KeyRound,
     LogOut,
     Menu,
@@ -38,6 +39,7 @@ export function UserPortalLayout() {
     const logout = useUserPortalAuthStore((state) => state.logout)
     const user = useUserPortalAuthStore((state) => state.user)
     const portalNavItems: PortalNavItem[] = [
+        { label: t('portal.nav.home'), href: ROUTES.HOME, icon: Home },
         { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
@@ -46,7 +48,9 @@ export function UserPortalLayout() {
 
     const currentPath = location.pathname
     const account = user?.email || user?.phone || `#${user?.id ?? ''}`
-    const activeNavItem = portalNavItems.find((item) => item.href === currentPath) || portalNavItems[0]
+    const activeNavItem = portalNavItems.find((item) => item.href === currentPath)
+        || portalNavItems.find((item) => item.href === ROUTES.USER_DASHBOARD)
+        || portalNavItems[0]
 
     const handleLogout = () => {
         logout()

@@ -5,6 +5,7 @@ export interface PublicModel {
   provider: string;
   capabilities: string[];
   available_groups: string[];
+  available_group_multipliers?: Record<string, number>;
   available_sets: string[];
   context_length?: number;
   max_input_tokens?: number;

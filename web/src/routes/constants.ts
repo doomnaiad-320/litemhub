@@ -1,6 +1,7 @@
 export const BASE_PATH = '/' as const
 
 export const ROUTES = {
+    HOME: "/",
     MONITOR: "/monitor",
     GROUP: "/group",
     CONSUMPTION_RANKING: "/consumption-ranking",

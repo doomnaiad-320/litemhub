@@ -9,6 +9,8 @@ import type {
     UserPortalKeysResponse,
     UserPortalLoginRequest,
     UserPortalModelLogsResponse,
+    UserPortalPlaygroundChatRequest,
+    UserPortalPlaygroundChatResponse,
     UserPortalRechargeRequest,
     UserPortalRechargeResponse,
     UserPortalRegisterRequest,
@@ -21,6 +23,7 @@ import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 
 const USER_API_BASE_URL = '/user-api'
 const USER_API_TIMEOUT = Number(ENV.API_TIMEOUT || 10000)
+const USER_PLAYGROUND_TIMEOUT = Math.max(USER_API_TIMEOUT, 60000)
 
 const userApiClient = axios.create({
     baseURL: USER_API_BASE_URL,
@@ -61,7 +64,8 @@ userApiClient.interceptors.response.use(
         }
 
         if (errorData) {
-            throw new ApiError(errorData.message || 'Request failed', status || 500)
+            const relayMessage = (errorData as unknown as { error?: { message?: string } }).error?.message
+            throw new ApiError(errorData.message || relayMessage || 'Request failed', status || 500)
         }
 
         throw new ApiError(error.message || 'Network request failed', status || 500)
@@ -76,6 +80,14 @@ const get = async <T>(url: string, params?: Record<string, string | number>) => 
 const post = async <T>(url: string, data?: unknown) => {
     const response: AxiosResponse<APIResponse<T>> = await userApiClient.post(url, data)
     return response.data.data as T
+}
+
+const postRaw = async <T>(url: string, data?: unknown, headers?: Record<string, string>) => {
+    const response: AxiosResponse<T> = await userApiClient.post(url, data, {
+        headers,
+        timeout: USER_PLAYGROUND_TIMEOUT,
+    })
+    return response.data
 }
 
 const put = async <T>(url: string, data?: unknown) => {
@@ -125,6 +137,18 @@ export const userPortalApi = {
 
     getModelLogDetail: async (logId: number) => {
         return get<LogRequestDetail>(`logs/detail/${logId}`)
+    },
+
+    playgroundChat: async (data: UserPortalPlaygroundChatRequest) => {
+        const { group, ...body } = data
+        return postRaw<UserPortalPlaygroundChatResponse>(
+            'playground/chat',
+            {
+                ...body,
+                stream: false,
+            },
+            group ? { 'X-Playground-Group': group } : undefined,
+        )
     },
 
     getGroups: async () => {

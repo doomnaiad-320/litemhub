@@ -118,3 +118,37 @@ export interface UserPortalCreateKeyRequest {
 export interface UserPortalUpdateKeyRequest {
     group: string
 }
+
+export interface UserPortalPlaygroundMessage {
+    role: 'system' | 'user' | 'assistant'
+    content: string
+}
+
+export interface UserPortalPlaygroundChatRequest {
+    model: string
+    messages: UserPortalPlaygroundMessage[]
+    group?: string
+    max_tokens?: number
+    temperature?: number
+}
+
+export interface UserPortalPlaygroundChatChoice {
+    index: number
+    message?: UserPortalPlaygroundMessage
+    finish_reason?: string
+}
+
+export interface UserPortalPlaygroundChatUsage {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+}
+
+export interface UserPortalPlaygroundChatResponse {
+    id?: string
+    object?: string
+    created?: number
+    model?: string
+    choices?: UserPortalPlaygroundChatChoice[]
+    usage?: UserPortalPlaygroundChatUsage
+}

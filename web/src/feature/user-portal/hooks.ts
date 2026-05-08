@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type {
     UserPortalCreateKeyRequest,
     UserPortalLoginRequest,
+    UserPortalPlaygroundChatRequest,
     UserPortalRechargeRequest,
     UserPortalRegisterRequest,
     UserPortalUpdateKeyRequest,
@@ -36,13 +37,7 @@ export const useUserPortalRegister = () => {
 
 export const useUserPortalLogin = () => {
     const navigate = useNavigate()
-    const location = useLocation()
     const login = useUserPortalAuthStore((state) => state.login)
-
-    const fromPath = (location.state as { from?: { pathname: string } })?.from?.pathname
-    const from = fromPath?.startsWith(ROUTES.USER_DASHBOARD)
-        ? fromPath
-        : ROUTES.USER_DASHBOARD
 
     return useMutation({
         mutationFn: (data: UserPortalLoginRequest) => userPortalApi.login(data),
@@ -53,7 +48,7 @@ export const useUserPortalLogin = () => {
                 user: response.user,
             })
             toast.success('登录成功')
-            navigate(from, { replace: true, state: null })
+            navigate(ROUTES.HOME, { replace: true, state: null })
         },
         onError: (error: unknown) => {
             const message = error instanceof Error ? error.message : '登录失败'
@@ -129,6 +124,18 @@ export const useUserPortalKeys = (page: number, perPage: number, group?: string,
         queryKey: ['userPortalKeys', page, perPage, group],
         queryFn: () => userPortalApi.getKeys(page, perPage, group),
         enabled,
+    })
+}
+
+export const useUserPortalPlaygroundChat = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (data: UserPortalPlaygroundChatRequest) => userPortalApi.playgroundChat(data),
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['userPortalWallet'] })
+            queryClient.invalidateQueries({ queryKey: ['userPortalModelLogs'] })
+        },
     })
 }
 
