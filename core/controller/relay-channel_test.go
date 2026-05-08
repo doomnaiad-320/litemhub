@@ -342,6 +342,191 @@ func TestGetChannelWithFallbackHandlesNilInputs(t *testing.T) {
 	assert.Equal(t, 1, channel.ID)
 }
 
+func TestGetChannelWithFallbackRequiresAvailableSet(t *testing.T) {
+	t.Parallel()
+
+	mc := &model.ModelCaches{
+		EnabledModel2ChannelsBySet: map[string]map[string][]*model.Channel{
+			"provider-a": {
+				"claude-opus-4-7-thinking": {{
+					ID:       1,
+					Type:     model.ChannelTypeOpenAI,
+					Status:   model.ChannelStatusEnabled,
+					Priority: 10,
+				}},
+			},
+			"provider-b": {
+				"claude-opus-4-7-thinking": {{
+					ID:       2,
+					Type:     model.ChannelTypeOpenAI,
+					Status:   model.ChannelStatusEnabled,
+					Priority: 10,
+				}},
+			},
+		},
+	}
+
+	channel, migratedChannels, err := getChannelWithFallback(
+		mc,
+		nil,
+		"claude-opus-4-7-thinking",
+		mode.ChatCompletions,
+		nil,
+		nil,
+		nil,
+	)
+	require.ErrorIs(t, err, ErrChannelsNotFound)
+	assert.Nil(t, channel)
+	assert.Nil(t, migratedChannels)
+}
+
+func TestGetInitialChannelRespectsGroupAvailableSetForDuplicateModel(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	channelA := &model.Channel{
+		ID:       1,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-a"},
+	}
+	channelB := &model.Channel{
+		ID:       2,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-b"},
+	}
+	mc := &model.ModelCaches{
+		EnabledModel2ChannelsBySet: map[string]map[string][]*model.Channel{
+			"provider-a": {
+				"claude-opus-4-7-thinking": {channelA},
+			},
+			"provider-b": {
+				"claude-opus-4-7-thinking": {channelB},
+			},
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	c.Set(middleware.Group, model.GroupCache{
+		ID:            "provider-b",
+		Status:        model.GroupStatusEnabled,
+		AvailableSets: []string{"provider-b"},
+	})
+	c.Set(middleware.ModelCaches, mc)
+
+	initialChannel, err := getInitialChannel(
+		c,
+		"claude-opus-4-7-thinking",
+		mode.ChatCompletions,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, initialChannel)
+	require.NotNil(t, initialChannel.channel)
+	assert.Equal(t, 2, initialChannel.channel.ID)
+}
+
+func TestGetInitialChannelFallsBackToGroupIDForLegacyEmptyAvailableSets(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	channelA := &model.Channel{
+		ID:       1,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-a"},
+	}
+	channelB := &model.Channel{
+		ID:       2,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-b"},
+	}
+	mc := &model.ModelCaches{
+		EnabledModel2ChannelsBySet: map[string]map[string][]*model.Channel{
+			"provider-a": {
+				"claude-opus-4-7-thinking": {channelA},
+			},
+			"provider-b": {
+				"claude-opus-4-7-thinking": {channelB},
+			},
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	c.Set(middleware.Group, model.GroupCache{
+		ID:     "provider-b",
+		Status: model.GroupStatusEnabled,
+	})
+	c.Set(middleware.ModelCaches, mc)
+
+	initialChannel, err := getInitialChannel(
+		c,
+		"claude-opus-4-7-thinking",
+		mode.ChatCompletions,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, initialChannel)
+	require.NotNil(t, initialChannel.channel)
+	assert.Equal(t, 2, initialChannel.channel.ID)
+}
+
+func TestGetWebSearchChannelRespectsAvailableSet(t *testing.T) {
+	t.Parallel()
+
+	channelA := &model.Channel{
+		ID:       1,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-a"},
+	}
+	channelB := &model.Channel{
+		ID:       2,
+		Type:     model.ChannelTypeOpenAI,
+		Status:   model.ChannelStatusEnabled,
+		Priority: 10,
+		Sets:     []string{"provider-b"},
+	}
+	mc := &model.ModelCaches{
+		EnabledModel2ChannelsBySet: map[string]map[string][]*model.Channel{
+			"provider-a": {
+				"claude-opus-4-7-thinking": {channelA},
+			},
+			"provider-b": {
+				"claude-opus-4-7-thinking": {channelB},
+			},
+		},
+	}
+
+	channel, err := getWebSearchChannel(
+		context.Background(),
+		mc,
+		[]string{"provider-b"},
+		"claude-opus-4-7-thinking",
+	)
+	require.NoError(t, err)
+	require.NotNil(t, channel)
+	assert.Equal(t, 2, channel.ID)
+
+	channel, err = getWebSearchChannel(
+		context.Background(),
+		mc,
+		[]string{"provider-c"},
+		"claude-opus-4-7-thinking",
+	)
+	require.ErrorIs(t, err, ErrChannelsNotFound)
+	assert.Nil(t, channel)
+}
+
 func TestGetRetryChannelHandlesNilInputs(t *testing.T) {
 	t.Parallel()
 

@@ -115,7 +115,12 @@ func (s *storeImpl) SaveIfNotExistStore(store adaptor.StoreCache) error {
 	return err
 }
 
-func wrapPlugin(ctx context.Context, mc *model.ModelCaches, a adaptor.Adaptor) adaptor.Adaptor {
+func wrapPlugin(
+	ctx context.Context,
+	mc *model.ModelCaches,
+	availableSet []string,
+	a adaptor.Adaptor,
+) adaptor.Adaptor {
 	return plugin.WrapperAdaptor(a,
 		monitorplugin.NewGroupMonitorPlugin(),
 		cache.NewCachePlugin(common.RDB),
@@ -123,7 +128,7 @@ func wrapPlugin(ctx context.Context, mc *model.ModelCaches, a adaptor.Adaptor) a
 		streamfake.NewStreamFakePlugin(),
 		timeout.NewTimeoutPlugin(),
 		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
-			return getWebSearchChannel(ctx, mc, modelName)
+			return getWebSearchChannel(ctx, mc, availableSet, modelName)
 		}),
 		thinksplit.NewThinkPlugin(),
 		monitorplugin.NewChannelMonitorPlugin(),
@@ -146,7 +151,7 @@ func relayHandler(c *gin.Context, meta *meta.Meta, mc *model.ModelCaches) *contr
 		}
 	}
 
-	adaptor = wrapPlugin(c.Request.Context(), mc, adaptor)
+	adaptor = wrapPlugin(c.Request.Context(), mc, meta.Group.GetAvailableSets(), adaptor)
 
 	return controller.Handle(adaptor, c, meta, adaptorStore, buildBodyDetailOption(meta))
 }

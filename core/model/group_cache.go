@@ -41,6 +41,10 @@ type GroupCache struct {
 
 func (g *GroupCache) GetAvailableSets() []string {
 	if len(g.AvailableSets) == 0 {
+		if g.ID != "" {
+			return []string{g.ID}
+		}
+
 		return []string{ChannelDefaultSet}
 	}
 	return g.AvailableSets

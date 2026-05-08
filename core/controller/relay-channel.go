@@ -180,37 +180,24 @@ func getAvailableChannels(
 	modelName string,
 	mode mode.Mode,
 ) ([]*model.Channel, error) {
+	if len(availableSet) == 0 {
+		return nil, ErrChannelsNotFound
+	}
+
 	channelMap := make(map[int]*model.Channel)
-	if len(availableSet) != 0 {
-		for _, set := range availableSet {
-			channels := mc.EnabledModel2ChannelsBySet[set][modelName]
-			for _, channel := range channels {
-				a, ok := adaptors.GetAdaptor(channel.Type)
-				if !ok {
-					continue
-				}
-
-				if !adaptorSupportsMode(a, mc, channel, modelName, mode) {
-					continue
-				}
-
-				channelMap[channel.ID] = channel
+	for _, set := range availableSet {
+		channels := mc.EnabledModel2ChannelsBySet[set][modelName]
+		for _, channel := range channels {
+			a, ok := adaptors.GetAdaptor(channel.Type)
+			if !ok {
+				continue
 			}
-		}
-	} else {
-		for _, sets := range mc.EnabledModel2ChannelsBySet {
-			for _, channel := range sets[modelName] {
-				a, ok := adaptors.GetAdaptor(channel.Type)
-				if !ok {
-					continue
-				}
 
-				if !adaptorSupportsMode(a, mc, channel, modelName, mode) {
-					continue
-				}
-
-				channelMap[channel.ID] = channel
+			if !adaptorSupportsMode(a, mc, channel, modelName, mode) {
+				continue
 			}
+
+			channelMap[channel.ID] = channel
 		}
 	}
 
@@ -615,6 +602,7 @@ func getPreferChannelIDs(c *gin.Context, modelName string, m mode.Mode) []int {
 func getWebSearchChannel(
 	ctx context.Context,
 	mc *model.ModelCaches,
+	availableSet []string,
 	modelName string,
 ) (*model.Channel, error) {
 	ignoreChannelIDs, _ := monitor.GetBannedChannelsMapWithModel(ctx, modelName)
@@ -622,7 +610,7 @@ func getWebSearchChannel(
 
 	channel, _, err := getChannelWithFallback(
 		mc,
-		nil,
+		availableSet,
 		modelName,
 		mode.ChatCompletions,
 		nil,

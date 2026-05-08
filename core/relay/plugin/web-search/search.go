@@ -480,6 +480,12 @@ func (p *WebSearch) generateSearchContexts(
 			Type:  mode.ChatCompletions,
 		},
 		meta.WithRequestID("web-search-rewrite"),
+		meta.WithGroup(m.Group),
+		meta.WithToken(m.Token),
+		meta.WithRequestAt(m.RequestAt),
+		meta.WithRequestServiceTier(m.RequestServiceTier),
+		meta.WithPromptCacheKey(m.PromptCacheKey),
+		meta.WithUser(m.User),
 	)
 
 	// Set appropriate channel
