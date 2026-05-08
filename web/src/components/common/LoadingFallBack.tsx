@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { motion } from "motion/react"
 
 // Loading component with translations
 export const LoadingFallback = () => {
@@ -62,36 +61,25 @@ export const LoadingFallback = () => {
             </div>
 
             <div className="relative z-10 flex flex-col items-center space-y-8">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-white text-2xl font-medium"
-                >
+                <div className="text-white text-2xl font-medium animate-in fade-in slide-in-from-top-4 duration-500">
                     Loading...
-                </motion.div>
+                </div>
 
                 <div className="w-64 h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                    <motion.div
+                    <div
                         className="h-full rounded-full"
                         style={{
                             background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)",
                             width: `${progress}%`,
                             boxShadow: "0 0 15px rgba(255, 255, 255, 0.5)",
+                            transition: "width 300ms ease",
                         }}
-                        initial={{ width: "0%" }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.3 }}
                     />
                 </div>
 
-                <motion.div
-                    className="text-white/90 text-sm font-medium"
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                >
+                <div className="text-white/90 text-sm font-medium animate-pulse">
                     {progress}% Complete
-                </motion.div>
+                </div>
             </div>
         </div>
     )

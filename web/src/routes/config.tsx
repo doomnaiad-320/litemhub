@@ -2,38 +2,49 @@ import { type RouteObject } from "react-router"
 import { Navigate } from "react-router"
 import { Suspense, lazy } from "react"
 import { ROUTES } from "./constants"
-import { ProtectedRoute } from "@/feature/auth/components/ProtectedRoute"
-
-//page
-import ModelPage from "@/pages/model/page"
-import ChannelPage from "@/pages/channel/page"
-import TokenPage from "@/pages/token/page"
-import MonitorPage from "@/pages/monitor/page"
-import LogPage from "@/pages/log/page"
-import MCPPage from "@/pages/mcp/page"
-import GroupPage from "@/pages/group/page"
-import ConsumptionRankingPage from "@/pages/consumption-ranking/page"
-import AppUserPage from "@/pages/app-user/page"
-import BillingPage from "@/pages/billing/page"
-import UserPortalLandingPage from "@/pages/user-portal/landing"
-import PublicModelsPage from "@/pages/public-models/page"
-import PublicModelDetailPage from "@/pages/public-models/detail"
-import UserPortalDashboardPage from "@/pages/user-portal/dashboard"
-import UserPortalModelsPage from "@/pages/user-portal/models"
-import UserPortalGroupsPage from "@/pages/user-portal/groups"
-import UserPortalKeysPage from "@/pages/user-portal/keys"
-import UserPortalLogsPage from "@/pages/user-portal/logs"
-import { UserPortalProtectedRoute } from "@/feature/user-portal/components/UserPortalProtectedRoute"
-import { UserPortalLayout } from "@/components/layout/UserPortalLayout"
-
-// import layout component directly
-import { RootLayout } from "@/components/layout/RootLayOut"
 import { LoadingFallback } from "@/components/common/LoadingFallBack"
 
-// lazy load login page
+const ProtectedRoute = lazy(() =>
+    import("@/feature/auth/components/ProtectedRoute").then((module) => ({
+        default: module.ProtectedRoute,
+    })),
+)
+const UserPortalProtectedRoute = lazy(() =>
+    import("@/feature/user-portal/components/UserPortalProtectedRoute").then((module) => ({
+        default: module.UserPortalProtectedRoute,
+    })),
+)
+const RootLayout = lazy(() =>
+    import("@/components/layout/RootLayOut").then((module) => ({
+        default: module.RootLayout,
+    })),
+)
+const UserPortalLayout = lazy(() =>
+    import("@/components/layout/UserPortalLayout").then((module) => ({
+        default: module.UserPortalLayout,
+    })),
+)
+const UserPortalLandingPage = lazy(() => import("@/pages/user-portal/landing"))
+const PublicModelsPage = lazy(() => import("@/pages/public-models/page"))
+const PublicModelDetailPage = lazy(() => import("@/pages/public-models/detail"))
 const LoginPage = lazy(() => import("@/pages/auth/login"))
 const UserPortalLoginPage = lazy(() => import("@/pages/user-portal/login"))
 const UserPortalRegisterPage = lazy(() => import("@/pages/user-portal/register"))
+const MonitorPage = lazy(() => import("@/pages/monitor/page"))
+const GroupPage = lazy(() => import("@/pages/group/page"))
+const ConsumptionRankingPage = lazy(() => import("@/pages/consumption-ranking/page"))
+const AppUserPage = lazy(() => import("@/pages/app-user/page"))
+const BillingPage = lazy(() => import("@/pages/billing/page"))
+const TokenPage = lazy(() => import("@/pages/token/page"))
+const ChannelPage = lazy(() => import("@/pages/channel/page"))
+const ModelPage = lazy(() => import("@/pages/model/page"))
+const LogPage = lazy(() => import("@/pages/log/page"))
+const MCPPage = lazy(() => import("@/pages/mcp/page"))
+const UserPortalDashboardPage = lazy(() => import("@/pages/user-portal/dashboard"))
+const UserPortalModelsPage = lazy(() => import("@/pages/user-portal/models"))
+const UserPortalGroupsPage = lazy(() => import("@/pages/user-portal/groups"))
+const UserPortalKeysPage = lazy(() => import("@/pages/user-portal/keys"))
+const UserPortalLogsPage = lazy(() => import("@/pages/user-portal/logs"))
 
 // lazy load component wrapper
 const lazyLoad = (Component: React.ComponentType) => (
@@ -49,9 +60,9 @@ export function useRoutes(): RouteObject[] {
 
     // auth routes
     const authRoutes: RouteObject[] = [
-        { path: "/", element: <UserPortalLandingPage /> },
-        { path: ROUTES.PUBLIC_MODELS, element: <PublicModelsPage /> },
-        { path: ROUTES.PUBLIC_MODEL_DETAIL, element: <PublicModelDetailPage /> },
+        { path: "/", element: lazyLoad(UserPortalLandingPage) },
+        { path: ROUTES.PUBLIC_MODELS, element: lazyLoad(PublicModelsPage) },
+        { path: ROUTES.PUBLIC_MODEL_DETAIL, element: lazyLoad(PublicModelDetailPage) },
         { path: ROUTES.ADMIN_LOGIN, element: lazyLoad(LoginPage) },
         { path: ROUTES.USER_LOGIN, element: lazyLoad(UserPortalLoginPage) },
         { path: ROUTES.USER_REGISTER, element: lazyLoad(UserPortalRegisterPage) },
@@ -59,29 +70,29 @@ export function useRoutes(): RouteObject[] {
 
     // app routes
     const appRoutes: RouteObject = {
-        element: <ProtectedRoute />,
+        element: lazyLoad(ProtectedRoute),
         children: [{
-            element: <RootLayout />,
+            element: lazyLoad(RootLayout),
             children: [
                 {
                     path: ROUTES.MONITOR,
-                    element: <MonitorPage />,
+                    element: lazyLoad(MonitorPage),
                 },
                 {
                     path: ROUTES.GROUP,
-                    element: <GroupPage />,
+                    element: lazyLoad(GroupPage),
                 },
                 {
                     path: ROUTES.CONSUMPTION_RANKING,
-                    element: <ConsumptionRankingPage />,
+                    element: lazyLoad(ConsumptionRankingPage),
                 },
                 {
                     path: ROUTES.APP_USERS,
-                    element: <AppUserPage />,
+                    element: lazyLoad(AppUserPage),
                 },
                 {
                     path: ROUTES.BILLING,
-                    element: <BillingPage />,
+                    element: lazyLoad(BillingPage),
                 },
                 {
                     path: ROUTES.LEGACY_GROUP_RANKING,
@@ -89,52 +100,52 @@ export function useRoutes(): RouteObject[] {
                 },
                 {
                     path: ROUTES.KEY,
-                    element: <TokenPage />,
+                    element: lazyLoad(TokenPage),
                 },
                 {
                     path: ROUTES.CHANNEL,
-                    element: <ChannelPage />,
+                    element: lazyLoad(ChannelPage),
                 },
                 {
                     path: ROUTES.MODEL,
-                    element: <ModelPage />,
+                    element: lazyLoad(ModelPage),
                 },
                 {
                     path: ROUTES.LOG,
-                    element: <LogPage />,
+                    element: lazyLoad(LogPage),
                 },
                 {
                     path: ROUTES.MCP,
-                    element: <MCPPage />,
+                    element: lazyLoad(MCPPage),
                 }
             ]
         }]
     }
 
     const portalRoutes: RouteObject = {
-        element: <UserPortalProtectedRoute />,
+        element: lazyLoad(UserPortalProtectedRoute),
         children: [{
-            element: <UserPortalLayout />,
+            element: lazyLoad(UserPortalLayout),
             children: [
                 {
                     path: ROUTES.USER_DASHBOARD,
-                    element: <UserPortalDashboardPage />,
+                    element: lazyLoad(UserPortalDashboardPage),
                 },
                 {
                     path: ROUTES.USER_MODELS,
-                    element: <UserPortalModelsPage />,
+                    element: lazyLoad(UserPortalModelsPage),
                 },
                 {
                     path: ROUTES.USER_GROUPS,
-                    element: <UserPortalGroupsPage />,
+                    element: lazyLoad(UserPortalGroupsPage),
                 },
                 {
                     path: ROUTES.USER_KEYS,
-                    element: <UserPortalKeysPage />,
+                    element: lazyLoad(UserPortalKeysPage),
                 },
                 {
                     path: ROUTES.USER_LOGS,
-                    element: <UserPortalLogsPage />,
+                    element: lazyLoad(UserPortalLogsPage),
                 },
             ],
         }],

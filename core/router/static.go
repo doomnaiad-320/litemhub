@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/public"
@@ -34,6 +35,19 @@ func SetStaticFileRouter(router *gin.Engine) {
 			template.New("").Funcs(router.FuncMap).ParseFS(public.Templates, "templates/*"),
 		),
 	)
+
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedExtensions([]string{
+		".avif",
+		".br",
+		".gz",
+		".ico",
+		".jpg",
+		".jpeg",
+		".png",
+		".webp",
+		".woff",
+		".woff2",
+	})))
 
 	if config.DisableWeb {
 		router.GET("/", renderWebRootRedirectPage)
