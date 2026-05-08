@@ -60,12 +60,9 @@ type AppRechargeLogResponse struct {
 	UpdatedAt  int64   `json:"updated_at"`
 }
 
-type RechargeAppUserBalanceRequest struct {
-	Amount     float64 `json:"amount"`
-	Channel    string  `json:"channel"`
-	TradeNo    string  `json:"trade_no"`
-	Remark     string  `json:"remark"`
-	RawPayload string  `json:"raw_payload"`
+type AdjustAppUserWalletBalanceRequest struct {
+	Amount float64 `json:"amount"`
+	Remark string  `json:"remark"`
 }
 
 type CreateAppUserRequest struct {
@@ -643,7 +640,7 @@ func GetAppUserWalletLogs(c *gin.Context) {
 		page,
 		perPage,
 		order,
-		[]string{model.AppWalletLogTypeRecharge},
+		[]string{model.AppWalletLogTypeRecharge, model.AppWalletLogTypeAdjust},
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -656,32 +653,30 @@ func GetAppUserWalletLogs(c *gin.Context) {
 	})
 }
 
-func RechargeAppUserBalance(c *gin.Context) {
+func AdjustAppUserWalletBalance(c *gin.Context) {
 	userID, ok := parseAppUserID(c)
 	if !ok {
 		return
 	}
 
-	req := RechargeAppUserBalanceRequest{}
+	req := AdjustAppUserWalletBalanceRequest{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
 
-	wallet, rechargeLog, err := model.RechargeAppUserBalance(model.AppUserRechargeParams{
-		UserID:     userID,
-		Amount:     req.Amount,
-		Channel:    req.Channel,
-		TradeNo:    req.TradeNo,
-		Remark:     req.Remark,
-		RawPayload: req.RawPayload,
+	wallet, walletLog, err := model.AdjustAppUserWalletBalance(model.AppUserWalletAdjustParams{
+		UserID: userID,
+		Amount: req.Amount,
+		Remark: req.Remark,
 	})
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			middleware.ErrorResponse(c, http.StatusNotFound, "user not found")
-		case errors.Is(err, model.ErrAppRechargeTradeNoExists):
-			middleware.ErrorResponse(c, http.StatusConflict, err.Error())
+		case errors.Is(err, model.ErrAppWalletInsufficientBalance),
+			errors.Is(err, model.ErrAppWalletAdjustmentAmountInvalid):
+			middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		default:
 			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		}
@@ -696,8 +691,8 @@ func RechargeAppUserBalance(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, gin.H{
-		"wallet":       buildAppWalletResponse(wallet, historicalConsumed),
-		"recharge_log": rechargeLog,
+		"wallet":     buildAppWalletResponse(wallet, historicalConsumed),
+		"wallet_log": buildAppWalletLogResponse(walletLog),
 	})
 }
 

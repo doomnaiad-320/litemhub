@@ -1204,7 +1204,7 @@
     "edit": "编辑",
     "view": "查看详情",
     "refresh": "刷新",
-    "recharge": "充值",
+    "adjustBalance": "调整余额",
     "resetPassword": "重置密码",
     "groupPriceMultiplier": "分组倍率",
     "delete": "删除用户",
@@ -1233,19 +1233,16 @@
       "emailInvalid": "请输入合法的邮箱地址",
       "passwordMin": "密码至少 6 位"
     },
-    "rechargeDialog": {
-      "title": "钱包充值",
-      "description": "为 {{account}} 增加钱包余额，并记录一条充值流水。",
-      "amount": "充值金额",
-      "channel": "充值渠道",
-      "channelPlaceholder": "manual",
-      "tradeNo": "交易单号",
-      "tradeNoPlaceholder": "可留空，系统会自动生成",
+    "adjustDialog": {
+      "title": "调整余额",
+      "description": "为 {{account}} 增加或扣减可用余额，并记录一条调整流水。",
+      "currentAvailableBalance": "当前可用余额",
+      "amount": "调整金额",
+      "amountHint": "输入正数增加余额，输入负数扣减余额；扣减后可用余额不能小于 0。",
+      "amountInvalid": "请输入非 0 的有效金额",
       "remark": "备注",
-      "remarkPlaceholder": "例如：线下转账、测试充值、人工补单",
-      "rawPayload": "原始回调内容",
-      "rawPayloadPlaceholder": "可选，用于留存支付回调或人工记录",
-      "submitting": "充值中..."
+      "remarkPlaceholder": "例如：人工扣减、退款修正、活动赠送、异常订单处理",
+      "submitting": "调整中..."
     },
     "rechargeStats": {
       "badge": "充值运营",
@@ -1363,6 +1360,7 @@
     },
     "nav": {
       "console": "用户控制台",
+      "home": "首页",
       "models": "模型",
       "wallet": "钱包",
       "keys": "Key",

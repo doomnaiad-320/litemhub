@@ -1,5 +1,7 @@
 import { del, get, post, put } from './index'
 import type {
+    AdjustAppUserWalletBalanceRequest,
+    AdjustAppUserWalletBalanceResponse,
     AppUserDetailResponse,
     AppRechargeLogsResponse,
     AppRechargeStatsResponse,
@@ -8,8 +10,6 @@ import type {
     AppUserWalletResponse,
     AppUsersResponse,
     CreateAppUserRequest,
-    RechargeAppUserBalanceRequest,
-    RechargeAppUserBalanceResponse,
     ResetAppUserPasswordRequest,
     UpdateAppUserGroupPriceMultiplierRequest,
     UpdateAppUserRequest,
@@ -142,11 +142,11 @@ export const appUserApi = {
         return get<AppUserWalletLogsResponse>(`app_users/${id}/wallet_logs`, { params })
     },
 
-    rechargeAppUserBalance: async (
+    adjustAppUserWalletBalance: async (
         id: number,
-        data: RechargeAppUserBalanceRequest,
-    ): Promise<RechargeAppUserBalanceResponse> => {
-        return post<RechargeAppUserBalanceResponse>(`app_users/${id}/recharge`, data)
+        data: AdjustAppUserWalletBalanceRequest,
+    ): Promise<AdjustAppUserWalletBalanceResponse> => {
+        return post<AdjustAppUserWalletBalanceResponse>(`app_users/${id}/wallet/adjust`, data)
     },
 
     getAppUserGroupPriceMultipliers: async (

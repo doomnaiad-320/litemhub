@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { appUserApi } from '@/api/app-user'
 import type {
+    AdjustAppUserWalletBalanceRequest,
     CreateAppUserRequest,
-    RechargeAppUserBalanceRequest,
     ResetAppUserPasswordRequest,
     UpdateAppUserGroupPriceMultiplierRequest,
     UpdateAppUserRequest,
@@ -17,6 +17,7 @@ const invalidateAppUserQueries = (queryClient: ReturnType<typeof useQueryClient>
     if (userId) {
         queryClient.invalidateQueries({ queryKey: ['appUser', userId] })
         queryClient.invalidateQueries({ queryKey: ['appUserWallet', userId] })
+        queryClient.invalidateQueries({ queryKey: ['appUserWalletLogs', userId] })
         queryClient.invalidateQueries({ queryKey: ['appUserGroupPriceMultipliers', userId] })
     }
 }
@@ -94,6 +95,20 @@ export const useAppUserWallet = (id?: number | null, enabled = true) => {
     return {
         ...query,
     }
+}
+
+export const useAppUserWalletLogs = (
+    id?: number | null,
+    page = 1,
+    perPage = 20,
+    order?: string,
+    enabled = true,
+) => {
+    return useQuery({
+        queryKey: ['appUserWalletLogs', id, page, perPage, order],
+        queryFn: () => appUserApi.getAppUserWalletLogs(id as number, page, perPage, order),
+        enabled: enabled && !!id,
+    })
 }
 
 export const useAppUserGroupPriceMultipliers = (
@@ -237,26 +252,26 @@ export const useResetAppUserPassword = () => {
     }
 }
 
-export const useRechargeAppUserBalance = () => {
+export const useAdjustAppUserWalletBalance = () => {
     const queryClient = useQueryClient()
     const [error, setError] = useState<ApiError | null>(null)
 
     const mutation = useMutation({
-        mutationFn: ({ id, data }: { id: number; data: RechargeAppUserBalanceRequest }) =>
-            appUserApi.rechargeAppUserBalance(id, data),
+        mutationFn: ({ id, data }: { id: number; data: AdjustAppUserWalletBalanceRequest }) =>
+            appUserApi.adjustAppUserWalletBalance(id, data),
         onSuccess: (_, variables) => {
             invalidateAppUserQueries(queryClient, variables.id)
             setError(null)
-            toast.success('充值成功')
+            toast.success('余额调整成功')
         },
         onError: (err: ApiError) => {
             setError(err)
-            toast.error(err.message || '充值失败')
+            toast.error(err.message || '余额调整失败')
         },
     })
 
     return {
-        rechargeAppUserBalance: mutation.mutate,
+        adjustAppUserWalletBalance: mutation.mutate,
         isLoading: mutation.isPending,
         error,
         clearError: () => setError(null),

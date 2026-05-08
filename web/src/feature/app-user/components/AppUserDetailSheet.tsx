@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
-import { Gauge, Key, Pencil, Wallet } from 'lucide-react'
+import { BadgeDollarSign, Gauge, Key, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,15 +13,23 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { AppUser } from '@/types/app-user'
-import { useAppUser, useAppUserWallet } from '../hooks'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import type { AppUser, AppWalletLog } from '@/types/app-user'
+import { useAppUser, useAppUserWallet, useAppUserWalletLogs } from '../hooks'
 
 interface AppUserDetailSheetProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     user: AppUser | null
     onEdit?: (user: AppUser) => void
-    onRecharge?: (user: AppUser) => void
+    onAdjustBalance?: (user: AppUser) => void
     onResetPassword?: (user: AppUser) => void
     onSetGroupPriceMultiplier?: (user: AppUser) => void
 }
@@ -33,6 +41,24 @@ const formatDateTime = (timestamp?: number) => {
 
 const formatMoney = (amount?: number) => {
     return `$${(amount || 0).toFixed(4)}`
+}
+
+const getAmountClass = (amount: number) => amount < 0
+    ? 'text-destructive'
+    : 'text-emerald-600 dark:text-emerald-400'
+
+const formatSignedMoney = (amount: number) => {
+    const prefix = amount > 0 ? '+' : ''
+    return `${prefix}${formatMoney(amount)}`
+}
+
+const getWalletLogTypeLabel = (
+    t: (key: string, options?: Record<string, unknown>) => string,
+    type: string,
+) => {
+    const key = `appUser.logTypes.${type}`
+    const label = t(key)
+    return label === key ? type : label
 }
 
 function getStatusBadgeClass(status: number) {
@@ -61,7 +87,7 @@ export function AppUserDetailSheet({
     onOpenChange,
     user,
     onEdit,
-    onRecharge,
+    onAdjustBalance,
     onResetPassword,
     onSetGroupPriceMultiplier,
 }: AppUserDetailSheetProps) {
@@ -71,9 +97,17 @@ export function AppUserDetailSheet({
 
     const { data: userData, isLoading: isUserLoading } = useAppUser(userId, open && !!userId)
     const { data: walletData, isLoading: isWalletLoading } = useAppUserWallet(userId, open && !!userId)
+    const { data: walletLogData, isLoading: isWalletLogLoading } = useAppUserWalletLogs(
+        userId,
+        1,
+        10,
+        'id-desc',
+        open && !!userId,
+    )
 
     const currentUser = userData?.user || user
     const wallet = walletData?.wallet
+    const walletLogs = walletLogData?.wallet_logs || []
     const account = currentUser?.email || currentUser?.phone || `#${currentUser?.id ?? ''}`
 
     return (
@@ -92,9 +126,9 @@ export function AppUserDetailSheet({
                                     <Pencil className="h-4 w-4" />
                                     {t('appUser.edit')}
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={() => onRecharge?.(currentUser)}>
-                                    <Wallet className="h-4 w-4" />
-                                    {t('appUser.recharge')}
+                                <Button variant="outline" size="sm" onClick={() => onAdjustBalance?.(currentUser)}>
+                                    <BadgeDollarSign className="h-4 w-4" />
+                                    {t('appUser.adjustBalance')}
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={() => onResetPassword?.(currentUser)}>
                                     <Key className="h-4 w-4" />
@@ -178,6 +212,58 @@ export function AppUserDetailSheet({
                                                         {formatMoney(wallet.available_balance + wallet.frozen_balance)}
                                                     </div>
                                                 </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground">{t('common.noResult')}</div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="gap-0 rounded-3xl border-border/60 bg-white/70 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:bg-card/75">
+                                    <CardHeader className="px-5 py-4">
+                                        <CardTitle className="text-base">{t('appUser.walletLogs')}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="px-5 pb-5">
+                                        {isWalletLogLoading ? (
+                                            <div className="space-y-3">
+                                                <Skeleton className="h-10 rounded-2xl" />
+                                                <Skeleton className="h-10 rounded-2xl" />
+                                                <Skeleton className="h-10 rounded-2xl" />
+                                            </div>
+                                        ) : walletLogs.length > 0 ? (
+                                            <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/80">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>{t('appUser.logType')}</TableHead>
+                                                            <TableHead>{t('appUser.amount')}</TableHead>
+                                                            <TableHead>{t('appUser.balanceChange')}</TableHead>
+                                                            <TableHead>{t('appUser.remark')}</TableHead>
+                                                            <TableHead>{t('appUser.createdAt')}</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {walletLogs.map((log: AppWalletLog) => (
+                                                            <TableRow key={log.id}>
+                                                                <TableCell>
+                                                                    {getWalletLogTypeLabel(t, log.type)}
+                                                                </TableCell>
+                                                                <TableCell className={`font-mono ${getAmountClass(log.amount)}`}>
+                                                                    {formatSignedMoney(log.amount)}
+                                                                </TableCell>
+                                                                <TableCell className="font-mono text-muted-foreground">
+                                                                    {`${formatMoney(log.balance_before)} -> ${formatMoney(log.balance_after)}`}
+                                                                </TableCell>
+                                                                <TableCell className="max-w-[180px] truncate">
+                                                                    {log.remark || '-'}
+                                                                </TableCell>
+                                                                <TableCell className="text-muted-foreground">
+                                                                    {formatDateTime(log.created_at)}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
                                             </div>
                                         ) : (
                                             <div className="text-sm text-muted-foreground">{t('common.noResult')}</div>

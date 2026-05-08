@@ -109,6 +109,81 @@ func TestGetAppWalletLogsByTypes(t *testing.T) {
 	})
 }
 
+func TestAdjustAppUserWalletBalanceIncreasesAndDecreases(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		createTestAppWallet(t, user.ID, 10)
+
+		wallet, walletLog, err := model.AdjustAppUserWalletBalance(model.AppUserWalletAdjustParams{
+			UserID: user.ID,
+			Amount: 5,
+			Remark: "manual credit",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 15.0, wallet.AvailableBalance)
+		require.Equal(t, model.AppWalletLogTypeAdjust, walletLog.Type)
+		require.Equal(t, 5.0, walletLog.Amount)
+		require.Equal(t, 10.0, walletLog.BalanceBefore)
+		require.Equal(t, 15.0, walletLog.BalanceAfter)
+		require.Equal(t, "manual credit", walletLog.Remark)
+
+		wallet, walletLog, err = model.AdjustAppUserWalletBalance(model.AppUserWalletAdjustParams{
+			UserID: user.ID,
+			Amount: -3,
+			Remark: "manual debit",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 12.0, wallet.AvailableBalance)
+		require.Equal(t, model.AppWalletLogTypeAdjust, walletLog.Type)
+		require.Equal(t, -3.0, walletLog.Amount)
+		require.Equal(t, 15.0, walletLog.BalanceBefore)
+		require.Equal(t, 12.0, walletLog.BalanceAfter)
+		require.Equal(t, "manual debit", walletLog.Remark)
+
+		logs, total, err := model.GetAppWalletLogsByTypes(
+			user.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeAdjust},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 2, total)
+		require.Len(t, logs, 2)
+		require.Equal(t, 5.0, logs[0].Amount)
+		require.Equal(t, -3.0, logs[1].Amount)
+	})
+}
+
+func TestAdjustAppUserWalletBalanceCannotOverdraw(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		createTestAppWallet(t, user.ID, 2)
+
+		_, _, err := model.AdjustAppUserWalletBalance(model.AppUserWalletAdjustParams{
+			UserID: user.ID,
+			Amount: -3,
+			Remark: "over debit",
+		})
+		require.ErrorIs(t, err, model.ErrAppWalletInsufficientBalance)
+
+		wallet, err := model.GetAppUserWalletByUserID(user.ID)
+		require.NoError(t, err)
+		require.Equal(t, 2.0, wallet.AvailableBalance)
+
+		logs, total, err := model.GetAppWalletLogsByTypes(
+			user.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeAdjust},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 0, total)
+		require.Empty(t, logs)
+	})
+}
+
 func TestCleanupAppWalletConsumptionLogsKeepsRechargeLogs(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)

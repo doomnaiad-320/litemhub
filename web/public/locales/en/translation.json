@@ -1216,7 +1216,7 @@
     "edit": "Edit",
     "view": "View Details",
     "refresh": "Refresh",
-    "recharge": "Recharge",
+    "adjustBalance": "Adjust Balance",
     "resetPassword": "Reset Password",
     "groupPriceMultiplier": "Group Multiplier",
     "delete": "Delete User",
@@ -1245,19 +1245,16 @@
       "emailInvalid": "Please enter a valid email address",
       "passwordMin": "Password must be at least 6 characters"
     },
-    "rechargeDialog": {
-      "title": "Recharge Wallet",
-      "description": "Add wallet balance for {{account}} and write a recharge record.",
-      "amount": "Amount",
-      "channel": "Channel",
-      "channelPlaceholder": "manual",
-      "tradeNo": "Trade No",
-      "tradeNoPlaceholder": "Optional. Generated automatically if empty.",
+    "adjustDialog": {
+      "title": "Adjust Balance",
+      "description": "Increase or decrease available balance for {{account}} and write an adjustment log.",
+      "currentAvailableBalance": "Current Available Balance",
+      "amount": "Adjustment Amount",
+      "amountHint": "Use a positive number to increase balance or a negative number to deduct it. Available balance cannot go below 0.",
+      "amountInvalid": "Enter a valid non-zero amount",
       "remark": "Remark",
-      "remarkPlaceholder": "For example: manual top-up, offline transfer, test credit",
-      "rawPayload": "Raw Payload",
-      "rawPayloadPlaceholder": "Optional. Store payment callback or manual notes here.",
-      "submitting": "Submitting..."
+      "remarkPlaceholder": "For example: manual deduction, refund correction, bonus credit, abnormal order handling",
+      "submitting": "Adjusting..."
     },
     "rechargeStats": {
       "badge": "Recharge Ops",
@@ -1375,6 +1372,7 @@
     },
     "nav": {
       "console": "User Console",
+      "home": "Home",
       "models": "Models",
       "wallet": "Wallet",
       "keys": "Keys",

@@ -74,12 +74,9 @@ export interface ResetAppUserPasswordRequest {
     password: string
 }
 
-export interface RechargeAppUserBalanceRequest {
+export interface AdjustAppUserWalletBalanceRequest {
     amount: number
-    channel?: string
-    trade_no?: string
     remark?: string
-    raw_payload?: string
 }
 
 export interface UpdateAppUserGroupPriceMultiplierRequest {
@@ -115,9 +112,9 @@ export interface AppRechargeLog {
     updated_at: number
 }
 
-export interface RechargeAppUserBalanceResponse {
+export interface AdjustAppUserWalletBalanceResponse {
     wallet: AppUserWallet
-    recharge_log?: AppRechargeLog
+    wallet_log: AppWalletLog
 }
 
 export interface AppRechargeLogsResponse {

@@ -6,6 +6,7 @@ import {
     type ColumnDef,
 } from '@tanstack/react-table'
 import {
+    BadgeDollarSign,
     Eye,
     Gauge,
     Key,
@@ -18,7 +19,6 @@ import {
     Search,
     Trash2,
     User,
-    Wallet,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
@@ -60,10 +60,10 @@ import {
     useDeleteAppUser,
     useUpdateAppUserStatus,
 } from '../hooks'
+import { AppUserBalanceAdjustDialog } from './AppUserBalanceAdjustDialog'
 import { AppUserDetailSheet } from './AppUserDetailSheet'
 import { AppUserDialog } from './AppUserDialog'
 import { AppUserGroupPriceMultiplierDialog } from './AppUserGroupPriceMultiplierDialog'
-import { AppUserRechargeDialog } from './AppUserRechargeDialog'
 import { AppUserResetPasswordDialog } from './AppUserResetPasswordDialog'
 
 const formatDateTime = (timestamp: number) => {
@@ -90,7 +90,7 @@ export function AppUserTable() {
     const [isRefreshAnimating, setIsRefreshAnimating] = useState(false)
     const [detailOpen, setDetailOpen] = useState(false)
     const [dialogOpen, setDialogOpen] = useState(false)
-    const [rechargeOpen, setRechargeOpen] = useState(false)
+    const [balanceAdjustOpen, setBalanceAdjustOpen] = useState(false)
     const [passwordOpen, setPasswordOpen] = useState(false)
     const [groupPriceMultiplierOpen, setGroupPriceMultiplierOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
@@ -132,9 +132,9 @@ export function AppUserTable() {
         setDetailOpen(true)
     }
 
-    const openRechargeDialog = (user: AppUser) => {
+    const openBalanceAdjustDialog = (user: AppUser) => {
         setSelectedUser(user)
-        setRechargeOpen(true)
+        setBalanceAdjustOpen(true)
     }
 
     const openResetPasswordDialog = (user: AppUser) => {
@@ -252,9 +252,9 @@ export function AppUserTable() {
                                 <Pencil className="mr-2 h-4 w-4" />
                                 {t('appUser.edit')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openRechargeDialog(row.original)}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                {t('appUser.recharge')}
+                            <DropdownMenuItem onClick={() => openBalanceAdjustDialog(row.original)}>
+                                <BadgeDollarSign className="mr-2 h-4 w-4" />
+                                {t('appUser.adjustBalance')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openResetPasswordDialog(row.original)}>
                                 <Key className="mr-2 h-4 w-4" />
@@ -414,9 +414,9 @@ export function AppUserTable() {
                 user={dialogMode === 'update' ? selectedUser : null}
             />
 
-            <AppUserRechargeDialog
-                open={rechargeOpen}
-                onOpenChange={setRechargeOpen}
+            <AppUserBalanceAdjustDialog
+                open={balanceAdjustOpen}
+                onOpenChange={setBalanceAdjustOpen}
                 user={selectedUser}
             />
 
@@ -437,7 +437,7 @@ export function AppUserTable() {
                 onOpenChange={setDetailOpen}
                 user={selectedUser}
                 onEdit={openEditDialog}
-                onRecharge={openRechargeDialog}
+                onAdjustBalance={openBalanceAdjustDialog}
                 onResetPassword={openResetPasswordDialog}
                 onSetGroupPriceMultiplier={openGroupPriceMultiplierDialog}
             />

@@ -186,7 +186,7 @@ func SetAPIRouter(router *gin.Engine) {
 			appUsersRoute.POST("/:id/password", controller.ResetAppUserPassword)
 			appUsersRoute.GET("/:id/wallet", controller.GetAppUserWallet)
 			appUsersRoute.GET("/:id/wallet_logs", controller.GetAppUserWalletLogs)
-			appUsersRoute.POST("/:id/recharge", controller.RechargeAppUserBalance)
+			appUsersRoute.POST("/:id/wallet/adjust", controller.AdjustAppUserWalletBalance)
 			appUsersRoute.GET(
 				"/:id/group_price_multipliers",
 				controller.GetAppUserGroupPriceMultipliers,

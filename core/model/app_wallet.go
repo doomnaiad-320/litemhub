@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -18,11 +19,14 @@ const (
 )
 
 var (
-	ErrAppRechargeTradeNoExists        = errors.New("trade no already exists")
-	ErrAppWalletInsufficientBalance    = errors.New("wallet balance not enough")
-	ErrAppWalletReservationInvalid     = errors.New("wallet reservation is invalid")
-	ErrAppWalletReservationDuplicated  = errors.New("wallet reservation already exists")
-	ErrAppWalletBalanceStateUnexpected = errors.New("wallet balance state is invalid")
+	ErrAppRechargeTradeNoExists         = errors.New("trade no already exists")
+	ErrAppWalletInsufficientBalance     = errors.New("wallet balance not enough")
+	ErrAppWalletReservationInvalid      = errors.New("wallet reservation is invalid")
+	ErrAppWalletReservationDuplicated   = errors.New("wallet reservation already exists")
+	ErrAppWalletBalanceStateUnexpected  = errors.New("wallet balance state is invalid")
+	ErrAppWalletAdjustmentAmountInvalid = errors.New(
+		"wallet adjustment amount must be a non-zero finite number",
+	)
 )
 
 type AppUserRechargeParams struct {
@@ -32,6 +36,12 @@ type AppUserRechargeParams struct {
 	TradeNo    string
 	RawPayload string
 	Remark     string
+}
+
+type AppUserWalletAdjustParams struct {
+	UserID int
+	Amount float64
+	Remark string
 }
 
 type AppRechargeLogWithUser struct {
@@ -780,6 +790,79 @@ func rechargeAppUserBalanceWithTx(
 	}
 
 	return wallet, rechargeLog, nil
+}
+
+func AdjustAppUserWalletBalance(params AppUserWalletAdjustParams) (
+	wallet *AppUserWallet,
+	walletLog *AppWalletLog,
+	err error,
+) {
+	if params.UserID == 0 {
+		return nil, nil, errors.New("user id is empty")
+	}
+
+	if params.Amount == 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
+		return nil, nil, ErrAppWalletAdjustmentAmountInvalid
+	}
+
+	if _, err = GetAppUserByID(params.UserID); err != nil {
+		return nil, nil, err
+	}
+
+	wallet = &AppUserWallet{}
+	walletLog = &AppWalletLog{}
+
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.
+			Where("user_id = ?", params.UserID).
+			Attrs(AppUserWallet{UserID: params.UserID}).
+			FirstOrCreate(wallet).Error; err != nil {
+			return err
+		}
+
+		updateTx := tx.
+			Model(wallet).
+			Clauses(clause.Returning{
+				Columns: []clause.Column{
+					{Name: "available_balance"},
+					{Name: "updated_at"},
+				},
+			}).
+			Where("id = ?", wallet.ID)
+		if params.Amount < 0 {
+			updateTx = updateTx.Where("available_balance >= ?", -params.Amount)
+		}
+
+		result := updateTx.Update(
+			"available_balance",
+			gorm.Expr("available_balance + ?", params.Amount),
+		)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrAppWalletInsufficientBalance
+		}
+
+		balanceAfter := wallet.AvailableBalance
+		balanceBefore := walletAmountSub(balanceAfter, params.Amount)
+		*walletLog = AppWalletLog{
+			UserID:        params.UserID,
+			Type:          AppWalletLogTypeAdjust,
+			Amount:        params.Amount,
+			BalanceBefore: balanceBefore,
+			BalanceAfter:  balanceAfter,
+			Remark:        params.Remark,
+		}
+
+		if err := tx.Create(walletLog).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return wallet, walletLog, err
 }
 
 func ReserveAppUserBalance(params AppUserReserveBalanceParams) (
