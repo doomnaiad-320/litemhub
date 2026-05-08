@@ -102,6 +102,20 @@ const normalizeChannelPayload = (
     configs: payload.configs ?? undefined,
 })
 
+const normalizeModelName = (modelName: string) => modelName.trim()
+
+const buildModelNameSet = (models?: Array<{ model: string }>) => {
+    const names = new Set<string>()
+    for (const model of models || []) {
+        const modelName = normalizeModelName(model.model)
+        if (modelName) {
+            names.add(modelName)
+        }
+    }
+
+    return names
+}
+
 interface ChannelFormProps {
     mode?: 'create' | 'update' | 'copy'
     channelId?: number
@@ -168,7 +182,7 @@ export function ChannelForm({
     const { data: typeMetas, isLoading: isTypeMetasLoading } = useChannelTypeMetas()
 
     // 获取所有模型
-    const { data: models, isLoading: isModelsLoading } = useModels()
+    const { data: models, isLoading: isModelsLoading, refetch: refetchModels } = useModels()
     const { data: groupsData } = useGroups(1, 1000)
 
     // API hooks
@@ -433,10 +447,27 @@ export function ChannelForm({
             return
         }
 
-        const discovered = result.models || []
+        let latestModels = models
+        try {
+            const refreshedModels = await refetchModels()
+            latestModels = refreshedModels.data || latestModels
+        } catch {
+            latestModels = models
+        }
+
+        const modelNameSet = buildModelNameSet(latestModels)
+        const discovered = (result.models || []).map((item) => ({
+            ...item,
+            exists: item.exists || modelNameSet.has(normalizeModelName(item.model)),
+        }))
+        const currentModelSet = new Set((values.models || []).map(normalizeModelName))
+
         setDiscoveredModels(discovered)
         setSelectedDiscoveredModels(Object.fromEntries(
-            discovered.map((item) => [item.upstream_model, !item.exists])
+            discovered.map((item) => [
+                item.upstream_model,
+                !currentModelSet.has(normalizeModelName(item.model)),
+            ])
         ))
         setDiscoveredSearch('')
         setDiscoveredDialogOpen(true)
@@ -460,12 +491,15 @@ export function ChannelForm({
         const currentMapping = form.getValues('model_mapping') || {}
         const nextModels = [...currentModels]
         const nextMapping = { ...currentMapping }
+        const nextModelSet = new Set(nextModels.map(normalizeModelName))
 
         selectedModels.forEach((item) => {
-            if (!nextModels.includes(item.model)) {
-                nextModels.push(item.model)
+            const modelName = normalizeModelName(item.model)
+            if (!nextModelSet.has(modelName)) {
+                nextModels.push(modelName)
+                nextModelSet.add(modelName)
             }
-            delete nextMapping[item.model]
+            delete nextMapping[modelName]
         })
 
         setUseDefaultModels(false)
@@ -823,7 +857,7 @@ export function ChannelForm({
                     <DialogHeader className="border-b px-5 py-4">
                         <DialogTitle>选择模型</DialogTitle>
                         <DialogDescription>
-                            已获取 {discoveredModels.length} 个模型，已选择 {selectedCount} 个
+                            已获取 {discoveredModels.length} 个模型，已选择 {selectedCount} 个。已在模型列表中的同名模型会复用现有价格配置。
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 px-5">
@@ -876,6 +910,20 @@ export function ChannelForm({
                                         <span className="min-w-0 flex-1 truncate font-mono text-sm">
                                             {item.model}
                                         </span>
+                                        {item.exists ? (
+                                            <Badge variant="secondary" className="shrink-0">
+                                                已在模型列表
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="shrink-0">
+                                                新模型
+                                            </Badge>
+                                        )}
+                                        {item.exists && (
+                                            <Badge variant="outline" className="shrink-0">
+                                                {item.priced ? '已定价' : '未定价'}
+                                            </Badge>
+                                        )}
                                     </label>
                                 )
                             })
