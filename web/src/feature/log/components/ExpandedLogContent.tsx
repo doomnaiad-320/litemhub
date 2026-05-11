@@ -279,7 +279,6 @@ export const ExpandedLogContent = ({
                         <div><span className="font-medium">{t('log.cacheCreationPrice')}:</span> {formatPrice(log.price?.cache_creation_price, log.price?.cache_creation_price_unit)}</div>
                         <div><span className="font-medium">{t('log.cachedPrice')}:</span> {formatPrice(log.price?.cached_price, log.price?.cached_price_unit)}</div>
                         <div><span className="font-medium">{t('log.imageInputPrice')}:</span> {formatPrice(log.price?.image_input_price, log.price?.image_input_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.perRequestPrice')}:</span> {log.price?.per_request_price || '-'}</div>
                         <div><span className="font-medium">{t('log.inputRequestPrice')}:</span> {log.price?.input_request_price || '-'}</div>
                         <div><span className="font-medium">{t('log.outputRequestPrice')}:</span> {log.price?.output_request_price || '-'}</div>
                         <div><span className="font-medium">{t('log.thinkingPrice')}:</span> {formatPrice(log.price?.thinking_mode_output_price, log.price?.thinking_mode_output_price_unit)}</div>

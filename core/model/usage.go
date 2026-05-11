@@ -32,8 +32,6 @@ type SelectedConditionalPrice struct {
 }
 
 type Price struct {
-	PerRequestPrice ZeroNullFloat64 `json:"per_request_price,omitempty"`
-
 	InputRequestPrice  ZeroNullFloat64 `json:"input_request_price,omitempty"`
 	OutputRequestPrice ZeroNullFloat64 `json:"output_request_price,omitempty"`
 
@@ -71,8 +69,7 @@ type Price struct {
 
 func (p Price) HasBillableAmount() bool {
 	switch {
-	case p.PerRequestPrice > 0,
-		p.InputRequestPrice > 0,
+	case p.InputRequestPrice > 0,
 		p.OutputRequestPrice > 0,
 		p.InputPrice > 0,
 		p.ImageInputPrice > 0,
@@ -100,7 +97,6 @@ func (p Price) ApplyMultiplier(multiplier float64) Price {
 		return p
 	}
 
-	p.PerRequestPrice = scaleZeroNullFloat64(p.PerRequestPrice, multiplier)
 	p.InputRequestPrice = scaleZeroNullFloat64(p.InputRequestPrice, multiplier)
 	p.OutputRequestPrice = scaleZeroNullFloat64(p.OutputRequestPrice, multiplier)
 	p.InputPrice = scaleZeroNullFloat64(p.InputPrice, multiplier)

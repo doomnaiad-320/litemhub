@@ -16,7 +16,6 @@ type PublicModelPriceResponse struct {
 	InputPriceUnit              int64   `json:"input_price_unit,omitempty"`
 	OutputPrice                 float64 `json:"output_price,omitempty"`
 	OutputPriceUnit             int64   `json:"output_price_unit,omitempty"`
-	PerRequestPrice             float64 `json:"per_request_price,omitempty"`
 	InputRequestPrice           float64 `json:"input_request_price,omitempty"`
 	OutputRequestPrice          float64 `json:"output_request_price,omitempty"`
 	CacheCreationPrice          float64 `json:"cache_creation_price,omitempty"`
@@ -209,7 +208,6 @@ func publicModelPriceFromModelPrice(price model.Price) PublicModelPriceResponse 
 		InputPriceUnit:              int64(price.InputPriceUnit),
 		OutputPrice:                 float64(price.OutputPrice),
 		OutputPriceUnit:             int64(price.OutputPriceUnit),
-		PerRequestPrice:             float64(price.PerRequestPrice),
 		InputRequestPrice:           float64(price.InputRequestPrice),
 		OutputRequestPrice:          float64(price.OutputRequestPrice),
 		CacheCreationPrice:          float64(price.CacheCreationPrice),

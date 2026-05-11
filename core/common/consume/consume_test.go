@@ -18,30 +18,6 @@ func TestCalculateAmount(t *testing.T) {
 		want        float64
 	}{
 		{
-			name: "Per-Request Pricing (OK)",
-			code: http.StatusOK,
-			usage: model.Usage{
-				InputTokens:  1000,
-				OutputTokens: 500,
-			},
-			price: model.Price{
-				PerRequestPrice: 2.5,
-			},
-			want: 2.5,
-		},
-		{
-			name: "Per-Request Pricing (Non-OK)",
-			code: http.StatusBadRequest,
-			usage: model.Usage{
-				InputTokens:  1000,
-				OutputTokens: 500,
-			},
-			price: model.Price{
-				PerRequestPrice: 2.5,
-			},
-			want: 0,
-		},
-		{
 			name: "Input/Output Request Pricing (With Output)",
 			code: http.StatusOK,
 			usage: model.Usage{

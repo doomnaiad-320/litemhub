@@ -37,7 +37,6 @@ export interface ModelPrice {
     input_price_unit?: number
     output_price?: number
     output_price_unit?: number
-    per_request_price?: number
     input_request_price?: number
     output_request_price?: number
     cache_creation_price?: number

@@ -10,9 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
-	relaycontroller "github.com/labring/aiproxy/core/relay/controller"
-	"github.com/labring/aiproxy/core/relay/meta"
-	"github.com/labring/aiproxy/core/relay/mode"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,75 +107,6 @@ func TestCalculateRelayBackoffDelay(t *testing.T) {
 	assert.Equal(t, 2500*time.Millisecond, calculateRelayBackoffDelay(2, 500*time.Millisecond))
 	assert.Equal(t, 5*time.Second, calculateRelayBackoffDelay(20, time.Second))
 	assert.Equal(t, 2*time.Second, calculateRelayBackoffDelay(1, time.Second))
-}
-
-func TestEffectiveBillingPrice(t *testing.T) {
-	t.Parallel()
-
-	perRequestPrice := model.Price{
-		PerRequestPrice: 0.1,
-	}
-
-	t.Run("zeroes chat per-request price when output tokens are empty", func(t *testing.T) {
-		t.Parallel()
-
-		got := effectiveBillingPrice(
-			&meta.Meta{Mode: mode.ChatCompletions},
-			perRequestPrice,
-			&relaycontroller.HandleResult{
-				Usage: model.Usage{},
-			},
-			http.StatusOK,
-		)
-
-		assert.Equal(t, model.Price{}, got)
-	})
-
-	t.Run("keeps chat per-request price when output tokens exist", func(t *testing.T) {
-		t.Parallel()
-
-		got := effectiveBillingPrice(
-			&meta.Meta{Mode: mode.ChatCompletions},
-			perRequestPrice,
-			&relaycontroller.HandleResult{
-				Usage: model.Usage{OutputTokens: 1},
-			},
-			http.StatusOK,
-		)
-
-		assert.Equal(t, perRequestPrice, got)
-	})
-
-	t.Run("keeps non-chat per-request price", func(t *testing.T) {
-		t.Parallel()
-
-		got := effectiveBillingPrice(
-			&meta.Meta{Mode: mode.Responses},
-			perRequestPrice,
-			&relaycontroller.HandleResult{
-				Usage: model.Usage{},
-			},
-			http.StatusOK,
-		)
-
-		assert.Equal(t, perRequestPrice, got)
-	})
-
-	t.Run("keeps async usage price until final usage is fetched", func(t *testing.T) {
-		t.Parallel()
-
-		got := effectiveBillingPrice(
-			&meta.Meta{Mode: mode.ChatCompletions},
-			perRequestPrice,
-			&relaycontroller.HandleResult{
-				AsyncUsage: true,
-				Usage:      model.Usage{},
-			},
-			http.StatusOK,
-		)
-
-		assert.Equal(t, perRequestPrice, got)
-	})
 }
 
 func TestGetReserveOutputTokens(t *testing.T) {

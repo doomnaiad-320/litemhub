@@ -229,6 +229,8 @@ func CompleteClaimedAsyncUsageInfo(
 		Select(
 			"Status",
 			"Usage",
+			"InputRequestAmount",
+			"OutputRequestAmount",
 			"InputAmount",
 			"ImageInputAmount",
 			"AudioInputAmount",

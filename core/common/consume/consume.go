@@ -223,16 +223,6 @@ func CalculateAmountDetail(
 	modelPrice model.Price,
 	serviceTier string,
 ) model.Amount {
-	if modelPrice.PerRequestPrice != 0 {
-		if code != http.StatusOK {
-			return model.Amount{}
-		}
-
-		return model.Amount{
-			UsedAmount: float64(modelPrice.PerRequestPrice),
-		}
-	}
-
 	modelPrice = modelPrice.SelectConditionalPrice(usage, serviceTier)
 
 	requestAmount := calculateRequestAmount(code, usage, modelPrice)

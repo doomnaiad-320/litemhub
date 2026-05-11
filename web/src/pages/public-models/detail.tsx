@@ -181,10 +181,6 @@ const buildPriceRows = (
         "",
     },
     {
-      label: t("publicModelDetail.pricing.request"),
-      value: formatPriceValue(price.per_request_price, 1) || "",
-    },
-    {
       label: t("publicModelDetail.pricing.requestInput"),
       value: formatPriceValue(price.input_request_price, 1) || "",
     },

@@ -43,7 +43,6 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
         return [
             { label: t('group.price.inputPrice'), value: formatPriceValue(target.input_price, target.input_price_unit) },
             { label: t('group.price.outputPrice'), value: formatPriceValue(target.output_price, target.output_price_unit) },
-            { label: t('group.price.perRequestPrice'), value: target.per_request_price != null ? String(target.per_request_price) : null },
             { label: t('group.price.inputRequestPrice'), value: target.input_request_price != null ? String(target.input_request_price) : null },
             { label: t('group.price.outputRequestPrice'), value: target.output_request_price != null ? String(target.output_request_price) : null },
             { label: t('group.price.cachedPrice'), value: formatPriceValue(target.cached_price, target.cached_price_unit) },
@@ -89,7 +88,6 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
     const summaryCandidates = [
         formatPriceValue(price.input_price, price.input_price_unit) && `In: ${formatPriceValue(price.input_price, price.input_price_unit)}`,
         formatPriceValue(price.output_price, price.output_price_unit) && `Out: ${formatPriceValue(price.output_price, price.output_price_unit)}`,
-        price.per_request_price != null ? `Req: ${price.per_request_price}` : null,
         price.input_request_price != null ? `Req In: ${price.input_request_price}` : null,
         price.output_request_price != null ? `Req Out: ${price.output_request_price}` : null,
         formatPriceValue(price.cached_price, price.cached_price_unit) && `Cache: ${formatPriceValue(price.cached_price, price.cached_price_unit)}`,

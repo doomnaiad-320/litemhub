@@ -201,11 +201,6 @@ function BasePriceFields({ price, onChange }: { price: ModelPrice; onChange: (pr
                 onUnitChange={(v) => updateField('output_price_unit', v)}
             />
             <PriceField
-                label={t('group.price.perRequestPrice')}
-                value={price.per_request_price}
-                onValueChange={(v) => updateField('per_request_price', v)}
-            />
-            <PriceField
                 label={t('group.price.inputRequestPrice')}
                 value={price.input_request_price}
                 onValueChange={(v) => updateField('input_request_price', v)}

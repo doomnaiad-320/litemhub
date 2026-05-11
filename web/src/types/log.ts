@@ -12,7 +12,6 @@ export interface LogPrice {
   input_price_unit: number
   output_price: number
   output_price_unit: number
-  per_request_price: number
   input_request_price: number
   output_request_price: number
   thinking_mode_output_price: number

@@ -583,8 +583,7 @@ func startAsyncUsageClaimRenewal(
 }
 
 func completeAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo, usage model.Usage) error {
-	price := info.Price
-	price.PerRequestPrice = 0
+	price := priceForAsyncUsageCompletion(info.Price)
 
 	amount := consume.CalculateAmountDetail(
 		http.StatusOK,
@@ -654,6 +653,22 @@ func completeAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo, usage m
 	}
 
 	return nil
+}
+
+func priceForAsyncUsageCompletion(price model.Price) model.Price {
+	price.InputRequestPrice = 0
+	if len(price.ConditionalPrices) == 0 {
+		return price
+	}
+
+	conditionalPrices := make([]model.ConditionalPrice, len(price.ConditionalPrices))
+	for i, conditionalPrice := range price.ConditionalPrices {
+		conditionalPrice.Price = priceForAsyncUsageCompletion(conditionalPrice.Price)
+		conditionalPrices[i] = conditionalPrice
+	}
+	price.ConditionalPrices = conditionalPrices
+
+	return price
 }
 
 func scheduleAsyncUsageRetry(info *model.AsyncUsageInfo, err error) {

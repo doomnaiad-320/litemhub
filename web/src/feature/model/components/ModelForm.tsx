@@ -51,7 +51,6 @@ const KNOWN_PRICE_KEYS = new Set([
     'input_price_unit',
     'output_price',
     'output_price_unit',
-    'per_request_price',
     'input_request_price',
     'output_request_price',
     'cache_creation_price',

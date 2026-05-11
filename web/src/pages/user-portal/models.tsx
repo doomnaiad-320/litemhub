@@ -119,7 +119,6 @@ const scaleModelPrice = (
     ...price,
     input_price: scalePriceNumber(price.input_price, multiplier),
     output_price: scalePriceNumber(price.output_price, multiplier),
-    per_request_price: scalePriceNumber(price.per_request_price, multiplier),
     input_request_price: scalePriceNumber(price.input_request_price, multiplier),
     output_request_price: scalePriceNumber(price.output_request_price, multiplier),
     cached_price: scalePriceNumber(price.cached_price, multiplier),
@@ -303,13 +302,6 @@ export default function UserPortalModelsPage() {
           ),
         },
         {
-          key: "request",
-          value:
-            price?.per_request_price != null
-              ? formatPriceNumber(price.per_request_price)
-              : null,
-        },
-        {
           key: "requestInput",
           value:
             price?.input_request_price != null
@@ -443,13 +435,11 @@ export default function UserPortalModelsPage() {
       );
 
     const request =
-      price?.per_request_price != null
-        ? formatPriceNumber(price.per_request_price)
-        : price?.output_request_price != null
-          ? formatPriceNumber(price.output_request_price)
-          : price?.input_request_price != null
-            ? formatPriceNumber(price.input_request_price)
-            : null;
+      price?.output_request_price != null
+        ? formatPriceNumber(price.output_request_price)
+        : price?.input_request_price != null
+          ? formatPriceNumber(price.input_request_price)
+          : null;
 
     const extraEntries: Array<{ label: string; value: string }> = [];
     const extraCandidates: Array<{ key: string; value: string | null }> = [
@@ -457,7 +447,7 @@ export default function UserPortalModelsPage() {
         key: "requestInput",
         value:
           price?.input_request_price != null &&
-          price?.per_request_price != null
+          price?.output_request_price != null
             ? formatPriceNumber(price.input_request_price)
             : null,
       },
@@ -465,7 +455,7 @@ export default function UserPortalModelsPage() {
         key: "requestOutput",
         value:
           price?.output_request_price != null &&
-          (price?.per_request_price != null || price?.input_request_price != null)
+          price?.input_request_price != null
             ? formatPriceNumber(price.output_request_price)
             : null,
       },

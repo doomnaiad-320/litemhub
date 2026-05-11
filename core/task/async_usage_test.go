@@ -4,11 +4,13 @@ package task
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/labring/aiproxy/core/common/balance"
+	"github.com/labring/aiproxy/core/common/consume"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -160,6 +162,42 @@ func TestCompleteAsyncUsageReturnsBalanceConsumeError(t *testing.T) {
 	require.Len(t, consumeErrors, 1)
 	require.Equal(t, "balance_error", consumeErrors[0].RequestID)
 	require.Equal(t, float64(10), consumeErrors[0].UsedAmount)
+}
+
+func TestPriceForAsyncUsageCompletionSkipsInputRequestPrice(t *testing.T) {
+	price := model.Price{
+		InputRequestPrice:  0.05,
+		OutputRequestPrice: 0.1,
+		InputPrice:         1,
+		InputPriceUnit:     1,
+		OutputPrice:        2,
+		OutputPriceUnit:    1,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{OutputTokenMin: 1},
+				Price: model.Price{
+					InputRequestPrice:  0.2,
+					OutputRequestPrice: 0.3,
+					OutputPrice:        4,
+					OutputPriceUnit:    1,
+				},
+			},
+		},
+	}
+
+	usage := model.Usage{
+		InputTokens:  10,
+		OutputTokens: 2,
+		TotalTokens:  12,
+	}
+
+	got := priceForAsyncUsageCompletion(price)
+	amount := consume.CalculateAmountDetail(http.StatusOK, usage, got, "")
+
+	require.Zero(t, got.InputRequestPrice)
+	require.Zero(t, got.ConditionalPrices[0].Price.InputRequestPrice)
+	require.Equal(t, float64(0.3), amount.OutputRequestAmount)
+	require.Equal(t, float64(8.3), amount.UsedAmount)
 }
 
 func TestTouchAsyncUsagePollCursorAdvancesUpdatedAtAndNextPollAt(t *testing.T) {
