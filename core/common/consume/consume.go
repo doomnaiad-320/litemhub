@@ -235,6 +235,8 @@ func CalculateAmountDetail(
 
 	modelPrice = modelPrice.SelectConditionalPrice(usage, serviceTier)
 
+	requestAmount := calculateRequestAmount(code, usage, modelPrice)
+
 	inputTokens := usage.InputTokens
 	if modelPrice.ImageInputPrice > 0 {
 		inputTokens -= usage.ImageInputTokens
@@ -300,6 +302,8 @@ func CalculateAmountDetail(
 		Div(decimal.NewFromInt(modelPrice.GetImageOutputPriceUnit()))
 
 	usedAmount := inputAmount.
+		Add(requestAmount.input).
+		Add(requestAmount.output).
 		Add(imageInputAmount).
 		Add(audioInputAmount).
 		Add(cachedAmount).
@@ -310,6 +314,8 @@ func CalculateAmountDetail(
 		InexactFloat64()
 
 	return model.Amount{
+		InputRequestAmount:  requestAmount.input.InexactFloat64(),
+		OutputRequestAmount: requestAmount.output.InexactFloat64(),
 		InputAmount:         inputAmount.InexactFloat64(),
 		ImageInputAmount:    imageInputAmount.InexactFloat64(),
 		AudioInputAmount:    audioInputAmount.InexactFloat64(),
@@ -320,6 +326,31 @@ func CalculateAmountDetail(
 		WebSearchAmount:     webSearchAmount.InexactFloat64(),
 		UsedAmount:          usedAmount,
 	}
+}
+
+type requestAmount struct {
+	input  decimal.Decimal
+	output decimal.Decimal
+}
+
+func calculateRequestAmount(
+	code int,
+	usage model.Usage,
+	modelPrice model.Price,
+) requestAmount {
+	if code != http.StatusOK {
+		return requestAmount{}
+	}
+
+	var amount requestAmount
+	if modelPrice.InputRequestPrice > 0 {
+		amount.input = decimal.NewFromFloat(float64(modelPrice.InputRequestPrice))
+	}
+	if modelPrice.OutputRequestPrice > 0 && usage.OutputTokens > 0 {
+		amount.output = decimal.NewFromFloat(float64(modelPrice.OutputRequestPrice))
+	}
+
+	return amount
 }
 
 func CalculateAmount(

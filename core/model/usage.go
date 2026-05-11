@@ -34,6 +34,9 @@ type SelectedConditionalPrice struct {
 type Price struct {
 	PerRequestPrice ZeroNullFloat64 `json:"per_request_price,omitempty"`
 
+	InputRequestPrice  ZeroNullFloat64 `json:"input_request_price,omitempty"`
+	OutputRequestPrice ZeroNullFloat64 `json:"output_request_price,omitempty"`
+
 	InputPrice     ZeroNullFloat64 `json:"input_price,omitempty"`
 	InputPriceUnit ZeroNullInt64   `json:"input_price_unit,omitempty"`
 
@@ -69,6 +72,8 @@ type Price struct {
 func (p Price) HasBillableAmount() bool {
 	switch {
 	case p.PerRequestPrice > 0,
+		p.InputRequestPrice > 0,
+		p.OutputRequestPrice > 0,
 		p.InputPrice > 0,
 		p.ImageInputPrice > 0,
 		p.AudioInputPrice > 0,
@@ -96,6 +101,8 @@ func (p Price) ApplyMultiplier(multiplier float64) Price {
 	}
 
 	p.PerRequestPrice = scaleZeroNullFloat64(p.PerRequestPrice, multiplier)
+	p.InputRequestPrice = scaleZeroNullFloat64(p.InputRequestPrice, multiplier)
+	p.OutputRequestPrice = scaleZeroNullFloat64(p.OutputRequestPrice, multiplier)
 	p.InputPrice = scaleZeroNullFloat64(p.InputPrice, multiplier)
 	p.ImageInputPrice = scaleZeroNullFloat64(p.ImageInputPrice, multiplier)
 	p.AudioInputPrice = scaleZeroNullFloat64(p.AudioInputPrice, multiplier)
@@ -510,6 +517,8 @@ func (u *Usage) Add(other Usage) {
 }
 
 type Amount struct {
+	InputRequestAmount  float64 `json:"input_request_amount,omitempty"`
+	OutputRequestAmount float64 `json:"output_request_amount,omitempty"`
 	InputAmount         float64 `json:"input_amount,omitempty"`
 	ImageInputAmount    float64 `json:"image_input_amount,omitempty"`
 	AudioInputAmount    float64 `json:"audio_input_amount,omitempty"`
@@ -522,6 +531,12 @@ type Amount struct {
 }
 
 func (a *Amount) Add(other Amount) {
+	a.InputRequestAmount = decimal.NewFromFloat(a.InputRequestAmount).
+		Add(decimal.NewFromFloat(other.InputRequestAmount)).
+		InexactFloat64()
+	a.OutputRequestAmount = decimal.NewFromFloat(a.OutputRequestAmount).
+		Add(decimal.NewFromFloat(other.OutputRequestAmount)).
+		InexactFloat64()
 	a.InputAmount = decimal.NewFromFloat(a.InputAmount).
 		Add(decimal.NewFromFloat(other.InputAmount)).
 		InexactFloat64()

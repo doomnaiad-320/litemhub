@@ -13,6 +13,8 @@ export interface LogPrice {
   output_price: number
   output_price_unit: number
   per_request_price: number
+  input_request_price: number
+  output_request_price: number
   thinking_mode_output_price: number
   thinking_mode_output_price_unit: number
   web_search_price: number
@@ -33,6 +35,8 @@ export interface LogUsage {
 
 // 消费金额明细
 export interface LogAmount {
+  input_request_amount?: number
+  output_request_amount?: number
   input_amount?: number
   image_input_amount?: number
   audio_input_amount?: number

@@ -227,6 +227,8 @@ export const hasPriceData = (source?: CatalogPriceSource) => {
       price.input_price,
       price.output_price,
       price.per_request_price,
+      price.input_request_price,
+      price.output_request_price,
       price.cached_price,
       price.cache_creation_price,
       price.image_input_price,

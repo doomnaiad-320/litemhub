@@ -42,6 +42,43 @@ func TestCalculateAmount(t *testing.T) {
 			want: 0,
 		},
 		{
+			name: "Input/Output Request Pricing (With Output)",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  1000,
+				OutputTokens: 500,
+			},
+			price: model.Price{
+				InputRequestPrice:  0.05,
+				OutputRequestPrice: 0.1,
+			},
+			want: 0.15,
+		},
+		{
+			name: "Input/Output Request Pricing (No Output)",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens: 1000,
+			},
+			price: model.Price{
+				OutputRequestPrice: 0.1,
+			},
+			want: 0,
+		},
+		{
+			name: "Input/Output Request Pricing (Non-OK)",
+			code: http.StatusBadRequest,
+			usage: model.Usage{
+				InputTokens:  1000,
+				OutputTokens: 500,
+			},
+			price: model.Price{
+				InputRequestPrice:  0.05,
+				OutputRequestPrice: 0.1,
+			},
+			want: 0,
+		},
+		{
 			name: "Simple Pricing",
 			code: http.StatusOK,
 			usage: model.Usage{
@@ -246,6 +283,30 @@ func TestCalculateAmount(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("CalculateAmount()\n%s\n\tgot: %v\n\twant: %v\n\t", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestCalculateAmountDetailWithRequestPricing(t *testing.T) {
+	amount := consume.CalculateAmountDetail(
+		http.StatusOK,
+		model.Usage{OutputTokens: 1},
+		model.Price{
+			InputRequestPrice:  0.05,
+			OutputRequestPrice: 0.1,
+		},
+		"",
+	)
+
+	if amount.InputRequestAmount != 0.05 {
+		t.Fatalf("expected input request amount 0.05, got %v", amount.InputRequestAmount)
+	}
+
+	if amount.OutputRequestAmount != 0.1 {
+		t.Fatalf("expected output request amount 0.1, got %v", amount.OutputRequestAmount)
+	}
+
+	if amount.UsedAmount != 0.15 {
+		t.Fatalf("expected used amount 0.15, got %v", amount.UsedAmount)
 	}
 }
 

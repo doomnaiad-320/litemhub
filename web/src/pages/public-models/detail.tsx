@@ -185,6 +185,14 @@ const buildPriceRows = (
       value: formatPriceValue(price.per_request_price, 1) || "",
     },
     {
+      label: t("publicModelDetail.pricing.requestInput"),
+      value: formatPriceValue(price.input_request_price, 1) || "",
+    },
+    {
+      label: t("publicModelDetail.pricing.requestOutput"),
+      value: formatPriceValue(price.output_request_price, 1) || "",
+    },
+    {
       label: t("publicModelDetail.pricing.cached"),
       value:
         formatTokenPriceValue(price.cached_price, price.cached_price_unit) ||

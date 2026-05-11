@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import {
   DISPLAY_TOKEN_PRICE_UNIT_LABEL,
   buildImagePriceEntries,
+  formatPriceValue,
   formatTokenPriceValue,
   getPublicModelDetailPath,
   sortCapabilities,
@@ -84,6 +85,7 @@ const getInputPrice = (model: PublicModel) =>
 
 const getOutputPrice = (model: PublicModel) =>
   formatTokenPriceValue(model.price?.output_price, model.price?.output_price_unit) ||
+  formatPriceValue(model.price?.output_request_price, 1) ||
   formatTokenPriceValue(
     model.price?.image_output_price,
     model.price?.image_output_price_unit,

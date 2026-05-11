@@ -527,6 +527,8 @@
     "cachedPrice": "Cached Price",
     "imageInputPrice": "Image Input Price",
     "perRequestPrice": "Per Request Price",
+    "inputRequestPrice": "Input Request Price",
+    "outputRequestPrice": "Output Request Price",
     "thinkingPrice": "Thinking Price",
     "webSearchPrice": "Web Search Price",
     "filters": {
@@ -720,6 +722,8 @@
       "outputPrice": "Output Price",
       "outputPriceUnit": "Unit (tokens)",
       "perRequestPrice": "Per Request Price",
+      "inputRequestPrice": "Input Request Price",
+      "outputRequestPrice": "Output Request Price",
       "cachedPrice": "Cached Price",
       "cachedPriceUnit": "Unit (tokens)",
       "cacheCreationPrice": "Cache Creation Price",

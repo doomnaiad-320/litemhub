@@ -354,6 +354,8 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 func TestPrice_ApplyMultiplier(t *testing.T) {
 	price := model.Price{
 		PerRequestPrice:         0.1,
+		InputRequestPrice:       0.11,
+		OutputRequestPrice:      0.12,
 		InputPrice:              0.2,
 		OutputPrice:             0.3,
 		ThinkingModeOutputPrice: 0.4,
@@ -374,6 +376,14 @@ func TestPrice_ApplyMultiplier(t *testing.T) {
 
 	if scaled.PerRequestPrice != 0.3 {
 		t.Fatalf("expected per request price 0.3, got %v", scaled.PerRequestPrice)
+	}
+
+	if scaled.InputRequestPrice != 0.33 {
+		t.Fatalf("expected input request price 0.33, got %v", scaled.InputRequestPrice)
+	}
+
+	if scaled.OutputRequestPrice != 0.36 {
+		t.Fatalf("expected output request price 0.36, got %v", scaled.OutputRequestPrice)
 	}
 
 	if scaled.InputPrice != 0.6 {

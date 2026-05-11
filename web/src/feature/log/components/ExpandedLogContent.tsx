@@ -280,6 +280,8 @@ export const ExpandedLogContent = ({
                         <div><span className="font-medium">{t('log.cachedPrice')}:</span> {formatPrice(log.price?.cached_price, log.price?.cached_price_unit)}</div>
                         <div><span className="font-medium">{t('log.imageInputPrice')}:</span> {formatPrice(log.price?.image_input_price, log.price?.image_input_price_unit)}</div>
                         <div><span className="font-medium">{t('log.perRequestPrice')}:</span> {log.price?.per_request_price || '-'}</div>
+                        <div><span className="font-medium">{t('log.inputRequestPrice')}:</span> {log.price?.input_request_price || '-'}</div>
+                        <div><span className="font-medium">{t('log.outputRequestPrice')}:</span> {log.price?.output_request_price || '-'}</div>
                         <div><span className="font-medium">{t('log.thinkingPrice')}:</span> {formatPrice(log.price?.thinking_mode_output_price, log.price?.thinking_mode_output_price_unit)}</div>
                         <div><span className="font-medium">{t('log.webSearchPrice')}:</span> {formatPrice(log.price?.web_search_price, log.price?.web_search_price_unit)}</div>
                     </div>
@@ -290,6 +292,8 @@ export const ExpandedLogContent = ({
                     <h4 className="font-semibold text-sm">{t('log.consumeInfo')}</h4>
                     <div className="space-y-1 text-sm">
                         <div><span className="font-medium">{t('log.usedAmount')}:</span> {formatAmount(totalUsedAmount)}</div>
+                        <div><span className="font-medium">{t('log.costBreakdown.inputRequest')}:</span> {formatAmount(amount?.input_request_amount)}</div>
+                        <div><span className="font-medium">{t('log.costBreakdown.outputRequest')}:</span> {formatAmount(amount?.output_request_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.input')}:</span> {formatAmount(amount?.input_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.cached')}:</span> {formatAmount(amount?.cached_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.cacheCreation')}:</span> {formatAmount(amount?.cache_creation_amount)}</div>

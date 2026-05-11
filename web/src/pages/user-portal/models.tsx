@@ -120,6 +120,8 @@ const scaleModelPrice = (
     input_price: scalePriceNumber(price.input_price, multiplier),
     output_price: scalePriceNumber(price.output_price, multiplier),
     per_request_price: scalePriceNumber(price.per_request_price, multiplier),
+    input_request_price: scalePriceNumber(price.input_request_price, multiplier),
+    output_request_price: scalePriceNumber(price.output_request_price, multiplier),
     cached_price: scalePriceNumber(price.cached_price, multiplier),
     cache_creation_price: scalePriceNumber(
       price.cache_creation_price,
@@ -308,6 +310,20 @@ export default function UserPortalModelsPage() {
               : null,
         },
         {
+          key: "requestInput",
+          value:
+            price?.input_request_price != null
+              ? formatPriceNumber(price.input_request_price)
+              : null,
+        },
+        {
+          key: "requestOutput",
+          value:
+            price?.output_request_price != null
+              ? formatPriceNumber(price.output_request_price)
+              : null,
+        },
+        {
           key: "imageInput",
           value: formatTokenPriceValue(
             price?.image_input_price,
@@ -429,10 +445,30 @@ export default function UserPortalModelsPage() {
     const request =
       price?.per_request_price != null
         ? formatPriceNumber(price.per_request_price)
-        : null;
+        : price?.output_request_price != null
+          ? formatPriceNumber(price.output_request_price)
+          : price?.input_request_price != null
+            ? formatPriceNumber(price.input_request_price)
+            : null;
 
     const extraEntries: Array<{ label: string; value: string }> = [];
     const extraCandidates: Array<{ key: string; value: string | null }> = [
+      {
+        key: "requestInput",
+        value:
+          price?.input_request_price != null &&
+          price?.per_request_price != null
+            ? formatPriceNumber(price.input_request_price)
+            : null,
+      },
+      {
+        key: "requestOutput",
+        value:
+          price?.output_request_price != null &&
+          (price?.per_request_price != null || price?.input_request_price != null)
+            ? formatPriceNumber(price.output_request_price)
+            : null,
+      },
       {
         key: "cached",
         value: formatTokenPriceValue(
