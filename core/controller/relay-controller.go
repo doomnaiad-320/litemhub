@@ -413,10 +413,11 @@ func recordResult(
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
+	billingPrice := effectiveBillingPrice(meta, price, result, code)
 	amount := consume.CalculateAmount(
 		code,
 		result.Usage,
-		price,
+		billingPrice,
 		meta.RequestServiceTier,
 	)
 	if amount > 0 {
@@ -439,7 +440,7 @@ func recordResult(
 		firstByteAt,
 		meta,
 		result.Usage,
-		price,
+		billingPrice,
 		content,
 		c.ClientIP(),
 		retryTimes,
@@ -451,8 +452,29 @@ func recordResult(
 	)
 
 	if asyncUsageStatus == model.AsyncUsageStatusPending {
-		saveAsyncUsageInfo(meta, price, result)
+		saveAsyncUsageInfo(meta, billingPrice, result)
 	}
+}
+
+func effectiveBillingPrice(
+	meta *meta.Meta,
+	price model.Price,
+	result *controller.HandleResult,
+	code int,
+) model.Price {
+	if meta == nil || result == nil {
+		return price
+	}
+
+	if meta.Mode == mode.ChatCompletions &&
+		code == http.StatusOK &&
+		price.PerRequestPrice > 0 &&
+		result.Usage.OutputTokens == 0 &&
+		!result.AsyncUsage {
+		return model.Price{}
+	}
+
+	return price
 }
 
 func saveAsyncUsageInfo(
