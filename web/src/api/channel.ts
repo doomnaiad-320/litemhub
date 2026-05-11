@@ -12,24 +12,67 @@ import {
     ChannelDiscoverModelsResponse
 } from '@/types/channel'
 
+export interface ChannelTestData {
+    test_at: string
+    model: string
+    actual_model: string
+    response: string
+    channel_name: string
+    channel_type: number
+    channel_id: number
+    took: number
+    success: boolean
+    mode: string
+    code: number
+}
+
+export interface ChannelTestPayload {
+    type: number
+    key: string
+    base_url?: string
+    proxy_url?: string
+    name?: string
+    model: string
+    model_mapping?: Record<string, string>
+    skip_tls_verify?: boolean
+    configs?: Record<string, unknown>
+}
+
+export interface ChannelTestAllPayload {
+    type: number
+    key: string
+    base_url?: string
+    proxy_url?: string
+    name?: string
+    models: string[]
+    model_mapping?: Record<string, string>
+    skip_tls_verify?: boolean
+    configs?: Record<string, unknown>
+}
+
 // 渠道测试结果类型
 export interface ChannelTestResult {
-    data?: {
-        test_at: string
-        model: string
-        actual_model: string
-        response: string
-        channel_name: string
-        channel_type: number
-        channel_id: number
-        took: number
-        success: boolean
-        mode: string
-        code: number
-    }
+    data?: ChannelTestData
     message?: string
     success: boolean
 }
+
+const normalizeChannelTestResult = (result: ChannelTestResult | ChannelTestData): ChannelTestResult => {
+    if ('data' in result || 'message' in result) {
+        return result as ChannelTestResult
+    }
+
+    return {
+        success: true,
+        data: result as ChannelTestData,
+    }
+}
+
+const encodePathSegments = (value: string) =>
+    value
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/')
 
 export const channelApi = {
     getTypeMetas: async (): Promise<ChannelTypeMetaMap> => {
@@ -162,39 +205,21 @@ export const channelApi = {
 
     // 测试单个模型
     testChannelModel: async (id: number, model: string): Promise<ChannelTestResult> => {
-        const response = await get<ChannelTestResult>(`channel/${id}/${model}?success_body=true`)
-        return response
+        const response = await get<ChannelTestResult | ChannelTestData>(
+            `channel/${id}/test/${encodePathSegments(model)}?success_body=true`
+        )
+        return normalizeChannelTestResult(response)
     },
 
     // 测试未保存的渠道配置（单个模型）
-    testChannelPreview: async (data: {
-        type: number
-        key: string
-        base_url?: string
-        proxy_url?: string
-        name?: string
-        model: string
-        model_mapping?: Record<string, string>
-        skip_tls_verify?: boolean
-        configs?: Record<string, unknown>
-    }): Promise<ChannelTestResult> => {
-        const response = await post<ChannelTestResult>('channel/test-preview?return_success=true&success_body=true', data)
-        return response
+    testChannelPreview: async (data: ChannelTestPayload): Promise<ChannelTestResult> => {
+        const response = await post<ChannelTestResult | ChannelTestData>('channel/test-preview?return_success=true&success_body=true', data)
+        return normalizeChannelTestResult(response)
     },
 
     // 测试未保存的渠道配置（所有模型，SSE 模式）
     testChannelPreviewAllStream: (
-        data: {
-            type: number
-            key: string
-            base_url?: string
-            proxy_url?: string
-            name?: string
-            models: string[]
-            model_mapping?: Record<string, string>
-            skip_tls_verify?: boolean
-            configs?: Record<string, unknown>
-        },
+        data: ChannelTestAllPayload,
         onResult: (result: ChannelTestResult) => void,
         onComplete: () => void,
         onError: (error: Error) => void

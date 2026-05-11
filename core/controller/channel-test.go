@@ -61,9 +61,11 @@ func getChannelTestModelConfig(
 	channel *model.Channel,
 	modelName string,
 ) (string, model.ModelConfig, bool) {
-	modelConfig, ok := mc.ModelConfig.GetModelConfig(modelName)
-	if ok {
-		return modelName, modelConfig, true
+	if mc != nil && mc.ModelConfig != nil {
+		modelConfig, ok := mc.ModelConfig.GetModelConfig(modelName)
+		if ok {
+			return modelName, modelConfig, true
+		}
 	}
 
 	if channel == nil || len(channel.ModelMapping) == 0 {
@@ -75,13 +77,29 @@ func getChannelTestModelConfig(
 			continue
 		}
 
-		modelConfig, ok = mc.ModelConfig.GetModelConfig(originModel)
-		if ok {
-			return originModel, modelConfig, true
+		if mc != nil && mc.ModelConfig != nil {
+			modelConfig, ok := mc.ModelConfig.GetModelConfig(originModel)
+			if ok {
+				return originModel, modelConfig, true
+			}
 		}
 	}
 
 	return modelName, model.ModelConfig{}, false
+}
+
+func buildFallbackChannelTestModelConfig(channel *model.Channel, modelName string) model.ModelConfig {
+	inferFromModel := modelName
+	channelType := model.ChannelType(0)
+	if channel != nil {
+		inferFromModel, _ = meta.GetMappedModelName(modelName, channel.ModelMapping)
+		channelType = channel.Type
+	}
+
+	return model.ModelConfig{
+		Model: modelName,
+		Type:  inferModelConfigType(channelType, inferFromModel),
+	}
 }
 
 // testSingleModel tests a single model in the channel
@@ -94,13 +112,15 @@ func testSingleModel(
 ) (*model.ChannelTest, error) {
 	originModel, modelConfig, ok := getChannelTestModelConfig(mc, channel, modelName)
 	if !ok {
-		return nil, errors.New(modelName + " model config not found")
+		modelConfig = buildFallbackChannelTestModelConfig(channel, modelName)
 	}
 
 	if modelConfig.Type == mode.Unknown {
 		newModelConfig := guessModelConfig(originModel)
 		if newModelConfig.Type != mode.Unknown {
 			modelConfig = newModelConfig
+		} else {
+			modelConfig = buildFallbackChannelTestModelConfig(channel, originModel)
 		}
 	}
 
@@ -215,7 +235,7 @@ func testSingleModel(
 //	@Param			id		path		int		true	"Channel ID"
 //	@Param			model	path		string	true	"Model name"
 //	@Success		200		{object}	middleware.APIResponse{data=model.ChannelTest}
-//	@Router			/api/channel/{id}/{model} [get]
+//	@Router			/api/channel/{id}/test/{model} [get]
 //
 //nolint:goconst
 func TestChannel(c *gin.Context) {

@@ -7,8 +7,8 @@ import {
 } from '@tanstack/react-table'
 import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { useChannels, useChannelTypeMetas, useUpdateChannelStatus, useTestChannel, useTestAllChannels, useAllChannelDefaultModels } from '../hooks'
-import { channelApi } from '@/api/channel'
+import { useChannels, useChannelTypeMetas, useUpdateChannelStatus, useTestAllChannels, useAllChannelDefaultModels } from '../hooks'
+import { channelApi, ChannelTestResult } from '@/api/channel'
 import { Channel, ChannelCreateRequest } from '@/types/channel'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +28,7 @@ import { ServerPagination } from '@/components/table/server-pagination'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
 import { DefaultModelsDialog } from './DefaultModelsDialog'
 import { ChannelTestDialog } from './ChannelTestDialog'
+import { ChannelModelTestSelectorDialog } from './ChannelModelTestSelectorDialog'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AnimatedIcon } from '@/components/ui/animation/components/animated-icon'
@@ -52,6 +53,7 @@ import { useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import { openResourceDialog, showDeletedResourceToast } from '@/utils/resource-dialog'
 import { format } from 'date-fns'
 import { getChannelModelMetric, getTemporarilyExcludedModels } from '@/utils/runtime-metrics'
+import { modelApi } from '@/api/model'
 
 const formatTimestamp = (timestamp: number): string => {
     if (!timestamp) return '-'
@@ -62,6 +64,8 @@ const formatAccessedAt = (timestamp: number, neverLabel: string): string => {
     if (!timestamp || timestamp <= 0) return neverLabel
     return format(new Date(timestamp), 'yyyy-MM-dd HH:mm')
 }
+
+const normalizeModelName = (modelName: string) => modelName.trim()
 
 export function ChannelTable() {
     const { t } = useTranslation()
@@ -79,6 +83,13 @@ export function ChannelTable() {
     const [isImporting, setIsImporting] = useState(false)
     const [testDialogOpen, setTestDialogOpen] = useState(false)
     const [isTestAll, setIsTestAll] = useState(false)
+    const [isTestingChannel, setIsTestingChannel] = useState(false)
+    const [channelTestResults, setChannelTestResults] = useState<ChannelTestResult[]>([])
+    const [testModelDialogOpen, setTestModelDialogOpen] = useState(false)
+    const [testModelOptions, setTestModelOptions] = useState<string[]>([])
+    const [selectedTestModel, setSelectedTestModel] = useState('')
+    const [pendingTestChannel, setPendingTestChannel] = useState<Channel | null>(null)
+    const [testModelSourceLabel, setTestModelSourceLabel] = useState('')
     const [defaultModelsDialogOpen, setDefaultModelsDialogOpen] = useState(false)
     const [searchInput, setSearchInput] = useState('')
     const [searchKeyword, setSearchKeyword] = useState<string | undefined>(undefined)
@@ -108,9 +119,6 @@ export function ChannelTable() {
 
     // 更新渠道状态
     const { updateStatus, isLoading: isStatusUpdating } = useUpdateChannelStatus()
-
-    // 测试单个渠道
-    const { testChannel, isTesting, results: testResults, clearResults, cancelTest } = useTestChannel()
 
     // 测试所有渠道
     const {
@@ -348,6 +356,105 @@ export function ChannelTable() {
         const { models } = getDisplayModels(channel)
         return getTemporarilyExcludedModels(runtimeMetrics, channel.id, models)
     }, [getDisplayModels, runtimeMetrics])
+
+    const getSelectableModelNames = useCallback((modelNames: string[]) => {
+        const seen = new Set<string>()
+        return modelNames
+            .map(normalizeModelName)
+            .filter((modelName) => {
+                if (!modelName || seen.has(modelName)) {
+                    return false
+                }
+                seen.add(modelName)
+                return true
+            })
+    }, [])
+
+    const getChannelSingleTestModels = useCallback(async (channel: Channel) => {
+        if (channel.models && channel.models.length > 0) {
+            return {
+                models: getSelectableModelNames(channel.models),
+                usingDefaultModels: false,
+            }
+        }
+
+        const cachedDefaultModels = getSelectableModelNames(allDefaultModels?.models?.[String(channel.type)] || [])
+        if (cachedDefaultModels.length > 0) {
+            return {
+                models: cachedDefaultModels,
+                usingDefaultModels: true,
+            }
+        }
+
+        const defaults = await modelApi.getDefaultModelsByType(channel.type)
+        return {
+            models: getSelectableModelNames(defaults.models),
+            usingDefaultModels: true,
+        }
+    }, [allDefaultModels, getSelectableModelNames])
+
+    const handleTestChannel = useCallback(async (channel: Channel) => {
+        let modelOptions: string[]
+        let usingDefaultModels = false
+        try {
+            const result = await getChannelSingleTestModels(channel)
+            modelOptions = result.models
+            usingDefaultModels = result.usingDefaultModels
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '获取测试模型失败'
+            toast.error(message)
+            return
+        }
+
+        if (modelOptions.length === 0) {
+            toast.error('该渠道没有可测试模型')
+            return
+        }
+
+        setIsTestAll(false)
+        setPendingTestChannel(channel)
+        setTestModelOptions(modelOptions)
+        setSelectedTestModel(
+            modelOptions.includes(selectedTestModel)
+                ? selectedTestModel
+                : modelOptions[0]
+        )
+        setTestModelSourceLabel(usingDefaultModels ? '默认模型' : '渠道模型')
+        setTestModelDialogOpen(true)
+    }, [getChannelSingleTestModels, selectedTestModel])
+
+    const handleConfirmSelectedTestModel = useCallback(async () => {
+        if (!pendingTestChannel || !selectedTestModel) {
+            toast.error('请先选择要测试的模型')
+            return
+        }
+
+        setChannelTestResults([])
+        setTestModelDialogOpen(false)
+        setTestDialogOpen(true)
+        setIsTestingChannel(true)
+
+        try {
+            const result = await channelApi.testChannelModel(pendingTestChannel.id, selectedTestModel)
+
+            setChannelTestResults([result])
+            if (result.success && result.data?.success) {
+                toast.success('渠道测试成功')
+            } else {
+                const message = result.message || result.data?.response?.slice(0, 200) || '测试失败'
+                toast.error(`测试失败: ${message}`)
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '测试请求失败'
+            toast.error(message)
+            setChannelTestResults([{
+                success: false,
+                message,
+            }])
+        } finally {
+            setIsTestingChannel(false)
+        }
+    }, [pendingTestChannel, selectedTestModel])
 
     // 可点击单元格样式
     const clickableCell = 'cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors'
@@ -714,15 +821,12 @@ export function ChannelTable() {
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem
                             onClick={() => {
-                                clearResults()
-                                setIsTestAll(false)
-                                setTestDialogOpen(true)
-                                testChannel(row.original.id)
+                                handleTestChannel(row.original)
                             }}
-                            disabled={isTesting}
+                            disabled={isTestingChannel}
                         >
                             <FlaskConical className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-500" />
-                            {isTesting ? t("channel.testing") : t("channel.test")}
+                            {isTestingChannel ? t("channel.testing") : t("channel.test")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => openUpdateDialog(row.original)}
@@ -768,7 +872,7 @@ export function ChannelTable() {
                 </DropdownMenu>
             ),
         },
-    ], [t, isTesting, isStatusUpdating, getDisplayModels, runtimeMetrics, formatPercent, getExcludedModels])
+    ], [t, isTestingChannel, isStatusUpdating, getDisplayModels, runtimeMetrics, formatPercent, getExcludedModels, handleTestChannel])
 
     // 初始化表格
     const table = useReactTable({
@@ -951,6 +1055,17 @@ export function ChannelTable() {
             />
 
             {/* 测试结果对话框 */}
+            <ChannelModelTestSelectorDialog
+                open={testModelDialogOpen}
+                onOpenChange={setTestModelDialogOpen}
+                models={testModelOptions}
+                selectedModel={selectedTestModel}
+                onSelectedModelChange={setSelectedTestModel}
+                onConfirm={handleConfirmSelectedTestModel}
+                isTesting={isTestingChannel}
+                sourceLabel={testModelSourceLabel}
+            />
+
             <ChannelTestDialog
                 open={testDialogOpen}
                 onOpenChange={(open) => {
@@ -959,8 +1074,8 @@ export function ChannelTable() {
                         setIsTestAll(false)
                     }
                 }}
-                isTesting={isTestAll ? isTestingAll : isTesting}
-                results={isTestAll ? testAllResults : testResults}
+                isTesting={isTestAll ? isTestingAll : isTestingChannel}
+                results={isTestAll ? testAllResults : channelTestResults}
                 showChannelInfo={true}
                 onChannelClick={async (channelId: number) => {
                     let channel = channels.find(c => c.id === channelId)
@@ -991,8 +1106,7 @@ export function ChannelTable() {
                         cancelTestAll()
                         clearTestAllResults()
                     } else {
-                        cancelTest()
-                        clearResults()
+                        setChannelTestResults([])
                     }
                     setTestDialogOpen(false)
                     setIsTestAll(false)

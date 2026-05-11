@@ -158,3 +158,39 @@ func TestGetChannelTestModelConfigUsesOriginModelForMappedName(t *testing.T) {
 	require.Equal(t, model.ZeroNullFloat64(1), config.Price.InputPrice)
 	require.Equal(t, model.ZeroNullFloat64(2), config.Price.OutputPrice)
 }
+
+func TestGetChannelTestModelConfigHandlesNilCache(t *testing.T) {
+	originModel, config, ok := getChannelTestModelConfig(nil, nil, "custom-model")
+
+	require.False(t, ok)
+	require.Equal(t, "custom-model", originModel)
+	require.Equal(t, model.ModelConfig{}, config)
+}
+
+func TestBuildFallbackChannelTestModelConfigUsesConfiguredModelName(t *testing.T) {
+	channel := &model.Channel{
+		Type: model.ChannelTypeOpenAI,
+		ModelMapping: map[string]string{
+			"public-model": "upstream-model-without-config",
+		},
+	}
+
+	config := buildFallbackChannelTestModelConfig(channel, "public-model")
+
+	require.Equal(t, "public-model", config.Model)
+	require.Equal(t, mode.ChatCompletions, config.Type)
+}
+
+func TestBuildFallbackChannelTestModelConfigInfersTypeFromMappedModelName(t *testing.T) {
+	channel := &model.Channel{
+		Type: model.ChannelTypeOpenAI,
+		ModelMapping: map[string]string{
+			"public-image-model": "upstream-image-model-without-config",
+		},
+	}
+
+	config := buildFallbackChannelTestModelConfig(channel, "public-image-model")
+
+	require.Equal(t, "public-image-model", config.Model)
+	require.Equal(t, mode.ImagesGenerations, config.Type)
+}

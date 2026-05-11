@@ -1,6 +1,6 @@
 // src/feature/channel/hooks.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { channelApi, ChannelTestResult } from '@/api/channel'
+import { channelApi, ChannelTestAllPayload, ChannelTestPayload, ChannelTestResult } from '@/api/channel'
 import { modelApi } from '@/api/model'
 import { useState, useCallback } from 'react'
 import {
@@ -262,23 +262,13 @@ export const useTestChannelPreview = () => {
     const [isTesting, setIsTesting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const testChannelPreview = async (data: {
-        type: number
-        key: string
-        base_url?: string
-        proxy_url?: string
-        name?: string
-        model: string
-        model_mapping?: Record<string, string>
-        skip_tls_verify?: boolean
-        configs?: Record<string, unknown>
-    }) => {
+    const testChannelPreview = async (data: ChannelTestPayload) => {
         setIsTesting(true)
         setError(null)
 
         try {
             const result = await channelApi.testChannelPreview(data)
-            if (result.success) {
+            if (result.success && result.data?.success) {
                 toast.success('渠道测试成功')
             } else {
                 const message = result.message || (result.data?.response?.substring(0, 200)) || '测试失败'
@@ -289,7 +279,10 @@ export const useTestChannelPreview = () => {
             const errorMessage = err instanceof Error ? err.message : '测试请求失败'
             setError(errorMessage)
             toast.error(errorMessage)
-            return null
+            return {
+                success: false,
+                message: errorMessage,
+            }
         } finally {
             setIsTesting(false)
         }
@@ -310,17 +303,7 @@ export const useTestChannelPreviewAll = () => {
     const [error, setError] = useState<string | null>(null)
     const [cancelRef, setCancelRef] = useState<(() => void) | null>(null)
 
-    const testChannelPreviewAll = useCallback((data: {
-        type: number
-        key: string
-        base_url?: string
-        proxy_url?: string
-        name?: string
-        models: string[]
-        model_mapping?: Record<string, string>
-        skip_tls_verify?: boolean
-        configs?: Record<string, unknown>
-    }) => {
+    const testChannelPreviewAll = useCallback((data: ChannelTestAllPayload) => {
         setIsTesting(true)
         setResults([])
         setError(null)
