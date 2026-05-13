@@ -5,6 +5,8 @@ import type { LogRequestDetail } from '@/types/log'
 import type {
     UserPortalAuthResponse,
     UserPortalCreateKeyRequest,
+    UserPortalEmailCodeRequest,
+    UserPortalEmailCodeResponse,
     UserPortalGroupsResponse,
     UserPortalKeysResponse,
     UserPortalLoginRequest,
@@ -101,6 +103,10 @@ const del = async <T>(url: string) => {
 }
 
 export const userPortalApi = {
+    sendRegisterEmailCode: async (data: UserPortalEmailCodeRequest) => {
+        return post<UserPortalEmailCodeResponse>('auth/email-code', data)
+    },
+
     register: async (data: UserPortalRegisterRequest) => {
         return post<{ user: UserPortalUser }>('auth/register', data)
     },

@@ -150,6 +150,7 @@ func migrateDB() error {
 		&Channel{},
 		&ChannelTest{},
 		&AppUser{},
+		&AppUserRegisterCode{},
 		&AppUserWallet{},
 		&AppRechargeLog{},
 		&AppPaymentOrder{},

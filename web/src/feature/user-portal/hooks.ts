@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type {
     UserPortalCreateKeyRequest,
+    UserPortalEmailCodeRequest,
+    UserPortalEmailCodeResponse,
     UserPortalLoginRequest,
     UserPortalPlaygroundChatRequest,
     UserPortalRechargeRequest,
@@ -30,6 +32,19 @@ export const useUserPortalRegister = () => {
         },
         onError: (error: unknown) => {
             const message = error instanceof Error ? error.message : '注册失败'
+            toast.error(message)
+        },
+    })
+}
+
+export const useUserPortalSendRegisterEmailCode = () => {
+    return useMutation({
+        mutationFn: (data: UserPortalEmailCodeRequest) => userPortalApi.sendRegisterEmailCode(data),
+        onSuccess: (_response: UserPortalEmailCodeResponse) => {
+            toast.success('验证码已发送')
+        },
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '发送验证码失败'
             toast.error(message)
         },
     })

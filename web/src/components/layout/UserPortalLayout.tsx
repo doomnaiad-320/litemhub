@@ -47,7 +47,7 @@ export function UserPortalLayout() {
     ]
 
     const currentPath = location.pathname
-    const account = user?.email || user?.phone || `#${user?.id ?? ''}`
+    const account = user?.email || `#${user?.id ?? ''}`
     const activeNavItem = portalNavItems.find((item) => item.href === currentPath)
         || portalNavItems.find((item) => item.href === ROUTES.USER_DASHBOARD)
         || portalNavItems[0]

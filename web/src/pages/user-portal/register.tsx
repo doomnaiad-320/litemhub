@@ -1,43 +1,53 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CreditCard, Mail, Phone, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Loader2, Mail, Send, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
-import { useUserPortalRegister } from '@/feature/user-portal/hooks'
-import { UserPortalMarketingHeader } from '@/feature/user-portal/components/UserPortalMarketingHeader'
+import {
+    useUserPortalRegister,
+    useUserPortalSendRegisterEmailCode,
+} from '@/feature/user-portal/hooks'
+import { UserPortalAuthShell } from '@/feature/user-portal/components/UserPortalAuthShell'
 import { ROUTES } from '@/routes/constants'
 
 interface UserPortalRegisterForm {
-    account: string
+    email: string
+    code: string
     password: string
     confirmPassword: string
 }
 
+const authInputClassName = 'h-9 rounded-[8px] border-[#d9d9d9] bg-white px-3 text-sm text-[#151515] shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-visible:border-[#151515] focus-visible:ring-[#151515]/10 dark:border-white/10 dark:bg-[#15181c] dark:text-white dark:focus-visible:border-white dark:focus-visible:ring-white/10'
+
 export default function UserPortalRegisterPage() {
     const { t: rawT } = useTranslation()
-    const t = rawT as (key: string) => string
+    const t = rawT as (key: string, options?: Record<string, unknown>) => string
     const navigate = useNavigate()
-    const [registerType, setRegisterType] = useState<'email' | 'phone'>('email')
     const registerMutation = useUserPortalRegister()
+    const sendCodeMutation = useUserPortalSendRegisterEmailCode()
+    const [now, setNow] = useState(() => Date.now())
+    const [codeCooldownEndsAt, setCodeCooldownEndsAt] = useState<number | null>(null)
+    const [codeEmail, setCodeEmail] = useState('')
 
     const schema = useMemo(() => z.object({
-        account: z.string().trim().min(1, t('portalAuth.accountRequired')),
+        email: z.string().trim().email(t('portalAuth.emailInvalid')),
+        code: z.string().trim().min(1, t('portalAuth.codeRequired')).regex(/^\d{6}$/, t('portalAuth.codeInvalid')),
         password: z.string().trim().min(6, t('portalAuth.passwordMin')),
         confirmPassword: z.string().trim().min(6, t('portalAuth.passwordMin')),
-    }).refine((value) => value.password === value.confirmPassword, {
+    }).refine((data) => data.password === data.confirmPassword, {
         path: ['confirmPassword'],
         message: t('portalAuth.passwordNotMatch'),
     }), [t])
@@ -45,149 +55,264 @@ export default function UserPortalRegisterPage() {
     const form = useForm<UserPortalRegisterForm>({
         resolver: zodResolver(schema),
         defaultValues: {
-            account: '',
+            email: '',
+            code: '',
             password: '',
             confirmPassword: '',
         },
     })
 
-    const onSubmit = (values: UserPortalRegisterForm) => {
-        const payload = registerType === 'email'
-            ? { email: values.account.trim(), password: values.password.trim() }
-            : { phone: values.account.trim(), password: values.password.trim() }
+    const watchedEmail = useWatch({
+        control: form.control,
+        name: 'email',
+    })
+    const normalizedEmail = useMemo(() => (watchedEmail || '').trim().toLowerCase(), [watchedEmail])
 
-        registerMutation.mutate(payload, {
-            onSuccess: () => navigate(ROUTES.USER_LOGIN),
+    useEffect(() => {
+        if (!codeEmail) {
+            return
+        }
+
+        if (normalizedEmail === codeEmail) {
+            return
+        }
+
+        setCodeEmail('')
+        setCodeCooldownEndsAt(null)
+        form.setValue('code', '', {
+            shouldDirty: true,
+            shouldTouch: false,
+            shouldValidate: false,
         })
+    }, [codeEmail, form, normalizedEmail])
+
+    useEffect(() => {
+        if (!codeCooldownEndsAt) {
+            return
+        }
+
+        const timer = window.setInterval(() => {
+            setNow(Date.now())
+        }, 1000)
+
+        return () => window.clearInterval(timer)
+    }, [codeCooldownEndsAt])
+
+    useEffect(() => {
+        if (codeCooldownEndsAt && Date.now() >= codeCooldownEndsAt) {
+            setCodeCooldownEndsAt(null)
+        }
+    }, [codeCooldownEndsAt, now])
+
+    const codeCooldownSeconds = codeCooldownEndsAt
+        ? Math.max(0, Math.ceil((codeCooldownEndsAt - now) / 1000))
+        : 0
+    const emailIsValid = z.string().trim().email().safeParse(normalizedEmail).success
+    const canSendCode = emailIsValid && !sendCodeMutation.isPending && codeCooldownSeconds === 0
+
+    const handleSendCode = async () => {
+        const emailValid = await form.trigger('email')
+        if (!emailValid) {
+            return
+        }
+
+        const email = form.getValues('email').trim().toLowerCase()
+        if (!email) {
+            return
+        }
+
+        sendCodeMutation.mutate(
+            { email },
+            {
+                onSuccess: (response) => {
+                    const cooldownSeconds = Math.max(1, Number(response.cooldown_seconds) || 0)
+                    setCodeEmail(email)
+                    setCodeCooldownEndsAt(Date.now() + cooldownSeconds * 1000)
+                    form.setValue('code', '', {
+                        shouldDirty: true,
+                        shouldTouch: false,
+                        shouldValidate: false,
+                    })
+                },
+            },
+        )
+    }
+
+    const onSubmit = (values: UserPortalRegisterForm) => {
+        registerMutation.mutate(
+            {
+                email: values.email.trim().toLowerCase(),
+                code: values.code.trim(),
+                password: values.password.trim(),
+            },
+            {
+                onSuccess: () => {
+                    navigate(ROUTES.USER_LOGIN, { replace: true })
+                },
+            },
+        )
     }
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.16),_transparent_30%),linear-gradient(180deg,_#f8faff_0%,_#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.2),_transparent_26%),linear-gradient(180deg,_#0f172a_0%,_#09111f_100%)]">
-            <UserPortalMarketingHeader />
-
-            <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:py-14">
-                <div className="hidden lg:flex flex-col justify-center rounded-[32px] border border-white/60 bg-white/55 p-10 shadow-[0_32px_64px_-48px_rgba(15,23,42,0.4)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/5">
-                    <div className="max-w-xl space-y-6">
-                        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                            <ShieldCheck className="h-4 w-4" />
-                            {t('portalAuth.registerBadge')}
-                        </div>
-                        <h1 className="text-4xl font-semibold tracking-tight text-foreground">
-                            {t('portalAuth.registerHeroTitle')}
-                        </h1>
-                        <p className="text-lg leading-8 text-muted-foreground">
-                            {t('portalAuth.registerHeroDescription')}
-                        </p>
-                    </div>
-                </div>
-
-                <Card className="rounded-[32px] border-white/70 bg-white/82 shadow-[0_36px_72px_-50px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/6">
-                    <CardHeader className="space-y-4 px-8 pt-8">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6A6DE6] to-[#8A8DF7] text-white shadow-lg lg:hidden">
-                            <CreditCard className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <CardTitle className="text-2xl font-semibold tracking-tight">
-                                {t('portalAuth.registerTitle')}
-                            </CardTitle>
-                            <CardDescription className="mt-1 text-base">
-                                {t('portalAuth.registerDescription')}
-                            </CardDescription>
-                        </div>
-                        <div className="inline-flex rounded-2xl border border-border/70 bg-muted/40 p-1">
-                            <button
-                                type="button"
-                                className={`rounded-xl px-4 py-2 text-sm transition ${registerType === 'email' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
-                                onClick={() => setRegisterType('email')}
-                            >
-                                <Mail className="mr-2 inline h-4 w-4" />
-                                {t('portalAuth.email')}
-                            </button>
-                            <button
-                                type="button"
-                                className={`rounded-xl px-4 py-2 text-sm transition ${registerType === 'phone' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
-                                onClick={() => setRegisterType('phone')}
-                            >
-                                <Phone className="mr-2 inline h-4 w-4" />
-                                {t('portalAuth.phone')}
-                            </button>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent className="px-8 pb-8">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                                <FormField
-                                    control={form.control}
-                                    name="account"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{registerType === 'email' ? t('portalAuth.email') : t('portalAuth.phone')}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder={registerType === 'email' ? t('portalAuth.emailPlaceholder') : t('portalAuth.phonePlaceholder')}
-                                                    className="h-12 rounded-2xl"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('portalAuth.password')}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    type="password"
-                                                    placeholder={t('portalAuth.passwordPlaceholder')}
-                                                    className="h-12 rounded-2xl"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('portalAuth.confirmPassword')}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    type="password"
-                                                    placeholder={t('portalAuth.confirmPasswordPlaceholder')}
-                                                    className="h-12 rounded-2xl"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <Button type="submit" className="h-12 w-full rounded-2xl text-base" disabled={registerMutation.isPending}>
-                                    {registerMutation.isPending ? t('portalAuth.registering') : t('portalAuth.register')}
-                                </Button>
-                            </form>
-                        </Form>
-
-                        <div className="mt-6 text-center text-sm text-muted-foreground">
-                            {t('portalAuth.hasAccount')}
-                            <Link to={ROUTES.USER_LOGIN} className="ml-2 font-medium text-primary hover:underline">
-                                {t('portalAuth.toLogin')}
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
+        <UserPortalAuthShell mode="register">
+            <div className="mb-7 text-center">
+                <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[26px] font-semibold leading-tight text-[#151515] dark:text-white">
+                    {t('portalAuth.registerTitle')}
+                </h1>
+                <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-white/55">
+                    {t('portalAuth.registerDescription')}
+                </p>
             </div>
-        </div>
+
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                    {t('portalAuth.email')}
+                                </FormLabel>
+                                <div className="flex gap-2">
+                                    <FormControl>
+                                        <Input
+                                            {...field}
+                                            type="email"
+                                            autoComplete="email"
+                                            placeholder={t('portalAuth.emailPlaceholder')}
+                                            className={`min-w-0 flex-1 ${authInputClassName}`}
+                                        />
+                                    </FormControl>
+                                    <Button
+                                        type="button"
+                                        onClick={handleSendCode}
+                                        disabled={!canSendCode}
+                                        className="h-9 shrink-0 rounded-[8px] bg-[#151515] px-3 text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px disabled:translate-y-0 dark:bg-white dark:text-[#111316] dark:hover:bg-white/90"
+                                    >
+                                        {sendCodeMutation.isPending ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                {t('portalAuth.sendingCode')}
+                                            </>
+                                        ) : codeCooldownSeconds > 0 ? (
+                                            <>
+                                                <Mail className="h-4 w-4" />
+                                                {t('portalAuth.codeResendIn', { seconds: codeCooldownSeconds })}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="h-4 w-4" />
+                                                {t('portalAuth.sendCode')}
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                    {t('portalAuth.registerEmailHint')}
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                    {t('portalAuth.verificationCode')}
+                                </FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        maxLength={6}
+                                        placeholder={t('portalAuth.codePlaceholder')}
+                                        className={authInputClassName}
+                                    />
+                                </FormControl>
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                    {t('portalAuth.codeHint')}
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                    {t('portalAuth.password')}
+                                </FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder={t('portalAuth.passwordPlaceholder')}
+                                        className={authInputClassName}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                    {t('portalAuth.confirmPassword')}
+                                </FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder={t('portalAuth.confirmPasswordPlaceholder')}
+                                        className={authInputClassName}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <Button
+                        type="submit"
+                        className="mt-1 h-9 w-full rounded-[8px] bg-[#151515] text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px dark:bg-white dark:text-[#111316] dark:hover:bg-white/90"
+                        disabled={registerMutation.isPending}
+                    >
+                        {registerMutation.isPending ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('portalAuth.registering')}
+                            </>
+                        ) : (
+                            <>
+                                <ShieldCheck className="h-4 w-4" />
+                                {t('portalAuth.register')}
+                            </>
+                        )}
+                    </Button>
+                </form>
+            </Form>
+
+            <div className="mt-7 text-center text-sm text-[#151515] dark:text-white/75">
+                {t('portalAuth.hasAccount')}
+                <Link to={ROUTES.USER_LOGIN} className="ml-1 underline underline-offset-2 hover:text-[#4b4b4b] dark:hover:text-white">
+                    {t('portalAuth.toLogin')}
+                </Link>
+            </div>
+        </UserPortalAuthShell>
     )
 }

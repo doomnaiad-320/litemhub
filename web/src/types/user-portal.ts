@@ -5,7 +5,6 @@ import type { ModelPrice } from './model'
 export interface UserPortalUser {
     id: number
     email?: string
-    phone?: string
     status: number
     created_at: number
     updated_at: number
@@ -97,15 +96,23 @@ export interface UserPortalKeysResponse {
 }
 
 export interface UserPortalRegisterRequest {
-    email?: string
-    phone?: string
+    email: string
+    code: string
     password: string
 }
 
 export interface UserPortalLoginRequest {
-    email?: string
-    phone?: string
+    email: string
     password: string
+}
+
+export interface UserPortalEmailCodeRequest {
+    email: string
+}
+
+export interface UserPortalEmailCodeResponse {
+    expires_at: number
+    cooldown_seconds: number
 }
 
 export interface UserPortalCreateKeyRequest {

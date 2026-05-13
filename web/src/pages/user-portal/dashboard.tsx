@@ -55,7 +55,7 @@ export default function UserPortalDashboardPage() {
     const wallet = walletData?.wallet
     const walletLogs = walletLogData?.wallet_logs || []
     const walletLogTotal = walletLogData?.total || 0
-    const account = user?.email || user?.phone || `#${user?.id ?? ''}`
+    const account = user?.email || `#${user?.id ?? ''}`
     const totalBalance = (wallet?.available_balance || 0) + (wallet?.frozen_balance || 0)
 
     useEffect(() => {

@@ -35,6 +35,15 @@ var (
 	DuluPayProductName   string
 	DuluPayMinAmount     float64
 	DuluPayMaxAmount     float64
+	SMTPHost             string
+	SMTPPort             int64
+	SMTPUsername         string
+	SMTPPassword         string
+	SMTPFrom             string
+	SMTPFromName         string
+	RegisterEmailCodeTTLMinutes     int64
+	RegisterEmailCodeCooldownSeconds int64
+	RegisterEmailCodeMaxAttempts     int64
 
 	// OnCall Lark configuration for urgent alerts
 	OnCallLarkAppID     string
@@ -76,6 +85,24 @@ func ReloadEnv() {
 	DuluPayProductName = env.String("DULUPAY_PRODUCT_NAME", "LiteMHub Wallet Recharge")
 	DuluPayMinAmount = env.Float64("DULUPAY_MIN_AMOUNT", 1)
 	DuluPayMaxAmount = env.Float64("DULUPAY_MAX_AMOUNT", 50000)
+	SMTPHost = env.String("SMTP_HOST", "")
+	SMTPPort = env.Int64("SMTP_PORT", 587)
+	SMTPUsername = env.String("SMTP_USERNAME", "")
+	SMTPPassword = env.String("SMTP_PASSWORD", "")
+	SMTPFrom = env.String("SMTP_FROM", SMTPUsername)
+	SMTPFromName = env.String("SMTP_FROM_NAME", "LiteMHub")
+	RegisterEmailCodeTTLMinutes = env.Int64("REGISTER_EMAIL_CODE_TTL_MINUTES", 10)
+	if RegisterEmailCodeTTLMinutes <= 0 {
+		RegisterEmailCodeTTLMinutes = 10
+	}
+	RegisterEmailCodeCooldownSeconds = env.Int64("REGISTER_EMAIL_CODE_COOLDOWN_SECONDS", 60)
+	if RegisterEmailCodeCooldownSeconds <= 0 {
+		RegisterEmailCodeCooldownSeconds = 60
+	}
+	RegisterEmailCodeMaxAttempts = env.Int64("REGISTER_EMAIL_CODE_MAX_ATTEMPTS", 5)
+	if RegisterEmailCodeMaxAttempts <= 0 {
+		RegisterEmailCodeMaxAttempts = 5
+	}
 
 	// OnCall Lark configuration
 	OnCallLarkAppID = os.Getenv("ON_CALL_LARK_APP_ID")

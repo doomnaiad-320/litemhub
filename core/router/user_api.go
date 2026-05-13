@@ -13,6 +13,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 
 	authPublicRouter := userAPI.Group("/auth")
 	{
+		authPublicRouter.POST("/email-code", controller.SendUserRegisterEmailCode)
 		authPublicRouter.POST("/register", controller.RegisterAppUser)
 		authPublicRouter.POST("/login", controller.LoginAppUser)
 	}

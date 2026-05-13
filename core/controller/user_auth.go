@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"net/mail"
 	"net/http"
 	"strings"
 
@@ -14,20 +15,27 @@ import (
 
 type UserAuthRegisterRequest struct {
 	Email    string `json:"email"`
-	Phone    string `json:"phone"`
+	Code     string `json:"code"`
 	Password string `json:"password"`
 }
 
 type UserAuthLoginRequest struct {
 	Email    string `json:"email"`
-	Phone    string `json:"phone"`
 	Password string `json:"password"`
+}
+
+type UserAuthEmailCodeRequest struct {
+	Email string `json:"email"`
+}
+
+type UserAuthEmailCodeResponse struct {
+	ExpiresAt       int64 `json:"expires_at"`
+	CooldownSeconds int64 `json:"cooldown_seconds"`
 }
 
 type AppUserResponse struct {
 	ID        int    `json:"id"`
 	Email     string `json:"email,omitempty"`
-	Phone     string `json:"phone,omitempty"`
 	Status    int    `json:"status"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
@@ -37,20 +45,52 @@ func buildAppUserResponse(user *model.AppUser) *AppUserResponse {
 	return &AppUserResponse{
 		ID:        user.ID,
 		Email:     string(user.Email),
-		Phone:     string(user.Phone),
 		Status:    user.Status,
 		CreatedAt: user.CreatedAt.UnixMilli(),
 		UpdatedAt: user.UpdatedAt.UnixMilli(),
 	}
 }
 
-func normalizeUserAuthAccount(email, phone string) (string, string) {
-	return strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(phone)
+func normalizeUserPortalEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
-func validateUserAuthRequest(email, phone, password string) string {
-	if email == "" && phone == "" {
-		return "email or phone is required"
+func validateUserPortalEmail(email string) string {
+	email = normalizeUserPortalEmail(email)
+	if email == "" {
+		return "email is required"
+	}
+
+	parsed, err := mail.ParseAddress(email)
+	if err != nil || parsed.Address != email {
+		return "invalid email format"
+	}
+
+	return ""
+}
+
+func validateUserPortalVerificationCode(code string) string {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return "verification code is required"
+	}
+
+	if len(code) != 6 {
+		return "verification code must be 6 digits"
+	}
+
+	for _, r := range code {
+		if r < '0' || r > '9' {
+			return "verification code must be 6 digits"
+		}
+	}
+
+	return ""
+}
+
+func validateUserPortalLoginRequest(email, password string) string {
+	if message := validateUserPortalEmail(email); message != "" {
+		return message
 	}
 
 	if strings.TrimSpace(password) == "" {
@@ -58,6 +98,30 @@ func validateUserAuthRequest(email, phone, password string) string {
 	}
 
 	return ""
+}
+
+func validateUserPortalRegisterRequest(email, code, password string) string {
+	if message := validateUserPortalEmail(email); message != "" {
+		return message
+	}
+
+	if message := validateUserPortalVerificationCode(code); message != "" {
+		return message
+	}
+
+	return validateUserPassword(password)
+}
+
+func normalizeUserAuthAccount(email, phone string) (string, string) {
+	return strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(phone)
+}
+
+func validateUserRegisterRequest(email, phone, password string) string {
+	if email == "" && phone == "" {
+		return "email or phone is required"
+	}
+
+	return validateUserPassword(password)
 }
 
 func validateUserPassword(password string) string {
@@ -72,22 +136,6 @@ func validateUserPassword(password string) string {
 	return ""
 }
 
-func validateUserRegisterRequest(email, phone, password string) string {
-	if email == "" && phone == "" {
-		return "email or phone is required"
-	}
-
-	return validateUserPassword(password)
-}
-
-func findAppUserForLogin(email, phone string) (*model.AppUser, error) {
-	if email != "" {
-		return model.GetAppUserByEmail(email)
-	}
-
-	return model.GetAppUserByPhone(phone)
-}
-
 func RegisterAppUser(c *gin.Context) {
 	req := UserAuthRegisterRequest{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -95,10 +143,24 @@ func RegisterAppUser(c *gin.Context) {
 		return
 	}
 
-	req.Email, req.Phone = normalizeUserAuthAccount(req.Email, req.Phone)
+	req.Email = normalizeUserPortalEmail(req.Email)
 
-	if message := validateUserRegisterRequest(req.Email, req.Phone, req.Password); message != "" {
+	if message := validateUserPortalRegisterRequest(req.Email, req.Code, req.Password); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
+		return
+	}
+
+	if err := verifyUserPortalRegisterEmailCode(req.Email, req.Code); err != nil {
+		switch {
+		case errors.Is(err, errUserPortalRegisterCodeNotFound),
+			errors.Is(err, errUserPortalRegisterCodeExpired),
+			errors.Is(err, errUserPortalRegisterCodeInvalid),
+			errors.Is(err, errUserPortalRegisterCodeTooManyAttempts):
+			middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+
 		return
 	}
 
@@ -110,7 +172,6 @@ func RegisterAppUser(c *gin.Context) {
 
 	user := &model.AppUser{
 		Email:        model.EmptyNullString(req.Email),
-		Phone:        model.EmptyNullString(req.Phone),
 		PasswordHash: string(passwordHash),
 		Status:       model.AppUserStatusEnabled,
 	}
@@ -137,17 +198,17 @@ func LoginAppUser(c *gin.Context) {
 		return
 	}
 
-	req.Email, req.Phone = normalizeUserAuthAccount(req.Email, req.Phone)
+	req.Email = normalizeUserPortalEmail(req.Email)
 
-	if message := validateUserAuthRequest(req.Email, req.Phone, req.Password); message != "" {
+	if message := validateUserPortalLoginRequest(req.Email, req.Password); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
 		return
 	}
 
-	user, err := findAppUserForLogin(req.Email, req.Phone)
+	user, err := model.GetAppUserByEmail(req.Email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email/phone or password")
+			middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email or password")
 			return
 		}
 
@@ -161,7 +222,7 @@ func LoginAppUser(c *gin.Context) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email/phone or password")
+		middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 

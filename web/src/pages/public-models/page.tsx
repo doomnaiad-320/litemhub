@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 import {
   DISPLAY_TOKEN_PRICE_UNIT_LABEL,
   buildImagePriceEntries,
-  formatPriceValue,
+  formatPriceNumber,
   formatTokenPriceValue,
   getPublicModelDetailPath,
   sortCapabilities,
@@ -83,9 +83,17 @@ const getInputPrice = (model: PublicModel) =>
     model.price?.audio_input_price_unit,
   );
 
-const getOutputPrice = (model: PublicModel) =>
+const formatRequestPriceValue = (price: number | undefined, unitLabel: string) => {
+  if (price == null || price === 0) {
+    return null;
+  }
+
+  return `${formatPriceNumber(price)}/${unitLabel}`;
+};
+
+const getOutputPrice = (model: PublicModel, requestUnitLabel = "次") =>
   formatTokenPriceValue(model.price?.output_price, model.price?.output_price_unit) ||
-  formatPriceValue(model.price?.output_request_price, 1) ||
+  formatRequestPriceValue(model.price?.output_request_price, requestUnitLabel) ||
   formatTokenPriceValue(
     model.price?.image_output_price,
     model.price?.image_output_price_unit,
@@ -179,6 +187,7 @@ const ensureJsonLd = (id: string, data: unknown) => {
 export default function PublicModelsPage() {
   const { t: rawT, i18n } = useTranslation();
   const t = rawT as (key: string, options?: Record<string, unknown>) => string;
+  const navigate = useNavigate();
   const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
   const { data, isLoading, isError } = usePublicModels();
   const [keyword, setKeyword] = useState("");
@@ -360,7 +369,7 @@ export default function PublicModelsPage() {
         <section className="relative overflow-hidden border-b border-[#f2f3f5] dark:border-white/10">
           <div className="pointer-events-none absolute right-[-9rem] top-[-12rem] h-[28rem] w-[28rem] rounded-full bg-[#1456f0]/10 blur-3xl" />
           <div className="pointer-events-none absolute bottom-[-10rem] left-[-8rem] h-[24rem] w-[24rem] rounded-full bg-[#ea5ec1]/10 blur-3xl" />
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
+          <div className="relative mx-auto grid w-full max-w-[1504px] gap-10 px-4 py-14 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
             <div className="space-y-7">
               <Badge className="rounded-full border-[#e5e7eb] bg-white px-3 py-1 text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] dark:border-white/10 dark:bg-white/5 dark:text-white/70" variant="outline">
                 <Sparkles className="h-3.5 w-3.5 text-[#1456f0]" />
@@ -418,8 +427,8 @@ export default function PublicModelsPage() {
           </div>
         </section>
 
-        <section id="model-catalog" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
-          <div className="-mx-4 mb-8 overflow-hidden rounded-[20px] bg-white shadow-[rgba(15,23,42,0.04)_0px_12px_24px] dark:bg-[#0b0f18] dark:shadow-none sm:-mx-6">
+        <section id="model-catalog" className="mx-auto w-full max-w-[1504px] px-4 py-14 lg:py-20">
+          <div className="-mx-4 mb-8 overflow-hidden rounded-[20px] bg-white shadow-[rgba(15,23,42,0.04)_0px_12px_24px] dark:bg-[#0b0f18] dark:shadow-none">
             <div className="border-b border-[#f2f3f5] px-4 py-3 dark:border-white/10">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex gap-1 overflow-x-auto">
@@ -553,9 +562,23 @@ export default function PublicModelsPage() {
                       <article
                         key={model.model}
                         id={encodeURIComponent(model.model)}
-                        className="group flex min-h-[286px] flex-col rounded-[20px] bg-white p-5 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:bg-white/5 dark:ring-white/10"
+                        role="link"
+                        tabIndex={0}
+                        aria-label={`${t("publicModels.viewDetails")}: ${model.model}`}
+                        className="group flex cursor-pointer flex-col rounded-[20px] bg-white p-[10px] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-white/5 dark:ring-white/10"
+                        onClick={() => navigate(getPublicModelDetailPath(model.model))}
+                        onKeyDown={(event) => {
+                          if (event.currentTarget !== event.target) {
+                            return;
+                          }
+
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            navigate(getPublicModelDetailPath(model.model));
+                          }
+                        }}
                       >
-                        <div className="mb-5 flex items-start justify-between gap-3">
+                        <div className="mb-[5px] flex items-start justify-between gap-3">
                           <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
                             {model.provider}
                           </Badge>
@@ -565,7 +588,10 @@ export default function PublicModelsPage() {
                             variant="outline"
                             className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
                             aria-label={`${t("publicModels.copyModelId")}: ${model.model}`}
-                            onClick={() => copyModelId(model.model)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void copyModelId(model.model);
+                            }}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -573,15 +599,36 @@ export default function PublicModelsPage() {
 
                         <Link
                           to={getPublicModelDetailPath(model.model)}
-                          className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                          className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[18px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                          onClick={(event) => event.stopPropagation()}
                         >
                           {model.model}
                         </Link>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <span className="text-[#8e8e93]">{t("publicModels.table.input")}</span>
+                            <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+                              {getInputPrice(model) || t("publicModels.freePrice")}
+                            </span>
+                          </span>
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <span className="text-[#8e8e93]">{t("publicModels.table.output")}</span>
+                            <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+                              {getOutputPrice(
+                                model,
+                                t("publicModels.perRequestUnit"),
+                              ) || "-"}
+                            </span>
+                          </span>
+                        </div>
                         <p className="mt-3 line-clamp-2 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
                           {model.description || t("publicModels.defaultDescription")}
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-1.5">
+                          <Badge className="rounded-full border-[#1456f0]/20 bg-[#1456f0] px-2.5 py-1 text-xs font-semibold text-white shadow-[rgba(20,86,240,0.18)_0px_4px_10px] hover:bg-[#1456f0] dark:border-[#60a5fa]/30 dark:bg-[#2563eb] dark:text-white">
+                            {t("publicModels.table.context")} {formatContextLength(model.context_length)}
+                          </Badge>
                           {(model.capabilities || []).slice(0, 5).map((capability) => (
                             <Badge
                               key={capability}
@@ -591,43 +638,6 @@ export default function PublicModelsPage() {
                               {t(`portal.models.capability.${capability}`)}
                             </Badge>
                           ))}
-                        </div>
-
-                        <div className="mt-auto grid grid-cols-3 gap-3 pt-6">
-                          {[
-                            {
-                              label: t("publicModels.table.context"),
-                              value: formatContextLength(model.context_length),
-                            },
-                            {
-                              label: t("publicModels.table.input"),
-                              value: getInputPrice(model) || "-",
-                            },
-                            {
-                              label: t("publicModels.table.output"),
-                              value: getOutputPrice(model) || "-",
-                            },
-                          ].map((item) => (
-                            <div key={item.label} className="min-w-0">
-                              <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
-                              <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-sm font-semibold text-[#18181b] dark:text-white">
-                                {item.value}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                          <Link to={getPublicModelDetailPath(model.model)}>
-                            <Button variant="outline" className="h-10 w-full rounded-lg border-0 bg-[#f0f0f0] text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white">
-                              {t("publicModels.viewDetails")}
-                            </Button>
-                          </Link>
-                          <Link to={isAuthenticated ? ROUTES.USER_KEYS : ROUTES.USER_REGISTER}>
-                            <Button className="h-10 w-full rounded-lg bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25]">
-                              {t("publicModels.startUsing")}
-                            </Button>
-                          </Link>
                         </div>
                       </article>
                     ))
@@ -639,7 +649,7 @@ export default function PublicModelsPage() {
         </section>
 
         <section className="border-t border-[#f2f3f5] bg-white dark:border-white/10">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20">
+          <div className="mx-auto grid w-full max-w-[1504px] gap-8 px-4 py-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-20">
             <div className="space-y-4">
               <Badge variant="outline" className="rounded-full border-[#e5e7eb] bg-white text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70">
                 <Code2 className="h-3.5 w-3.5" />
@@ -678,7 +688,7 @@ export default function PublicModelsPage() {
       </main>
 
       <footer className="bg-[#181e25] py-8 text-sm text-white/70">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1504px] flex-col items-center justify-between gap-3 px-4 sm:flex-row">
           <div>© {new Date().getFullYear()} LiteMHub. AI model distribution platform.</div>
           <div className="inline-flex items-center gap-2">
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}

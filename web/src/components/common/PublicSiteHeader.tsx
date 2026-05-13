@@ -27,7 +27,7 @@ export function PublicSiteHeader({
   const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
   const isChinese = (i18n.resolvedLanguage || i18n.language || "").startsWith("zh");
   const isDark = variant === "dark";
-  const primaryTarget = isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_REGISTER;
+  const primaryTarget = isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_LOGIN;
 
   return (
     <header
