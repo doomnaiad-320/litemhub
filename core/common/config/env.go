@@ -8,40 +8,46 @@ import (
 )
 
 var (
-	DebugEnabled         bool
-	DebugSQLEnabled      bool
-	DisableAutoMigrateDB bool
-	AdminKey             string
-	UserJWTSecret        string
-	UserJWTExpireHours   int64
-	WebPath              string
-	DisableWeb           bool
-	DisableWebRoot       bool
-	FfmpegEnabled        bool
-	InternalToken        string
-	DisableModelConfig   bool
-	Redis                string
-	RedisKeyPrefix       string
-	ConfigFilePath       string
-	DuluPayAPIBaseURL    string
-	DuluPayPID           string
-	DuluPayPrivateKey    string
-	DuluPayPublicKey     string
-	DuluPayNotifyURL     string
-	DuluPayReturnURL     string
-	DuluPayMethod        string
-	DuluPayType          string
-	DuluPayDevice        string
-	DuluPayProductName   string
-	DuluPayMinAmount     float64
-	DuluPayMaxAmount     float64
-	SMTPHost             string
-	SMTPPort             int64
-	SMTPUsername         string
-	SMTPPassword         string
-	SMTPFrom             string
-	SMTPFromName         string
-	RegisterEmailCodeTTLMinutes     int64
+	DebugEnabled                     bool
+	DebugSQLEnabled                  bool
+	DisableAutoMigrateDB             bool
+	AdminKey                         string
+	UserJWTSecret                    string
+	UserJWTExpireHours               int64
+	WebPath                          string
+	DisableWeb                       bool
+	DisableWebRoot                   bool
+	FfmpegEnabled                    bool
+	InternalToken                    string
+	DisableModelConfig               bool
+	Redis                            string
+	RedisKeyPrefix                   string
+	ConfigFilePath                   string
+	DuluPayAPIBaseURL                string
+	DuluPayPID                       string
+	DuluPayPrivateKey                string
+	DuluPayPublicKey                 string
+	DuluPayNotifyURL                 string
+	DuluPayReturnURL                 string
+	DuluPayMethod                    string
+	DuluPayType                      string
+	DuluPayDevice                    string
+	DuluPayProductName               string
+	DuluPayMinAmount                 float64
+	DuluPayMaxAmount                 float64
+	UserOAuthGitHubClientID          string
+	UserOAuthGitHubClientSecret      string
+	UserOAuthGoogleClientID          string
+	UserOAuthGoogleClientSecret      string
+	UserOAuthCallbackBaseURL         string
+	UserOAuthFrontendBaseURL         string
+	SMTPHost                         string
+	SMTPPort                         int64
+	SMTPUsername                     string
+	SMTPPassword                     string
+	SMTPFrom                         string
+	SMTPFromName                     string
+	RegisterEmailCodeTTLMinutes      int64
 	RegisterEmailCodeCooldownSeconds int64
 	RegisterEmailCodeMaxAttempts     int64
 
@@ -85,6 +91,12 @@ func ReloadEnv() {
 	DuluPayProductName = env.String("DULUPAY_PRODUCT_NAME", "LiteMHub Wallet Recharge")
 	DuluPayMinAmount = env.Float64("DULUPAY_MIN_AMOUNT", 1)
 	DuluPayMaxAmount = env.Float64("DULUPAY_MAX_AMOUNT", 50000)
+	UserOAuthGitHubClientID = os.Getenv("USER_OAUTH_GITHUB_CLIENT_ID")
+	UserOAuthGitHubClientSecret = os.Getenv("USER_OAUTH_GITHUB_CLIENT_SECRET")
+	UserOAuthGoogleClientID = os.Getenv("USER_OAUTH_GOOGLE_CLIENT_ID")
+	UserOAuthGoogleClientSecret = os.Getenv("USER_OAUTH_GOOGLE_CLIENT_SECRET")
+	UserOAuthCallbackBaseURL = strings.TrimRight(env.String("USER_OAUTH_CALLBACK_BASE_URL", ""), "/")
+	UserOAuthFrontendBaseURL = strings.TrimRight(env.String("USER_OAUTH_FRONTEND_BASE_URL", ""), "/")
 	SMTPHost = env.String("SMTP_HOST", "")
 	SMTPPort = env.Int64("SMTP_PORT", 587)
 	SMTPUsername = env.String("SMTP_USERNAME", "")

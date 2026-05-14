@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { KeyRound, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -17,8 +18,11 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import { useUserPortalLogin } from '@/feature/user-portal/hooks'
+import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 import { UserPortalAuthShell } from '@/feature/user-portal/components/UserPortalAuthShell'
+import { UserPortalOAuthButtons } from '@/feature/user-portal/components/UserPortalOAuthButtons'
 import { ROUTES } from '@/routes/constants'
+import type { UserPortalAuthResponse } from '@/types/user-portal'
 
 interface UserPortalLoginForm {
     email: string
@@ -28,7 +32,9 @@ interface UserPortalLoginForm {
 export default function UserPortalLoginPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
+    const navigate = useNavigate()
     const loginMutation = useUserPortalLogin()
+    const login = useUserPortalAuthStore((state) => state.login)
 
     const schema = useMemo(() => z.object({
         email: z.string().trim().email(t('portalAuth.emailInvalid')),
@@ -42,6 +48,49 @@ export default function UserPortalLoginPage() {
             password: '',
         },
     })
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        const oauthPayload = hashParams.get('oauth')
+        const oauthError = hashParams.get('oauth_error')
+
+        if (!oauthPayload && !oauthError) {
+            return
+        }
+
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+        if (oauthError) {
+            toast.error(oauthError)
+            return
+        }
+
+        if (!oauthPayload) {
+            toast.error(t('portalAuth.oauthLoginFailed'))
+            return
+        }
+
+        try {
+            const response = JSON.parse(oauthPayload) as UserPortalAuthResponse
+            if (!response?.token || !response?.expires_at || !response?.user) {
+                throw new Error('invalid oauth payload')
+            }
+
+            login({
+                token: response.token,
+                expiresAt: response.expires_at,
+                user: response.user,
+            })
+            toast.success(t('portalAuth.loginSuccess'))
+            navigate(ROUTES.HOME, { replace: true, state: null })
+        } catch {
+            toast.error(t('portalAuth.oauthLoginFailed'))
+        }
+    }, [login, navigate, t])
 
     const onSubmit = (values: UserPortalLoginForm) => {
         loginMutation.mutate({
@@ -59,6 +108,10 @@ export default function UserPortalLoginPage() {
                 <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-white/55">
                     {t('portalAuth.loginDescription')}
                 </p>
+            </div>
+
+            <div className="mb-6">
+                <UserPortalOAuthButtons />
             </div>
 
             <Form {...form}>

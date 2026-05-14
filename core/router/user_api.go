@@ -16,6 +16,8 @@ func SetUserAPIRouter(router *gin.Engine) {
 		authPublicRouter.POST("/email-code", controller.SendUserRegisterEmailCode)
 		authPublicRouter.POST("/register", controller.RegisterAppUser)
 		authPublicRouter.POST("/login", controller.LoginAppUser)
+		authPublicRouter.GET("/oauth/:provider/start", controller.StartUserOAuthLogin)
+		authPublicRouter.GET("/oauth/:provider/callback", controller.HandleUserOAuthCallback)
 	}
 
 	protectedUserAPI := userAPI.Group("")

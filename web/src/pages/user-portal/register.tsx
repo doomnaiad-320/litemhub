@@ -21,6 +21,7 @@ import {
     useUserPortalSendRegisterEmailCode,
 } from '@/feature/user-portal/hooks'
 import { UserPortalAuthShell } from '@/feature/user-portal/components/UserPortalAuthShell'
+import { UserPortalOAuthButtons } from '@/feature/user-portal/components/UserPortalOAuthButtons'
 import { ROUTES } from '@/routes/constants'
 
 interface UserPortalRegisterForm {
@@ -162,6 +163,10 @@ export default function UserPortalRegisterPage() {
                 <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-white/55">
                     {t('portalAuth.registerDescription')}
                 </p>
+            </div>
+
+            <div className="mb-6">
+                <UserPortalOAuthButtons />
             </div>
 
             <Form {...form}>
