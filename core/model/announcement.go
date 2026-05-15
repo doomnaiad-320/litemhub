@@ -58,13 +58,13 @@ func DeleteAnnouncement(id int) error {
 	return HandleUpdateResult(DB.Delete(&Announcement{}, id), "announcement")
 }
 
-func GetAnnouncements(keyword string, status int, page, perPage int) (
+func GetAnnouncements(keyword, category string, status int, page, perPage int) (
 	announcements []*Announcement,
 	total int64,
 	err error,
 ) {
 	tx := DB.Model(&Announcement{})
-	tx = applyAnnouncementFilters(tx, keyword, status, false)
+	tx = applyAnnouncementFilters(tx, keyword, category, status, false)
 
 	if err = tx.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -83,12 +83,12 @@ func GetAnnouncements(keyword string, status int, page, perPage int) (
 	return announcements, total, err
 }
 
-func GetPublishedAnnouncements(page, perPage int) (
+func GetPublishedAnnouncements(category string, page, perPage int) (
 	announcements []*Announcement,
 	total int64,
 	err error,
 ) {
-	tx := applyAnnouncementFilters(DB.Model(&Announcement{}), "", AnnouncementStatusPublished, true)
+	tx := applyAnnouncementFilters(DB.Model(&Announcement{}), "", category, AnnouncementStatusPublished, true)
 
 	if err = tx.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -107,12 +107,35 @@ func GetPublishedAnnouncements(page, perPage int) (
 	return announcements, total, err
 }
 
-func applyAnnouncementFilters(tx *gorm.DB, keyword string, status int, publishedOnly bool) *gorm.DB {
+func GetAnnouncementCategories(publishedOnly bool) (categories []string, err error) {
+	tx := DB.Model(&Announcement{}).
+		Where("category IS NOT NULL AND category <> ''")
+	if publishedOnly {
+		tx = tx.
+			Where("status = ?", AnnouncementStatusPublished).
+			Where("published_at IS NOT NULL AND published_at <= ?", time.Now())
+	}
+
+	err = tx.
+		Distinct("category").
+		Order("category asc").
+		Pluck("category", &categories).
+		Error
+
+	return categories, err
+}
+
+func applyAnnouncementFilters(tx *gorm.DB, keyword, category string, status int, publishedOnly bool) *gorm.DB {
 	if status != 0 {
 		tx = tx.Where("status = ?", status)
 	}
 	if publishedOnly {
 		tx = tx.Where("published_at IS NOT NULL AND published_at <= ?", time.Now())
+	}
+
+	category = strings.TrimSpace(category)
+	if category != "" {
+		tx = tx.Where("category = ?", category)
 	}
 
 	keyword = strings.TrimSpace(keyword)

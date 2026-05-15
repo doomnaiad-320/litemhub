@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { ENV } from "@/utils/env";
 import { ApiError, type APIResponse } from "./index";
-import type { AnnouncementsResponse } from "@/types/announcement";
+import type { AnnouncementCategoriesResponse, AnnouncementsResponse } from "@/types/announcement";
 
 const PUBLIC_API_BASE_URL = "/public-api";
 const PUBLIC_API_TIMEOUT = Number(ENV.API_TIMEOUT || 10000);
@@ -41,6 +41,17 @@ const get = async <T>(url: string) => {
 };
 
 export const publicAnnouncementsApi = {
-  getAnnouncements: async (page = 1, perPage = 50) =>
-    get<AnnouncementsResponse>(`announcements?p=${page}&per_page=${perPage}`),
+  getAnnouncements: async (page = 1, perPage = 50, category?: string) => {
+    const params = new URLSearchParams({
+      p: String(page),
+      per_page: String(perPage),
+    });
+    if (category) {
+      params.set("category", category);
+    }
+
+    return get<AnnouncementsResponse>(`announcements?${params.toString()}`);
+  },
+  getCategories: async () =>
+    get<AnnouncementCategoriesResponse>("announcements/categories"),
 };

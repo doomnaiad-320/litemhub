@@ -1,5 +1,6 @@
 import { del, get, post, put } from './index'
 import type {
+    AnnouncementCategoriesResponse,
     AnnouncementDetailResponse,
     AnnouncementsResponse,
     SaveAnnouncementRequest,
@@ -12,6 +13,7 @@ export const announcementApi = {
         perPage: number,
         keyword?: string,
         status?: number,
+        category?: string,
     ): Promise<AnnouncementsResponse> => {
         const params: Record<string, string | number> = {
             p: page,
@@ -24,8 +26,15 @@ export const announcementApi = {
         if (status) {
             params.status = status
         }
+        if (category) {
+            params.category = category
+        }
 
         return get<AnnouncementsResponse>('announcements', { params })
+    },
+
+    getAnnouncementCategories: async (): Promise<AnnouncementCategoriesResponse> => {
+        return get<AnnouncementCategoriesResponse>('announcements/categories')
     },
 
     getAnnouncement: async (id: number): Promise<AnnouncementDetailResponse> => {

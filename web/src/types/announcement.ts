@@ -24,6 +24,10 @@ export interface AnnouncementsResponse {
     total: number
 }
 
+export interface AnnouncementCategoriesResponse {
+    categories: string[]
+}
+
 export interface AnnouncementDetailResponse {
     announcement: Announcement
 }

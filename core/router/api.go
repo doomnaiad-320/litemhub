@@ -201,6 +201,7 @@ func SetAPIRouter(router *gin.Engine) {
 		{
 			announcementsRoute.GET("", controller.GetAnnouncements)
 			announcementsRoute.GET("/", controller.GetAnnouncements)
+			announcementsRoute.GET("/categories", controller.GetAnnouncementCategories)
 			announcementsRoute.POST("", controller.CreateAnnouncement)
 			announcementsRoute.POST("/", controller.CreateAnnouncement)
 			announcementsRoute.GET("/:id", controller.GetAnnouncement)

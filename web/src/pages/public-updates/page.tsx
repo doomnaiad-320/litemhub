@@ -1,9 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Loader2 } from "lucide-react";
 import { PublicSiteHeader } from "@/components/common/PublicSiteHeader";
-import { usePublicAnnouncements } from "@/feature/public-announcements/hooks";
+import {
+  usePublicAnnouncementCategories,
+  usePublicAnnouncements,
+} from "@/feature/public-announcements/hooks";
 import { ROUTES } from "@/routes/constants";
 import { cn } from "@/lib/utils";
 import { normalizeMarkdownContent } from "@/lib/markdown";
@@ -99,8 +102,12 @@ const markdownComponents: Components = {
 };
 
 export default function PublicUpdatesPage() {
-  const { data, isLoading, isError } = usePublicAnnouncements();
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const selectedCategory = categoryFilter === "all" ? undefined : categoryFilter;
+  const { data, isLoading, isError } = usePublicAnnouncements(1, 50, selectedCategory);
+  const { data: categoriesData } = usePublicAnnouncementCategories();
   const announcements = data?.announcements || [];
+  const categories = categoriesData?.categories || [];
 
   useEffect(() => {
     const title = "API 更新 | LiteMHub";
@@ -139,6 +146,38 @@ export default function PublicUpdatesPage() {
           </div>
 
           <div className="mt-12">
+            {categories.length > 0 && (
+              <div className="mb-10 flex flex-wrap gap-2 border-b border-[#e5e7eb] pb-5 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter("all")}
+                  className={cn(
+                    "h-8 rounded-[6px] border px-3 text-sm font-medium transition",
+                    categoryFilter === "all"
+                      ? "border-[#18181b] bg-[#18181b] text-white dark:border-white dark:bg-white dark:text-[#18181b]"
+                      : "border-[#e5e7eb] bg-white text-[#45515e] hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-transparent dark:text-white/60 dark:hover:border-white dark:hover:text-white",
+                  )}
+                >
+                  全部
+                </button>
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setCategoryFilter(category)}
+                    className={cn(
+                      "h-8 rounded-[6px] border px-3 text-sm font-medium transition",
+                      categoryFilter === category
+                        ? "border-[#18181b] bg-[#18181b] text-white dark:border-white dark:bg-white dark:text-[#18181b]"
+                        : "border-[#e5e7eb] bg-white text-[#45515e] hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-transparent dark:text-white/60 dark:hover:border-white dark:hover:text-white",
+                    )}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {isLoading && (
               <div className="flex items-center gap-2 py-12 text-sm text-[#8e8e93]">
                 <Loader2 className="h-4 w-4 animate-spin" />

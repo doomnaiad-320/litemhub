@@ -18,5 +18,6 @@ func SetPublicAPIRouter(router *gin.Engine) {
 	{
 		announcementsRoute.GET("", controller.GetPublicAnnouncements)
 		announcementsRoute.GET("/", controller.GetPublicAnnouncements)
+		announcementsRoute.GET("/categories", controller.GetPublicAnnouncementCategories)
 	}
 }

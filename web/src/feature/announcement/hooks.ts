@@ -12,6 +12,7 @@ const invalidateAnnouncementQueries = (
     announcementId?: number,
 ) => {
     queryClient.invalidateQueries({ queryKey: ['announcements'] })
+    queryClient.invalidateQueries({ queryKey: ['announcementCategories'] })
     queryClient.invalidateQueries({ queryKey: ['publicAnnouncements'] })
     if (announcementId) {
         queryClient.invalidateQueries({ queryKey: ['announcement', announcementId] })
@@ -23,10 +24,18 @@ export const useAnnouncements = (
     perPage: number,
     keyword?: string,
     status?: number,
+    category?: string,
 ) => {
     return useQuery({
-        queryKey: ['announcements', page, perPage, keyword, status],
-        queryFn: () => announcementApi.getAnnouncements(page, perPage, keyword, status),
+        queryKey: ['announcements', page, perPage, keyword, status, category],
+        queryFn: () => announcementApi.getAnnouncements(page, perPage, keyword, status, category),
+    })
+}
+
+export const useAnnouncementCategories = () => {
+    return useQuery({
+        queryKey: ['announcementCategories'],
+        queryFn: () => announcementApi.getAnnouncementCategories(),
     })
 }
 

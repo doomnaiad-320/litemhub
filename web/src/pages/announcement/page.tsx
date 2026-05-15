@@ -58,6 +58,7 @@ import {
 } from '@/types/announcement'
 import {
     useAnnouncements,
+    useAnnouncementCategories,
     useCreateAnnouncement,
     useDeleteAnnouncement,
     useUpdateAnnouncement,
@@ -125,6 +126,7 @@ export default function AnnouncementPage() {
     const [searchInput, setSearchInput] = useState('')
     const [searchKeyword, setSearchKeyword] = useState<string | undefined>(undefined)
     const [statusFilter, setStatusFilter] = useState('all')
+    const [categoryFilter, setCategoryFilter] = useState('all')
     const [isRefreshAnimating, setIsRefreshAnimating] = useState(false)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [dialogMode, setDialogMode] = useState<'create' | 'update'>('create')
@@ -133,13 +135,16 @@ export default function AnnouncementPage() {
     const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
     const statusValue = statusFilter === 'all' ? undefined : Number(statusFilter)
-    const { data, isLoading, refetch } = useAnnouncements(page, pageSize, searchKeyword, statusValue)
+    const categoryValue = categoryFilter === 'all' ? undefined : categoryFilter
+    const { data, isLoading, refetch } = useAnnouncements(page, pageSize, searchKeyword, statusValue, categoryValue)
+    const { data: categoriesData } = useAnnouncementCategories()
     const { createAnnouncement, isLoading: isCreating } = useCreateAnnouncement()
     const { updateAnnouncement, isLoading: isUpdating } = useUpdateAnnouncement()
     const { updateAnnouncementStatus, isLoading: isStatusUpdating } = useUpdateAnnouncementStatus()
     const { deleteAnnouncement, isLoading: isDeleting } = useDeleteAnnouncement()
 
     const announcements = useMemo(() => data?.announcements || [], [data?.announcements])
+    const categories = useMemo(() => categoriesData?.categories || [], [categoriesData?.categories])
     const total = data?.total || 0
     const isSaving = isCreating || isUpdating
 
@@ -348,6 +353,26 @@ export default function AnnouncementPage() {
                                         <SelectItem value="all">全部状态</SelectItem>
                                         <SelectItem value="1">草稿</SelectItem>
                                         <SelectItem value="2">已发布</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={categoryFilter}
+                                    onValueChange={(value) => {
+                                        setCategoryFilter(value)
+                                        setPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-10 w-[150px] rounded-2xl border-border/70 bg-background/80 shadow-none">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">全部分类</SelectItem>
+                                        {categories.map((category) => (
+                                            <SelectItem key={category} value={category}>
+                                                {category}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
 

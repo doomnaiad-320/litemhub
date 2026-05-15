@@ -51,9 +51,10 @@ type AnnouncementResponse struct {
 func GetAnnouncements(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	keyword := c.Query("keyword")
+	category := c.Query("category")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	announcements, total, err := model.GetAnnouncements(keyword, status, page, perPage)
+	announcements, total, err := model.GetAnnouncements(keyword, category, status, page, perPage)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -73,6 +74,18 @@ func GetAnnouncement(c *gin.Context) {
 
 	middleware.SuccessResponse(c, gin.H{
 		"announcement": buildAnnouncementResponse(announcement),
+	})
+}
+
+func GetAnnouncementCategories(c *gin.Context) {
+	categories, err := model.GetAnnouncementCategories(false)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"categories": categories,
 	})
 }
 
@@ -198,8 +211,9 @@ func UpdateAnnouncementStatus(c *gin.Context) {
 
 func GetPublicAnnouncements(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
+	category := c.Query("category")
 
-	announcements, total, err := model.GetPublishedAnnouncements(page, perPage)
+	announcements, total, err := model.GetPublishedAnnouncements(category, page, perPage)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -208,6 +222,18 @@ func GetPublicAnnouncements(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"announcements": buildAnnouncementResponses(announcements),
 		"total":         total,
+	})
+}
+
+func GetPublicAnnouncementCategories(c *gin.Context) {
+	categories, err := model.GetAnnouncementCategories(true)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"categories": categories,
 	})
 }
 
