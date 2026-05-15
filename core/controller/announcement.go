@@ -255,6 +255,11 @@ func buildAnnouncementFromRequest(req AnnouncementRequest) (*model.Announcement,
 		return nil, errors.New("invalid announcement status")
 	}
 
+	category := strings.TrimSpace(req.Category)
+	if !model.IsAnnouncementCategoryValid(category) {
+		return nil, errors.New("invalid announcement category")
+	}
+
 	publishedAt := parseAnnouncementPublishedAt(req.PublishedAt)
 	if status == model.AnnouncementStatusPublished && publishedAt == nil {
 		now := time.Now()
@@ -266,7 +271,7 @@ func buildAnnouncementFromRequest(req AnnouncementRequest) (*model.Announcement,
 		Slug:        model.EmptyNullString(normalizeAnnouncementSlug(req.Slug)),
 		Summary:     strings.TrimSpace(req.Summary),
 		Content:     content,
-		Category:    model.EmptyNullString(strings.TrimSpace(req.Category)),
+		Category:    model.EmptyNullString(category),
 		Version:     model.EmptyNullString(strings.TrimSpace(req.Version)),
 		Status:      status,
 		PublishedAt: publishedAt,

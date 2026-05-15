@@ -12,6 +12,14 @@ const (
 	AnnouncementStatusPublished = 2
 )
 
+var AnnouncementCategories = []string{
+	"API 更新",
+	"AI 更新",
+	"系统公告",
+	"计费与价格",
+	"维护通知",
+}
+
 type Announcement struct {
 	ID          int             `json:"id"           gorm:"primaryKey"`
 	Title       string          `json:"title"        gorm:"size:255;not null"`
@@ -37,6 +45,21 @@ func IsAnnouncementStatusValid(status int) bool {
 	default:
 		return false
 	}
+}
+
+func IsAnnouncementCategoryValid(category string) bool {
+	category = strings.TrimSpace(category)
+	if category == "" {
+		return true
+	}
+
+	for _, allowedCategory := range AnnouncementCategories {
+		if category == allowedCategory {
+			return true
+		}
+	}
+
+	return false
 }
 
 func CreateAnnouncement(announcement *Announcement) error {
@@ -108,21 +131,34 @@ func GetPublishedAnnouncements(category string, page, perPage int) (
 }
 
 func GetAnnouncementCategories(publishedOnly bool) (categories []string, err error) {
-	tx := DB.Model(&Announcement{}).
-		Where("category IS NOT NULL AND category <> ''")
-	if publishedOnly {
-		tx = tx.
-			Where("status = ?", AnnouncementStatusPublished).
-			Where("published_at IS NOT NULL AND published_at <= ?", time.Now())
+	if !publishedOnly {
+		return append([]string(nil), AnnouncementCategories...), nil
 	}
 
-	err = tx.
+	var usedCategories []string
+	if err = DB.Model(&Announcement{}).
+		Where("category IS NOT NULL AND category <> ''").
+		Where("status = ?", AnnouncementStatusPublished).
+		Where("published_at IS NOT NULL AND published_at <= ?", time.Now()).
 		Distinct("category").
-		Order("category asc").
-		Pluck("category", &categories).
-		Error
+		Pluck("category", &usedCategories).
+		Error; err != nil {
+		return nil, err
+	}
 
-	return categories, err
+	used := make(map[string]struct{}, len(usedCategories))
+	for _, category := range usedCategories {
+		used[category] = struct{}{}
+	}
+
+	categories = make([]string, 0, len(AnnouncementCategories))
+	for _, category := range AnnouncementCategories {
+		if _, ok := used[category]; ok {
+			categories = append(categories, category)
+		}
+	}
+
+	return categories, nil
 }
 
 func applyAnnouncementFilters(tx *gorm.DB, keyword, category string, status int, publishedOnly bool) *gorm.DB {

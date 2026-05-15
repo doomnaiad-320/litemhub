@@ -3,7 +3,16 @@ export const ANNOUNCEMENT_STATUS = {
     PUBLISHED: 2,
 } as const
 
+export const ANNOUNCEMENT_CATEGORIES = [
+    'API 更新',
+    'AI 更新',
+    '系统公告',
+    '计费与价格',
+    '维护通知',
+] as const
+
 export type AnnouncementStatus = typeof ANNOUNCEMENT_STATUS[keyof typeof ANNOUNCEMENT_STATUS]
+export type AnnouncementCategory = typeof ANNOUNCEMENT_CATEGORIES[number]
 
 export interface Announcement {
     id: number

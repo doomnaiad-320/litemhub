@@ -51,8 +51,10 @@ import { AnimatedIcon } from '@/components/ui/animation/components/animated-icon
 import { normalizeMarkdownContent } from '@/lib/markdown'
 import { cn } from '@/lib/utils'
 import {
+    ANNOUNCEMENT_CATEGORIES,
     ANNOUNCEMENT_STATUS,
     type Announcement,
+    type AnnouncementCategory,
     type AnnouncementStatus,
     type SaveAnnouncementRequest,
 } from '@/types/announcement'
@@ -100,7 +102,7 @@ const createEmptyForm = (): SaveAnnouncementRequest => ({
     slug: '',
     summary: '',
     content: defaultMarkdown,
-    category: 'API 更新',
+    category: ANNOUNCEMENT_CATEGORIES[0],
     version: '',
     status: ANNOUNCEMENT_STATUS.DRAFT,
     published_at: undefined,
@@ -144,7 +146,10 @@ export default function AnnouncementPage() {
     const { deleteAnnouncement, isLoading: isDeleting } = useDeleteAnnouncement()
 
     const announcements = useMemo(() => data?.announcements || [], [data?.announcements])
-    const categories = useMemo(() => categoriesData?.categories || [], [categoriesData?.categories])
+    const categories = useMemo(() => {
+        const remoteCategories = categoriesData?.categories || []
+        return remoteCategories.length > 0 ? remoteCategories : [...ANNOUNCEMENT_CATEGORIES]
+    }, [categoriesData?.categories])
     const total = data?.total || 0
     const isSaving = isCreating || isUpdating
 
@@ -462,11 +467,24 @@ export default function AnnouncementPage() {
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <div className="grid gap-2">
                                         <label className="text-sm font-medium">分类</label>
-                                        <Input
-                                            value={form.category || ''}
-                                            onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-                                            placeholder="API 更新"
-                                        />
+                                        <Select
+                                            value={form.category || ANNOUNCEMENT_CATEGORIES[0]}
+                                            onValueChange={(value) => setForm((prev) => ({
+                                                ...prev,
+                                                category: value as AnnouncementCategory,
+                                            }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categories.map((category) => (
+                                                    <SelectItem key={category} value={category}>
+                                                        {category}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="grid gap-2">
                                         <label className="text-sm font-medium">版本</label>
