@@ -150,12 +150,12 @@ export function AppUserDetailSheet({
                 <div className="flex-1 overflow-y-auto px-6 py-6">
                     {(isUserLoading && !currentUser) ? (
                         <div className="space-y-4">
-                            <Skeleton className="h-24 rounded-2xl" />
-                            <Skeleton className="h-48 rounded-2xl" />
+                            <Skeleton className="h-24 rounded-md" />
+                            <Skeleton className="h-48 rounded-md" />
                         </div>
                     ) : currentUser ? (
                         <div className="space-y-6">
-                            <div className="rounded-3xl border border-border/60 bg-white/75 p-5 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:bg-card/75">
+                            <div className="rounded-md border border-border bg-background p-5 shadow-none">
                                 <div className="flex flex-wrap items-start justify-between gap-4">
                                     <div className="space-y-2">
                                         <div className="text-sm text-muted-foreground">{t('appUser.user')}</div>
@@ -170,7 +170,7 @@ export function AppUserDetailSheet({
                             </div>
 
                             <div className="space-y-4">
-                                <Card className="gap-0 rounded-3xl border-border/60 bg-white/70 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:bg-card/75">
+                                <Card className="gap-0 rounded-md border-border bg-background shadow-none">
                                     <CardHeader className="px-5 py-4">
                                         <CardTitle className="text-base">{t('appUser.detail.userInfo')}</CardTitle>
                                     </CardHeader>
@@ -187,28 +187,28 @@ export function AppUserDetailSheet({
                                     </CardContent>
                                 </Card>
 
-                                <Card className="gap-0 rounded-3xl border-border/60 bg-white/70 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:bg-card/75">
+                                <Card className="gap-0 rounded-md border-border bg-background shadow-none">
                                     <CardHeader className="px-5 py-4">
                                         <CardTitle className="text-base">{t('appUser.detail.walletInfo')}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="px-5 pb-5">
                                         {isWalletLoading && !wallet ? (
                                             <div className="grid gap-3 sm:grid-cols-3">
-                                                <Skeleton className="h-24 rounded-2xl" />
-                                                <Skeleton className="h-24 rounded-2xl" />
-                                                <Skeleton className="h-24 rounded-2xl" />
+                                                <Skeleton className="h-24 rounded-md" />
+                                                <Skeleton className="h-24 rounded-md" />
+                                                <Skeleton className="h-24 rounded-md" />
                                             </div>
                                         ) : wallet ? (
                                             <div className="grid gap-3 sm:grid-cols-3">
-                                                <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                                                <div className="rounded-md border border-border bg-background p-4">
                                                     <div className="text-sm text-muted-foreground">{t('appUser.availableBalance')}</div>
                                                     <div className="mt-2 text-2xl font-semibold">{formatMoney(wallet.available_balance)}</div>
                                                 </div>
-                                                <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                                                <div className="rounded-md border border-border bg-background p-4">
                                                     <div className="text-sm text-muted-foreground">{t('appUser.frozenBalance')}</div>
                                                     <div className="mt-2 text-2xl font-semibold">{formatMoney(wallet.frozen_balance)}</div>
                                                 </div>
-                                                <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                                                <div className="rounded-md border border-border bg-background p-4">
                                                     <div className="text-sm text-muted-foreground">{t('appUser.totalBalance')}</div>
                                                     <div className="mt-2 text-2xl font-semibold">
                                                         {formatMoney(wallet.available_balance + wallet.frozen_balance)}
@@ -221,19 +221,19 @@ export function AppUserDetailSheet({
                                     </CardContent>
                                 </Card>
 
-                                <Card className="gap-0 rounded-3xl border-border/60 bg-white/70 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.4)] backdrop-blur-sm dark:bg-card/75">
+                                <Card className="gap-0 rounded-md border-border bg-background shadow-none">
                                     <CardHeader className="px-5 py-4">
                                         <CardTitle className="text-base">{t('appUser.walletLogs')}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="px-5 pb-5">
                                         {isWalletLogLoading ? (
                                             <div className="space-y-3">
-                                                <Skeleton className="h-10 rounded-2xl" />
-                                                <Skeleton className="h-10 rounded-2xl" />
-                                                <Skeleton className="h-10 rounded-2xl" />
+                                                <Skeleton className="h-10 rounded-md" />
+                                                <Skeleton className="h-10 rounded-md" />
+                                                <Skeleton className="h-10 rounded-md" />
                                             </div>
                                         ) : walletLogs.length > 0 ? (
-                                            <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/80">
+                                            <div className="overflow-hidden rounded-md border border-border bg-background">
                                                 <Table>
                                                     <TableHeader>
                                                         <TableRow>

@@ -135,6 +135,7 @@ type AppPaymentOrder struct {
 	ID            int             `json:"id"               gorm:"primaryKey"`
 	UserID        int             `json:"user_id"          gorm:"index;not null"`
 	Amount        float64         `json:"amount"`
+	PayAmount     float64         `json:"pay_amount"`
 	Channel       string          `json:"channel"          gorm:"size:32;index;not null"`
 	OutTradeNo    string          `json:"out_trade_no"     gorm:"size:128;uniqueIndex;not null"`
 	TradeNo       EmptyNullString `json:"trade_no"         gorm:"size:128;index"`

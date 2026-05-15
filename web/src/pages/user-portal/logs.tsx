@@ -15,7 +15,7 @@ export default function UserPortalLogsPage() {
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
+            <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
                 <p className="max-w-3xl text-[12px] leading-5 text-muted-foreground">{t('portal.logs.description')}</p>
             </section>
 

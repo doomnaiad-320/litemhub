@@ -12,7 +12,7 @@ export default function UserPortalGroupsPage() {
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
+            <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
                 <div className="space-y-2">
                     <div className="text-sm text-primary">{t('portal.groups.badge')}</div>
                     <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.groups.title')}</h1>
@@ -23,11 +23,11 @@ export default function UserPortalGroupsPage() {
             <section className="grid gap-4 lg:grid-cols-2">
                 {isLoading ? (
                     <>
-                        <Skeleton className="h-56 rounded-[28px]" />
-                        <Skeleton className="h-56 rounded-[28px]" />
+                        <Skeleton className="h-56 rounded-md" />
+                        <Skeleton className="h-56 rounded-md" />
                     </>
                 ) : groups.map((group) => (
-                    <Card key={group.group} className="rounded-[28px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5">
+                    <Card key={group.group} className="rounded-md border-border bg-background shadow-none dark:border-white/10">
                         <CardHeader className="flex flex-row items-start justify-between gap-4">
                             <div>
                                 <CardTitle className="text-xl">{group.group}</CardTitle>
@@ -43,7 +43,7 @@ export default function UserPortalGroupsPage() {
                                     <Badge
                                         key={`${group.group}-${model}`}
                                         variant="outline"
-                                        className="rounded-full border-border/70 bg-background/80 px-3 py-1"
+                                        className="rounded-md border-border bg-background px-3 py-1"
                                     >
                                         {model}
                                     </Badge>

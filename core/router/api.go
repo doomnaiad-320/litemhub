@@ -178,6 +178,8 @@ func SetAPIRouter(router *gin.Engine) {
 			appUsersRoute.GET("/search", controller.SearchAppUsers)
 			appUsersRoute.GET("/recharges", controller.GetAppRechargeLogs)
 			appUsersRoute.GET("/recharge_stats", controller.GetAppRechargeStats)
+			appUsersRoute.GET("/billing_settings", controller.GetAppBillingSettings)
+			appUsersRoute.PUT("/billing_settings", controller.UpdateAppBillingSettings)
 			appUsersRoute.POST("/", controller.CreateAppUser)
 			appUsersRoute.GET("/:id", controller.GetAppUser)
 			appUsersRoute.PUT("/:id", controller.UpdateAppUser)

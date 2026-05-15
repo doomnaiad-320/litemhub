@@ -19,6 +19,7 @@ const invalidatePortalQueries = (queryClient: ReturnType<typeof useQueryClient>)
     queryClient.invalidateQueries({ queryKey: ['userPortalMe'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalWallet'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalWalletLogs'] })
+    queryClient.invalidateQueries({ queryKey: ['userPortalRechargeLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalModelLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalGroups'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalKeys'] })
@@ -108,9 +109,22 @@ export const useUserPortalWalletLogs = (page: number, perPage: number, enabled =
     })
 }
 
+export const useUserPortalRechargeLogs = (page: number, perPage: number, enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalRechargeLogs', page, perPage],
+        queryFn: () => userPortalApi.getRechargeLogs(page, perPage),
+        enabled,
+    })
+}
+
 export const useUserPortalDuluPayRecharge = () => {
+    const queryClient = useQueryClient()
+
     return useMutation({
         mutationFn: (data: UserPortalRechargeRequest) => userPortalApi.createDuluPayRecharge(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['userPortalRechargeLogs'] })
+        },
         onError: (error: unknown) => {
             const message = error instanceof Error ? error.message : '创建支付订单失败'
             toast.error(message)

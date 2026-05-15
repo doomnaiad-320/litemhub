@@ -110,7 +110,7 @@ export function AppUserBalanceAdjustDialog({
                 </DialogHeader>
 
                 <div className="px-6 py-6">
-                    <div className="mb-5 rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
+                    <div className="mb-5 rounded-md border border-border bg-background px-4 py-3">
                         <div className="text-xs text-muted-foreground">
                             {t('appUser.adjustDialog.currentAvailableBalance')}
                         </div>

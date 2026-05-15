@@ -160,7 +160,7 @@ function FilterChip({
       variant="outline"
       size="sm"
       className={cn(
-        "h-9 shrink-0 rounded-xl border-border/60 bg-background px-3 text-sm font-normal shadow-none hover:bg-muted/40",
+        "h-9 shrink-0 rounded-md border-border bg-background px-3 text-sm font-normal shadow-none hover:bg-muted/40",
         active &&
           "border-primary/40 bg-primary/10 text-primary hover:bg-primary/10",
         className,
@@ -578,7 +578,7 @@ export default function UserPortalModelsPage() {
 
   return (
     <div className="w-full space-y-4 sm:space-y-6">
-      <Card className="gap-0 overflow-hidden rounded-[24px] border-border/60 bg-background shadow-sm sm:rounded-[28px]">
+      <Card className="gap-0 overflow-hidden rounded-md border-border bg-background shadow-none">
         <CardContent className="space-y-5 px-4 py-4 sm:space-y-7 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="relative w-full sm:max-w-[320px]">
@@ -587,19 +587,19 @@ export default function UserPortalModelsPage() {
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
                 placeholder={t("portal.models.searchPlaceholder")}
-                className="h-11 rounded-2xl border-border/60 bg-background pl-10 shadow-none"
+                className="h-11 rounded-md border-border bg-background pl-10 shadow-none"
               />
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:self-end xl:self-auto">
               <Badge
                 variant="outline"
-                className="rounded-full px-3 py-1 text-xs"
+                className="rounded-md px-3 py-1 text-xs"
               >
                 {t("portal.models.results", { count: filteredModels.length })}
               </Badge>
               <Badge
                 variant="outline"
-                className="rounded-full px-3 py-1 text-xs"
+                className="rounded-md px-3 py-1 text-xs"
               >
                 {t("portal.models.totalModels")}: {modelCards.length}
               </Badge>
@@ -607,7 +607,7 @@ export default function UserPortalModelsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 rounded-full border-border/60 px-3 sm:h-10 sm:px-4"
+                  className="h-9 rounded-md border-border px-3 sm:h-10 sm:px-4"
                   onClick={resetFilters}
                 >
                   <RotateCcw className="mr-1 h-3.5 w-3.5" />
@@ -728,11 +728,11 @@ export default function UserPortalModelsPage() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {isLoading ? (
           <>
-            <Skeleton className="h-[136px] rounded-2xl" />
-            <Skeleton className="h-[136px] rounded-2xl" />
-            <Skeleton className="h-[136px] rounded-2xl" />
-            <Skeleton className="h-[136px] rounded-2xl" />
-            <Skeleton className="h-[136px] rounded-2xl" />
+            <Skeleton className="h-[136px] rounded-md" />
+            <Skeleton className="h-[136px] rounded-md" />
+            <Skeleton className="h-[136px] rounded-md" />
+            <Skeleton className="h-[136px] rounded-md" />
+            <Skeleton className="h-[136px] rounded-md" />
           </>
         ) : filteredModels.length > 0 ? (
           filteredModels.map((item) => {
@@ -798,7 +798,7 @@ export default function UserPortalModelsPage() {
                 role="button"
                 tabIndex={0}
                 aria-label={`${t("portal.models.openDetails")}: ${item.model}`}
-                className="group relative flex min-h-[126px] cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/95 p-3.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_18px_46px_rgba(15,23,42,0.10)] dark:bg-slate-950/45 dark:shadow-none sm:min-h-[136px] sm:p-4"
+                className="group relative flex min-h-[126px] cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-background p-3.5 shadow-none transition-colors duration-200 hover:border-primary/35 hover:bg-muted/20 dark:bg-background sm:min-h-[136px] sm:p-4"
                 onClick={() => openModelDetails(item)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -807,10 +807,8 @@ export default function UserPortalModelsPage() {
                   }
                 }}
               >
-                <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_32%_25%,#79f2ff_0%,#396dff_48%,#10213f_100%)] text-white shadow-[0_10px_22px_rgba(37,99,235,0.26)] ring-1 ring-white/20">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
                     <Cpu className="h-4.5 w-4.5" />
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
@@ -893,7 +891,7 @@ export default function UserPortalModelsPage() {
             );
           })
         ) : (
-          <Card className="gap-0 rounded-xl border-border/60 bg-background shadow-none sm:col-span-2 lg:col-span-3 2xl:col-span-5">
+          <Card className="gap-0 rounded-md border-border bg-background shadow-none sm:col-span-2 lg:col-span-3 2xl:col-span-5">
             <CardContent className="flex min-h-44 flex-col items-center justify-center space-y-3 p-5 text-center sm:p-8">
               <div className="text-lg font-semibold">
                 {t("portal.models.emptyTitle")}
@@ -929,7 +927,7 @@ export default function UserPortalModelsPage() {
                       <Info className="h-4 w-4 text-muted-foreground" />
                       <span>{t("portal.models.infoSection")}</span>
                     </div>
-                    <div className="rounded-2xl border border-border/60 bg-background/80 p-4 sm:rounded-3xl sm:p-5">
+                    <div className="rounded-md border border-border bg-background p-4 sm:p-5">
                       <div className="grid gap-4 md:grid-cols-3">
                         <div className="space-y-1">
                           <div className="text-sm text-muted-foreground">
@@ -943,7 +941,7 @@ export default function UserPortalModelsPage() {
                           <div className="text-sm text-muted-foreground">
                             {t("portal.models.billingType")}
                           </div>
-                          <Badge className="rounded-full px-2.5 py-1">
+                          <Badge className="rounded-md px-2.5 py-1">
                             {t("portal.models.usageBilling")}
                           </Badge>
                         </div>
@@ -961,7 +959,7 @@ export default function UserPortalModelsPage() {
                           <Badge
                             key={`${selectedModel.model}-sheet-${capability}`}
                             variant="outline"
-                            className="rounded-full px-2 py-0.5"
+                            className="rounded-md px-2 py-0.5"
                           >
                             {t(`portal.models.capability.${capability}`)}
                           </Badge>
@@ -980,7 +978,7 @@ export default function UserPortalModelsPage() {
                         selectedModel.accessGroups[0]?.group
                       }
                       onValueChange={setSelectedPricingGroup}
-                      className="overflow-hidden rounded-2xl border border-border/60 bg-background/80 sm:rounded-3xl"
+                      className="overflow-hidden rounded-md border border-border bg-background"
                     >
                       <div className="flex flex-col border-b border-border/60 bg-muted/10 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                         <TabsList className="min-h-8 min-w-0 flex-1 justify-start gap-0 overflow-x-auto rounded-none bg-transparent px-0 py-[5px]">

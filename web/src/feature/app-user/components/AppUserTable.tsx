@@ -300,7 +300,7 @@ export function AppUserTable() {
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <Card className="flex min-h-0 flex-1 flex-col gap-0 rounded-[28px] border border-white/70 bg-white/75 p-0 shadow-[0_20px_44px_-30px_rgba(15,23,42,0.35)] backdrop-blur-sm dark:border-white/10 dark:bg-card/80">
+            <Card className="flex min-h-0 flex-1 flex-col gap-0 rounded-md border-border bg-background p-0 shadow-none">
                 <div className="flex flex-col gap-5 border-b border-border/60 px-6 py-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="space-y-1.5">
@@ -321,7 +321,7 @@ export function AppUserTable() {
                                     placeholder={t('common.search')}
                                     value={searchInput}
                                     onChange={(e) => handleSearchChange(e.target.value)}
-                                    className="h-10 w-56 rounded-2xl border-border/70 bg-background/80 pl-9 shadow-none"
+                                    className="h-10 w-56 rounded-md border-border bg-background pl-9 shadow-none"
                                 />
                             </div>
 
@@ -332,7 +332,7 @@ export function AppUserTable() {
                                     setPage(1)
                                 }}
                             >
-                                <SelectTrigger className="h-10 w-[160px] rounded-2xl border-border/70 bg-background/80 shadow-none">
+                                <SelectTrigger className="h-10 w-[160px] rounded-md border-border bg-background shadow-none">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -347,7 +347,7 @@ export function AppUserTable() {
                                     variant="outline"
                                     size="sm"
                                     onClick={refreshUsers}
-                                    className="h-10 rounded-2xl border-border/70 bg-background/80 px-4"
+                                    className="h-10 rounded-md border-border bg-background px-4"
                                 >
                                     <AnimatedIcon
                                         animationVariant="continuous-spin"
@@ -364,7 +364,7 @@ export function AppUserTable() {
                                 <Button
                                     size="sm"
                                     onClick={openCreateDialog}
-                                    className="h-10 rounded-2xl px-4"
+                                    className="h-10 rounded-md px-4"
                                 >
                                     <Plus className="h-4 w-4" />
                                     {t('appUser.add')}
@@ -376,7 +376,7 @@ export function AppUserTable() {
 
                 <div className="flex min-h-0 flex-1 flex-col">
                     <div className="flex-1 overflow-auto px-6 py-4">
-                        <div className="overflow-hidden rounded-[22px] border border-border/60 bg-background/80">
+                        <div className="overflow-hidden rounded-md border border-border bg-background">
                             <DataTable
                                 table={table}
                                 columns={columns}

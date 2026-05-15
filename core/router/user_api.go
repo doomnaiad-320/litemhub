@@ -31,6 +31,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 		walletRouter := protectedUserAPI.Group("/wallet")
 		walletRouter.GET("", controller.GetCurrentUserWallet)
 		walletRouter.GET("/logs", controller.GetCurrentUserWalletLogs)
+		walletRouter.GET("/recharge/logs", controller.GetCurrentUserRechargeLogs)
 		walletRouter.POST("/recharge/dulupay", controller.CreateDuluPayRecharge)
 
 		logsRouter := protectedUserAPI.Group("/logs")

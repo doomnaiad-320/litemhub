@@ -6,6 +6,7 @@ import type {
     AdjustAppUserWalletBalanceRequest,
     CreateAppUserRequest,
     ResetAppUserPasswordRequest,
+    UpdateAppBillingSettingsRequest,
     UpdateAppUserGroupPriceMultiplierRequest,
     UpdateAppUserRequest,
     UpdateAppUserStatusRequest,
@@ -70,6 +71,29 @@ export const useAppRechargeStats = (
     return useQuery({
         queryKey: ['appRechargeStats', startTimestamp, endTimestamp, keyword, granularity],
         queryFn: () => appUserApi.getAppRechargeStats(startTimestamp, endTimestamp, keyword, granularity),
+    })
+}
+
+export const useAppBillingSettings = () => {
+    return useQuery({
+        queryKey: ['appBillingSettings'],
+        queryFn: () => appUserApi.getAppBillingSettings(),
+    })
+}
+
+export const useUpdateAppBillingSettings = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (data: UpdateAppBillingSettingsRequest) => appUserApi.updateAppBillingSettings(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appBillingSettings'] })
+            toast.success('账单设置已更新')
+        },
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '更新账单设置失败'
+            toast.error(message)
+        },
     })
 }
 

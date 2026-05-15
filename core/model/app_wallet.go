@@ -233,6 +233,7 @@ func appPaymentOrderSelectSQL() string {
 		"ELSE '" + AppPaymentAdminStatusUnpaid + "' END"
 
 	return "recharge_orders.id AS id, recharge_orders.user_id AS user_id, recharge_orders.amount AS amount, " +
+		"recharge_orders.pay_amount AS pay_amount, " +
 		"recharge_orders.channel AS channel, recharge_orders.out_trade_no AS out_trade_no, " +
 		"recharge_orders.trade_no AS trade_no, recharge_orders.pay_type AS pay_type, recharge_orders.pay_info AS pay_info, " +
 		"recharge_orders.source_status AS status, recharge_orders.notify_payload AS notify_payload, " +
@@ -297,7 +298,7 @@ func appPaymentOrderSourceQuery() *gorm.DB {
 	paymentOrders := DB.
 		Model(&AppPaymentOrder{}).
 		Select(
-			"app_payment_order.id, app_payment_order.user_id, app_payment_order.amount, " +
+			"app_payment_order.id, app_payment_order.user_id, app_payment_order.amount, app_payment_order.pay_amount, " +
 				"app_payment_order.channel, app_payment_order.out_trade_no, app_payment_order.trade_no, " +
 				"app_payment_order.pay_type, app_payment_order.pay_info, app_payment_order.status AS source_status, " +
 				"app_payment_order.notify_payload, app_payment_order.recharge_log_id, app_payment_order.created_at, " +
@@ -309,7 +310,7 @@ func appPaymentOrderSourceQuery() *gorm.DB {
 	manualRecharges := DB.
 		Model(&AppRechargeLog{}).
 		Select(
-			"app_recharge_log.id * -1 AS id, app_recharge_log.user_id, app_recharge_log.amount, " +
+			"app_recharge_log.id * -1 AS id, app_recharge_log.user_id, app_recharge_log.amount, app_recharge_log.amount AS pay_amount, " +
 				"COALESCE(app_recharge_log.channel, '') AS channel, COALESCE(app_recharge_log.trade_no, '') AS out_trade_no, " +
 				"app_recharge_log.trade_no, '' AS pay_type, '' AS pay_info, '" + AppPaymentStatusPaid + "' AS source_status, " +
 				"app_recharge_log.raw_payload AS notify_payload, app_recharge_log.id AS recharge_log_id, app_recharge_log.created_at, " +

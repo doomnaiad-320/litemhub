@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -54,12 +55,22 @@ type AppRechargeLogResponse struct {
 	UserEmail  string  `json:"user_email,omitempty"`
 	UserPhone  string  `json:"user_phone,omitempty"`
 	Amount     float64 `json:"amount"`
+	PayAmount  float64 `json:"pay_amount,omitempty"`
 	Channel    string  `json:"channel,omitempty"`
+	PayType    string  `json:"pay_type,omitempty"`
 	TradeNo    string  `json:"trade_no,omitempty"`
 	Status     string  `json:"status"`
 	RawPayload string  `json:"raw_payload,omitempty"`
 	CreatedAt  int64   `json:"created_at"`
 	UpdatedAt  int64   `json:"updated_at"`
+}
+
+type AppBillingSettingsResponse struct {
+	RechargeDiscount float64 `json:"recharge_discount"`
+}
+
+type UpdateAppBillingSettingsRequest struct {
+	RechargeDiscount float64 `json:"recharge_discount"`
 }
 
 type AdjustAppUserWalletBalanceRequest struct {
@@ -163,7 +174,9 @@ func buildAppRechargeLogResponse(log *model.AppRechargeLogWithUser) *AppRecharge
 		UserEmail:  string(log.UserEmail),
 		UserPhone:  string(log.UserPhone),
 		Amount:     log.Amount,
+		PayAmount:  log.Amount,
 		Channel:    string(log.Channel),
+		PayType:    string(log.Channel),
 		TradeNo:    string(log.TradeNo),
 		Status:     log.Status,
 		RawPayload: log.RawPayload,
@@ -188,7 +201,9 @@ func buildAppPaymentOrderResponse(order *model.AppPaymentOrderWithUser) *AppRech
 		UserEmail:  string(order.UserEmail),
 		UserPhone:  string(order.UserPhone),
 		Amount:     order.Amount,
+		PayAmount:  order.ExpectedPayAmount(),
 		Channel:    order.Channel,
+		PayType:    string(order.PayType),
 		TradeNo:    order.AdminTradeNo,
 		Status:     order.AdminStatus,
 		RawPayload: order.NotifyPayload,
@@ -284,6 +299,66 @@ func GetCurrentUserWalletLogs(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"wallet_logs": buildAppWalletLogResponses(logs),
 		"total":       total,
+	})
+}
+
+func GetCurrentUserRechargeLogs(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	page, perPage := utils.ParsePageParams(c)
+	order := c.DefaultQuery("order", "")
+
+	orders, total, err := model.GetAppPaymentOrders(
+		user.ID,
+		"",
+		"",
+		"",
+		time.Time{},
+		time.Time{},
+		page,
+		perPage,
+		order,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"recharge_logs": buildAppPaymentOrderResponses(orders),
+		"total":         total,
+	})
+}
+
+func GetAppBillingSettings(c *gin.Context) {
+	middleware.SuccessResponse(c, gin.H{
+		"settings": AppBillingSettingsResponse{
+			RechargeDiscount: config.GetDuluPayRechargeDiscount(),
+		},
+	})
+}
+
+func UpdateAppBillingSettings(c *gin.Context) {
+	req := UpdateAppBillingSettingsRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
+		return
+	}
+
+	if req.RechargeDiscount <= 0 || req.RechargeDiscount > 1 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "recharge discount must be greater than 0 and less than or equal to 1")
+		return
+	}
+
+	value := strconv.FormatFloat(req.RechargeDiscount, 'f', -1, 64)
+	if err := model.UpdateOption("DuluPayRechargeDiscount", value); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"settings": AppBillingSettingsResponse{
+			RechargeDiscount: config.GetDuluPayRechargeDiscount(),
+		},
 	})
 }
 

@@ -36,14 +36,14 @@ function ToggleGroup({ value, onChange, options }: {
     options: { label: string; value: string }[]
 }) {
     return (
-        <div className="flex bg-muted rounded-md p-0.5 text-xs">
+        <div className="flex rounded-md bg-muted/70 p-0.5 text-xs">
             {options.map((opt) => (
                 <button
                     key={opt.value}
                     className={cn(
-                        "px-2 py-0.5 rounded transition-colors",
+                        "rounded-sm px-2 py-0.5 transition-colors",
                         value === opt.value
-                            ? "bg-background shadow-sm text-foreground font-medium"
+                            ? "bg-background text-foreground font-medium"
                             : "text-muted-foreground hover:text-foreground"
                     )}
                     onClick={() => onChange(opt.value)}
@@ -62,7 +62,7 @@ function ChartBox({ title, children, rightSlot, className }: {
     className?: string
 }) {
     return (
-        <div className={cn("bg-card rounded-lg border p-4 h-[300px] overflow-hidden", className)}>
+        <div className={cn("h-[300px] overflow-hidden rounded-md border bg-card p-4", className)}>
             <div className="flex items-start justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">{title}</span>
                 {rightSlot && <div className="flex items-center gap-2">{rightSlot}</div>}

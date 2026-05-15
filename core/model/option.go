@@ -125,6 +125,12 @@ func initOptionMap() error {
 		10,
 	)
 	optionMap["FuzzyTokenThreshold"] = strconv.FormatInt(config.GetFuzzyTokenThreshold(), 10)
+	optionMap["DuluPayRechargeDiscount"] = strconv.FormatFloat(
+		config.GetDuluPayRechargeDiscount(),
+		'f',
+		-1,
+		64,
+	)
 
 	optionKeys = make([]string, 0, len(optionMap))
 	for key := range optionMap {
@@ -476,6 +482,17 @@ func updateOption(key, value string, isInit bool) (err error) {
 		}
 
 		config.SetFuzzyTokenThreshold(threshold)
+	case "DuluPayRechargeDiscount":
+		discount, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+
+		if discount <= 0 || discount > 1 {
+			return errors.New("dulupay recharge discount must be greater than 0 and less than or equal to 1")
+		}
+
+		config.SetDuluPayRechargeDiscount(discount)
 	default:
 		return ErrUnknownOptionKey
 	}

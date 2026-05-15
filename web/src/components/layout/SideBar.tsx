@@ -182,42 +182,25 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
         <div
             className={cn(
                 "h-full relative overflow-hidden flex flex-col transition-all duration-300 ease-in-out",
-                "bg-gradient-to-b from-[#6A6DE6] to-[#8A8DF7] dark:from-[#4A4DA0] dark:to-[#5155A5]",
+                "border-r border-border bg-background dark:bg-background",
                 collapsed ? "w-20" : "w-64",
             )}
         >
-            {/* 粒子效果 */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {Array.from({ length: 25 }).map((_, i) => (
-                    <div
-                        key={i}
-                        className="absolute rounded-full bg-white/10 dark:bg-white/5 sidebar-particle"
-                        style={{
-                            width: `${Math.random() * 6 + 2}px`,
-                            height: `${Math.random() * 6 + 2}px`,
-                            top: `${Math.random() * 100}%`,
-                            left: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 5}s`,
-                        }}
-                    />
-                ))}
-            </div>
-
-            <div className="relative z-10 flex items-center justify-between p-6 border-b border-white/20 dark:border-white/10">
+            <div className="relative z-10 flex items-center justify-between border-b border-border px-6 py-5">
                 <div
                     className={cn(
                         "overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0",
                         collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
                     )}
                 >
-                    <h1 className="text-lg font-semibold text-white whitespace-nowrap">AI Proxy</h1>
+                    <h1 className="text-lg font-semibold text-foreground whitespace-nowrap">AI Proxy</h1>
                 </div>
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={onToggle}
                     className={cn(
-                        "rounded-full hover:bg-white/10 hover:text-white transition-all flex-shrink-0 w-8 h-8 flex items-center justify-center text-white",
+                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
                         collapsed ? "ml-auto mr-auto" : "ml-auto",
                     )}
                 >
@@ -236,9 +219,8 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
                                     <div className="flex items-center justify-center w-5 h-5">
                                         <item.icon
                                             className={cn(
-                                                "w-5 h-5 transition-all duration-300 ease-in-out",
-                                                isActive ? "text-white" : "text-white/90",
-                                                "group-hover:scale-125 group-hover:rotate-6 group-hover:animate-bounce-subtle",
+                                                "w-5 h-5 transition-colors",
+                                                isActive ? "text-foreground" : "text-muted-foreground",
                                             )}
                                         />
                                     </div>
@@ -246,7 +228,7 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
                                     <span
                                         className={cn(
                                             "ml-3 font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
-                                            isActive ? "text-white" : "text-white/90",
+                                            isActive ? "text-foreground" : "text-muted-foreground",
                                             collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto",
                                         )}
                                     >
@@ -264,8 +246,8 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className={cn(
-                                                    "group flex items-center px-6 py-3 my-1 mx-2 rounded-lg transition-all duration-200",
-                                                    "text-white/90 hover:bg-white/10",
+                                                    "group flex items-center mx-2 my-1 rounded-md px-6 py-3 transition-colors",
+                                                    "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                                                     collapsed ? "justify-center" : "",
                                                 )}
                                             >
@@ -275,10 +257,10 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
                                             <Link
                                                 to={item.href}
                                                 className={cn(
-                                                    "group flex items-center px-6 py-3 my-1 mx-2 rounded-lg transition-all duration-200",
+                                                    "group flex items-center mx-2 my-1 rounded-md px-6 py-3 transition-colors",
                                                     isActive
-                                                        ? "bg-white/15 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.15)]"
-                                                        : "text-white/90 hover:bg-white/10",
+                                                        ? "bg-muted text-foreground"
+                                                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                                                     collapsed ? "justify-center" : "",
                                                 )}
                                             >
@@ -294,20 +276,20 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
             </div>
 
             {/* Logout button */}
-            <div className="p-4 border-t border-white/20 dark:border-white/10 relative z-10">
+            <div className="relative z-10 border-t border-border p-4">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
                             variant="secondary"
                             onClick={handleLogout}
                             className={cn(
-                                "group w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200",
-                                "text-[#6A6DE6] dark:text-[#4A4DA0] bg-white hover:bg-gray-100",
+                                "group flex w-full items-center rounded-md px-4 py-3 transition-colors",
+                                "border border-border bg-background text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                                 collapsed ? "justify-center" : "justify-start",
                             )}
                         >
                             <div className="flex items-center justify-center w-5 h-5">
-                                <LogOut className="w-5 h-5 transition-all duration-300 ease-in-out group-hover:scale-125 group-hover:rotate-6 group-hover:animate-bounce-subtle" />
+                                <LogOut className="h-5 w-5 transition-colors" />
                             </div>
                             <span
                                 className={cn(

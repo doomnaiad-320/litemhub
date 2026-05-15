@@ -309,12 +309,12 @@ export function LogTable({
             <div className="flex-1 min-h-0">
                 <div className="space-y-3 md:hidden">
                     {loading ? (
-                        <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
+                        <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
                             <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
                             {t('common.loading')}
                         </div>
                     ) : data.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-border/70 bg-card p-6 text-center text-sm text-muted-foreground">
+                        <div className="rounded-md border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
                             {t('common.noResult')}
                         </div>
                     ) : (
@@ -322,7 +322,7 @@ export function LogTable({
                             const isSuccess = log.code === 200
 
                             return (
-                                <div key={log.id} className="rounded-xl bg-card p-3 shadow-sm ring-1 ring-border/50">
+                                <div key={log.id} className="rounded-md border border-border bg-card p-3 shadow-none">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
                                             <div className="truncate font-mono text-[14px] font-semibold leading-5 text-foreground">
@@ -374,7 +374,7 @@ export function LogTable({
                 <div className="hidden rounded-lg border border-border bg-card shadow-none h-full overflow-hidden md:block">
                     <div className="overflow-auto h-full">
                         <table className="min-w-[980px] w-full table-fixed">
-                            <thead className="sticky top-0 bg-muted/50 backdrop-blur-sm">
+                            <thead className="sticky top-0 bg-muted/50">
                                 <tr className="border-b border-border">
                                     {table.getHeaderGroups().map((headerGroup) =>
                                         headerGroup.headers.map((header, index) => {

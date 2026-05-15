@@ -32,6 +32,7 @@ var (
 type AppPaymentCreateParams struct {
 	UserID     int
 	Amount     float64
+	PayAmount  float64
 	Channel    string
 	OutTradeNo string
 	TradeNo    string
@@ -59,6 +60,11 @@ func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, err
 		return nil, errors.New("amount must be greater than zero")
 	}
 
+	payAmount := params.PayAmount
+	if payAmount <= 0 {
+		payAmount = params.Amount
+	}
+
 	channel := strings.TrimSpace(params.Channel)
 	if channel == "" {
 		channel = "dulupay"
@@ -72,6 +78,7 @@ func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, err
 	order := &AppPaymentOrder{
 		UserID:     params.UserID,
 		Amount:     normalizeMoney(params.Amount),
+		PayAmount:  normalizeMoney(payAmount),
 		Channel:    channel,
 		OutTradeNo: outTradeNo,
 		TradeNo:    EmptyNullString(strings.TrimSpace(params.TradeNo)),
@@ -132,7 +139,7 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 			return ErrAppPaymentOrderAlreadyHandled
 		}
 
-		if !moneyEqual(order.Amount, params.Amount) {
+		if !moneyEqual(order.ExpectedPayAmount(), params.Amount) {
 			return ErrAppPaymentOrderAmountMismatch
 		}
 
@@ -151,6 +158,10 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 		if result.RowsAffected == 0 {
 			return ErrAppPaymentOrderAlreadyHandled
 		}
+		order.Status = AppPaymentStatusPaid
+		order.TradeNo = EmptyNullString(params.TradeNo)
+		order.NotifyPayload = params.NotifyPayload
+		order.PaidAt = &now
 
 		var rechargeErr error
 		wallet, rechargeLog, rechargeErr = rechargeAppUserBalanceWithTx(tx, AppUserRechargeParams{
@@ -173,6 +184,14 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 
 func normalizeMoney(amount float64) float64 {
 	return decimal.NewFromFloat(amount).Round(2).InexactFloat64()
+}
+
+func (o *AppPaymentOrder) ExpectedPayAmount() float64 {
+	if o.PayAmount > 0 {
+		return o.PayAmount
+	}
+
+	return o.Amount
 }
 
 func moneyEqual(a, b float64) bool {

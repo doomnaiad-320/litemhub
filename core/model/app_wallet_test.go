@@ -298,6 +298,65 @@ func TestGetAppPaymentOrdersIncludesPaidPendingAndFailedStatuses(t *testing.T) {
 	})
 }
 
+func TestMarkAppPaymentOrderPaidUsesPayAmountAndCreditsRechargeAmount(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  90,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-discounted",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 100.0, order.Amount)
+		require.Equal(t, 90.0, order.PayAmount)
+
+		order, wallet, rechargeLog, err := model.MarkAppPaymentOrderPaid(model.AppPaymentPaidParams{
+			OutTradeNo:    "UP-discounted",
+			TradeNo:       "dulupay-discounted",
+			Amount:        90,
+			NotifyPayload: `{"money":"90.00"}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.AppPaymentStatusPaid, order.Status)
+		require.Equal(t, 100.0, wallet.AvailableBalance)
+		require.Equal(t, 100.0, rechargeLog.Amount)
+
+		_, _, _, err = model.MarkAppPaymentOrderPaid(model.AppPaymentPaidParams{
+			OutTradeNo: "UP-discounted",
+			Amount:     100,
+		})
+		require.ErrorIs(t, err, model.ErrAppPaymentOrderAlreadyHandled)
+	})
+}
+
+func TestMarkAppPaymentOrderPaidRejectsAmountDifferentFromPayAmount(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		_, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  90,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-discounted-mismatch",
+		})
+		require.NoError(t, err)
+
+		_, _, _, err = model.MarkAppPaymentOrderPaid(model.AppPaymentPaidParams{
+			OutTradeNo: "UP-discounted-mismatch",
+			Amount:     100,
+		})
+		require.ErrorIs(t, err, model.ErrAppPaymentOrderAmountMismatch)
+
+		wallet, err := model.GetAppUserWalletByUserID(user.ID)
+		require.Error(t, err)
+		require.Zero(t, wallet.ID)
+	})
+}
+
 func TestReleaseAppUserReservation(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)

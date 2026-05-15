@@ -145,3 +145,15 @@ export interface AppRechargeStats {
 export interface AppRechargeStatsResponse {
     stats: AppRechargeStats
 }
+
+export interface AppBillingSettings {
+    recharge_discount: number
+}
+
+export interface AppBillingSettingsResponse {
+    settings: AppBillingSettings
+}
+
+export interface UpdateAppBillingSettingsRequest {
+    recharge_discount: number
+}

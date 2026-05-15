@@ -1,5 +1,19 @@
 import { format } from 'date-fns'
-import { CreditCard, ExternalLink } from 'lucide-react'
+import {
+    BadgePercent,
+    Bell,
+    Check,
+    ChevronDown,
+    CircleHelp,
+    Copy,
+    CreditCard,
+    ExternalLink,
+    QrCode,
+    ReceiptText,
+    Smartphone,
+    Tag,
+    Wallet,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
@@ -9,22 +23,26 @@ import {
     useReactTable,
 } from '@tanstack/react-table'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
-import type { UserPortalWalletLog } from '@/types/user-portal'
+import type { UserPortalRechargeLog } from '@/types/user-portal'
 import {
     useUserPortalDuluPayRecharge,
+    useUserPortalRechargeLogs,
     useUserPortalWallet,
-    useUserPortalWalletLogs,
 } from '@/feature/user-portal/hooks'
-import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 
-const formatMoney = (amount?: number) => `$${(amount || 0).toFixed(4)}`
+const presetAmounts = [10, 50, 100, 500, 1000, 5000]
+
+const formatMoney = (amount?: number) => `$${(amount || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+})}`
 
 const formatDateTime = (value?: string | number) => {
     if (!value) {
@@ -36,27 +54,43 @@ const formatDateTime = (value?: string | number) => {
         return '-'
     }
 
-    return format(date, 'yyyy-MM-dd HH:mm')
+    return format(date, 'yyyy/MM/dd HH:mm')
+}
+
+const getRechargeStatusClassName = (status: string) => {
+    switch (status) {
+        case 'success':
+            return 'border-[#d8f3df] bg-[#f2fbf4] text-[#2f7d46] dark:border-[#69b37c]/30 dark:bg-[#69b37c]/10 dark:text-[#9dd8aa]'
+        case 'failed':
+            return 'border-[#f3d8d8] bg-[#fff5f5] text-[#a14343] dark:border-[#d47777]/30 dark:bg-[#d47777]/10 dark:text-[#f0aaaa]'
+        default:
+            return 'border-[#f2dfc6] bg-[#fff8ed] text-[#a76b1d] dark:border-[#d5a15a]/30 dark:bg-[#d5a15a]/10 dark:text-[#edc384]'
+    }
 }
 
 export default function UserPortalDashboardPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
-    const user = useUserPortalAuthStore((state) => state.user)
     const [searchParams, setSearchParams] = useSearchParams()
     const { data: walletData, isLoading } = useUserPortalWallet(true)
-    const [walletLogPage, setWalletLogPage] = useState(1)
-    const [walletLogPageSize, setWalletLogPageSize] = useState(20)
-    const [rechargeAmount, setRechargeAmount] = useState('50')
+    const [rechargeLogPage, setRechargeLogPage] = useState(1)
+    const [rechargeLogPageSize, setRechargeLogPageSize] = useState(20)
+    const [rechargeAmount, setRechargeAmount] = useState('10')
+    const [discountCode, setDiscountCode] = useState('')
     const [paymentType, setPaymentType] = useState('alipay')
-    const { data: walletLogData, isLoading: isWalletLogLoading } = useUserPortalWalletLogs(walletLogPage, walletLogPageSize, true)
+    const { data: rechargeLogData, isLoading: isRechargeLogLoading } = useUserPortalRechargeLogs(
+        rechargeLogPage,
+        rechargeLogPageSize,
+        true,
+    )
     const rechargeMutation = useUserPortalDuluPayRecharge()
 
     const wallet = walletData?.wallet
-    const walletLogs = walletLogData?.wallet_logs || []
-    const walletLogTotal = walletLogData?.total || 0
-    const account = user?.email || `#${user?.id ?? ''}`
+    const rechargeLogs = rechargeLogData?.recharge_logs || []
+    const rechargeLogTotal = rechargeLogData?.total || 0
     const totalBalance = (wallet?.available_balance || 0) + (wallet?.frozen_balance || 0)
+    const selectedAmount = Number(rechargeAmount)
+    const hasCustomAmount = Number.isFinite(selectedAmount) && !presetAmounts.includes(selectedAmount)
 
     useEffect(() => {
         const payment = searchParams.get('payment')
@@ -68,6 +102,28 @@ export default function UserPortalDashboardPage() {
             setSearchParams({}, { replace: true })
         }
     }, [searchParams, setSearchParams, t])
+
+    const paymentTypeLabel = (type?: string) => {
+        switch (type) {
+            case 'wxpay':
+                return t('portal.dashboard.wxpay')
+            case 'alipay':
+                return t('portal.dashboard.alipay')
+            default:
+                return type || '-'
+        }
+    }
+
+    const statusLabel = (status: string) => {
+        switch (status) {
+            case 'success':
+                return t('portal.dashboard.statusSuccess')
+            case 'failed':
+                return t('portal.dashboard.statusFailed')
+            default:
+                return t('portal.dashboard.statusUnpaid')
+        }
+    }
 
     const startRecharge = async () => {
         const amount = Number(rechargeAmount)
@@ -89,236 +145,450 @@ export default function UserPortalDashboardPage() {
         window.open(payment.pay_info, '_blank', 'noopener,noreferrer')
     }
 
-    const walletLogColumns: ColumnDef<UserPortalWalletLog>[] = useMemo(() => [
+    const rechargeLogColumns: ColumnDef<UserPortalRechargeLog>[] = useMemo(() => [
         {
-            accessorKey: 'amount',
-            header: () => <div className="py-3.5 font-medium">{t('portal.logs.amount')}</div>,
-            cell: ({ row }) => <div className="font-mono text-sm">{formatMoney(row.original.amount)}</div>,
-        },
-        {
-            id: 'balance',
-            header: () => <div className="py-3.5 font-medium">{t('portal.logs.balance')}</div>,
+            accessorKey: 'trade_no',
+            header: () => <div className="py-3.5 font-medium">{t('portal.dashboard.orderNo')}</div>,
             cell: ({ row }) => (
-                <div className="font-mono text-xs text-muted-foreground">
-                    {formatMoney(row.original.balance_before)} → {formatMoney(row.original.balance_after)}
+                <div className="flex max-w-[240px] items-center gap-2">
+                    <span className="truncate font-mono text-xs text-[#45515e] dark:text-white/70">
+                        {row.original.trade_no || '-'}
+                    </span>
+                    {row.original.trade_no && (
+                        <button
+                            type="button"
+                            className="text-[#8e8e93] transition-colors hover:text-[#18181b] dark:hover:text-white"
+                            onClick={() => {
+                                navigator.clipboard.writeText(row.original.trade_no || '')
+                                toast.success(t('portal.dashboard.orderCopied'))
+                            }}
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                        </button>
+                    )}
                 </div>
             ),
         },
         {
-            accessorKey: 'remark',
-            header: () => <div className="py-3.5 font-medium">{t('portal.logs.remark')}</div>,
+            accessorKey: 'pay_type',
+            header: () => <div className="py-3.5 font-medium">{t('portal.dashboard.paymentMethod')}</div>,
+            cell: ({ row }) => <div className="text-sm text-[#45515e] dark:text-white/70">{paymentTypeLabel(row.original.pay_type)}</div>,
+        },
+        {
+            accessorKey: 'amount',
+            header: () => <div className="py-3.5 font-medium">{t('portal.dashboard.rechargeAmount')}</div>,
+            cell: ({ row }) => <div className="font-mono text-sm text-[#18181b] dark:text-white">{formatMoney(row.original.amount)}</div>,
+        },
+        {
+            accessorKey: 'pay_amount',
+            header: () => <div className="py-3.5 font-medium">{t('portal.dashboard.payAmount')}</div>,
+            cell: ({ row }) => <div className="font-mono text-sm text-[#18181b] dark:text-white">{formatMoney(row.original.pay_amount ?? row.original.amount)}</div>,
+        },
+        {
+            accessorKey: 'status',
+            header: () => <div className="py-3.5 font-medium">{t('portal.logs.status')}</div>,
             cell: ({ row }) => (
-                <div className="max-w-[280px] break-words text-sm text-muted-foreground">
-                    {row.original.remark || '-'}
-                </div>
+                <Badge className={`rounded-full px-2.5 py-1 text-xs font-medium shadow-none ${getRechargeStatusClassName(row.original.status)}`}>
+                    {statusLabel(row.original.status)}
+                </Badge>
             ),
         },
         {
             accessorKey: 'created_at',
             header: () => <div className="py-3.5 font-medium">{t('portal.logs.createdAt')}</div>,
             cell: ({ row }) => (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-[#8e8e93]">
                     {formatDateTime(row.original.created_at)}
                 </div>
             ),
         },
     ], [t])
 
-    const walletLogTable = useReactTable({
-        data: walletLogs,
-        columns: walletLogColumns,
+    const rechargeLogTable = useReactTable({
+        data: rechargeLogs,
+        columns: rechargeLogColumns,
         getCoreRowModel: getCoreRowModel(),
     })
 
-    const metricItems = wallet
+    const balanceItems = wallet
         ? [
-            { label: t('portal.dashboard.available'), value: formatMoney(wallet.available_balance) },
             { label: t('portal.dashboard.frozen'), value: formatMoney(wallet.frozen_balance) },
             { label: t('portal.dashboard.total'), value: formatMoney(totalBalance) },
             { label: t('portal.dashboard.historicalConsumed'), value: formatMoney(wallet.historical_consumed) },
         ]
         : []
 
+    const paymentMethods = [
+        {
+            value: 'alipay',
+            label: t('portal.dashboard.alipay'),
+            description: t('portal.dashboard.paymentMethodHint'),
+            icon: QrCode,
+            disabled: false,
+        },
+        {
+            value: 'wxpay',
+            label: t('portal.dashboard.wxpay'),
+            description: t('portal.dashboard.paymentMethodHint'),
+            icon: Smartphone,
+            disabled: false,
+        },
+        {
+            value: 'crypto',
+            label: 'Crypto',
+            description: t('portal.dashboard.minimumAmount', { amount: '$15.00' }),
+            icon: BadgePercent,
+            disabled: true,
+        },
+        {
+            value: 'paypal',
+            label: 'PayPal',
+            description: t('portal.dashboard.paymentMethodHint'),
+            icon: CreditCard,
+            disabled: true,
+        },
+    ]
+
     return (
-        <div className="font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
-            <Card className="overflow-hidden rounded-[24px] border-0 bg-white shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10">
-                <CardHeader className="border-b border-[#f2f3f5] p-5 dark:border-white/10 sm:p-6">
-                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                        <div>
-                            <div className="text-sm font-medium text-[#1456f0] dark:text-[#60a5fa]">
-                                {t('portal.dashboard.welcome')}
-                            </div>
-                            <h1 className="mt-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold leading-[1.5] tracking-tight text-[#222222] dark:text-white sm:text-[31px]">
-                                {t('portal.dashboard.title')}
-                            </h1>
-                            <p className="mt-1 max-w-2xl text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
-                                {t('portal.dashboard.description')}
-                            </p>
-                        </div>
-                        <div className="inline-flex max-w-full rounded-full bg-[#f7f7f7] px-3 py-1.5 text-xs font-medium text-[#45515e] ring-1 ring-[#f2f3f5] dark:bg-white/10 dark:text-white/70 dark:ring-white/10">
-                            <span className="shrink-0">{t('portal.dashboard.currentAccount')}:</span>
-                            <span className="ml-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif]">{account}</span>
+        <div className="space-y-6 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
+            <header>
+                <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[28px] font-semibold leading-tight tracking-tight text-[#18181b] dark:text-white">
+                    {t('portal.dashboard.billingTitle')}
+                </h1>
+                <p className="mt-1 text-sm leading-[1.6] text-[#5f5f5f] dark:text-white/60">
+                    {t('portal.dashboard.billingDescription')}
+                </p>
+            </header>
+
+            <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10">
+                {isLoading || !wallet ? (
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-12 w-12 rounded-md" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-20 rounded-md" />
+                            <Skeleton className="h-8 w-32 rounded-md" />
                         </div>
                     </div>
+                ) : (
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#e9f4ef] text-[#6f9d8d] dark:bg-[#6f9d8d]/15 dark:text-[#9bc3b5]">
+                                <Wallet className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <div className="text-xs font-medium text-[#8e8e93]">{t('portal.dashboard.available')}</div>
+                                <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-[30px] font-semibold leading-none text-[#18181b] dark:text-white">
+                                    {formatMoney(wallet.available_balance)}
+                                </div>
+                            </div>
+                        </div>
 
-                    <div className="mt-5 grid gap-x-6 gap-y-3 border-t border-[#f2f3f5] pt-4 dark:border-white/10 sm:grid-cols-2 lg:grid-cols-4">
-                        {isLoading || !wallet ? (
-                            Array.from({ length: 4 }).map((_, index) => (
-                                <Skeleton key={index} className="h-10 rounded-[12px]" />
-                            ))
-                        ) : (
-                            metricItems.map((item) => (
-                                <div key={item.label} className="min-w-0">
+                        <div className="grid gap-4 border-t border-[#f2f3f5] pt-4 dark:border-white/10 sm:grid-cols-3 lg:min-w-[520px] lg:border-t-0 lg:pt-0">
+                            {balanceItems.map((item) => (
+                                <div key={item.label} className="min-w-0 lg:border-l lg:border-[#f2f3f5] lg:pl-5 lg:dark:border-white/10">
                                     <div className="text-xs font-medium text-[#8e8e93]">{item.label}</div>
-                                    <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#18181b] dark:text-white">
+                                    <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold leading-tight text-[#18181b] dark:text-white">
                                         {item.value}
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </CardHeader>
-
-                <CardContent className="p-0">
-                    <section className="border-b border-[#f2f3f5] p-5 dark:border-white/10 sm:p-6">
-                        <div className="flex items-center gap-2 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
-                            <CreditCard className="h-4 w-4 text-[#1456f0] dark:text-[#60a5fa]" />
-                            {t('portal.dashboard.rechargeTitle')}
+                            ))}
                         </div>
-                        <p className="mt-2 max-w-3xl text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
-                            {t('portal.dashboard.rechargeDescription')}
-                        </p>
 
-                        {isLoading || !wallet ? (
-                            <Skeleton className="mt-6 h-24 rounded-[16px]" />
-                        ) : (
-                            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(260px,1fr)_280px_180px] lg:items-end">
-                                <div className="space-y-2">
-                                    <Label htmlFor="recharge-amount" className="text-xs font-semibold text-[#5f5f5f] dark:text-white/60">
-                                        {t('portal.dashboard.rechargeAmount')}
-                                    </Label>
-                                    <div className="relative">
-                                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#8e8e93]">$</span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-fit rounded-md border-[#e5e7eb] bg-background text-xs text-[#45515e] shadow-none hover:border-[#18181b] hover:bg-background dark:border-white/10 dark:text-white/70"
+                        >
+                            <Bell className="h-3.5 w-3.5" />
+                            {t('portal.dashboard.notify')}
+                        </Button>
+                    </div>
+                )}
+            </section>
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_292px]">
+                <div className="space-y-5">
+                    <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10 sm:p-6">
+                        <div>
+                            <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
+                                {t('portal.dashboard.packageTitle')}
+                            </h2>
+                            <p className="mt-1 text-sm text-[#8e8e93]">
+                                {t('portal.dashboard.packageDescription')}
+                            </p>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {presetAmounts.map((amount) => {
+                                const selected = Number(rechargeAmount) === amount
+                                return (
+                                    <button
+                                        key={amount}
+                                        type="button"
+                                        onClick={() => setRechargeAmount(String(amount))}
+                                        className={
+                                            selected
+                                                ? 'min-h-[72px] rounded-md border border-[#6f9d8d] bg-[#eef6f3] p-4 text-left transition-colors dark:border-[#9bc3b5] dark:bg-[#6f9d8d]/15'
+                                                : 'min-h-[72px] rounded-md border border-[#e5e7eb] bg-background p-4 text-left transition-colors hover:border-[#8e8e93] hover:bg-[#fafafa] dark:border-white/10 dark:hover:border-white/30 dark:hover:bg-white/[0.03]'
+                                        }
+                                    >
+                                        <div className="font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold leading-tight text-[#18181b] dark:text-white">
+                                            {formatMoney(amount)}
+                                        </div>
+                                        <div className="mt-2 text-xs leading-[1.5] text-[#8e8e93]">
+                                            {t('portal.dashboard.packageHint')}
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                            <div className="space-y-2">
+                                <Label htmlFor="recharge-amount" className="text-xs font-semibold text-[#18181b] dark:text-white">
+                                    {t('portal.dashboard.customAmount')}
+                                </Label>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm font-semibold text-[#8e8e93]">$</span>
+                                    <Input
+                                        id="recharge-amount"
+                                        type="number"
+                                        min="1"
+                                        step="0.01"
+                                        value={rechargeAmount}
+                                        onChange={(event) => setRechargeAmount(event.target.value)}
+                                        className="h-11 rounded-md border-[#e5e7eb] bg-background pl-9 font-mono text-sm shadow-none focus-visible:border-[#6f9d8d] focus-visible:ring-[#6f9d8d]/20 dark:border-white/10"
+                                    />
+                                </div>
+                                <p className="text-xs text-[#8e8e93]">{t('portal.dashboard.minimumAmount', { amount: '$1.00' })}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="discount-code" className="text-xs font-semibold text-[#18181b] dark:text-white">
+                                    {t('portal.dashboard.discountCode')}
+                                </Label>
+                                <div className="flex gap-2">
+                                    <div className="relative min-w-0 flex-1">
+                                        <Tag className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
                                         <Input
-                                            id="recharge-amount"
-                                            type="number"
-                                            min="1"
-                                            step="0.01"
-                                            value={rechargeAmount}
-                                            onChange={(event) => setRechargeAmount(event.target.value)}
-                                            className="h-14 rounded-[14px] border-[#e5e7eb] bg-white pl-9 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold shadow-none focus-visible:ring-[#1456f0] dark:border-white/10 dark:bg-white/10"
+                                            id="discount-code"
+                                            value={discountCode}
+                                            onChange={(event) => setDiscountCode(event.target.value)}
+                                            placeholder={t('portal.dashboard.discountCodePlaceholder')}
+                                            className="h-11 rounded-md border-[#e5e7eb] bg-background pl-10 text-sm shadow-none focus-visible:border-[#6f9d8d] focus-visible:ring-[#6f9d8d]/20 dark:border-white/10"
                                         />
                                     </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-11 rounded-md border-[#e5e7eb] bg-background px-4 text-xs shadow-none hover:border-[#18181b] hover:bg-background dark:border-white/10"
+                                    >
+                                        {t('portal.dashboard.verify')}
+                                    </Button>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold text-[#5f5f5f] dark:text-white/60">
-                                        {t('portal.dashboard.paymentMethod')}
-                                    </Label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { value: 'alipay', label: t('portal.dashboard.alipay') },
-                                            { value: 'wxpay', label: t('portal.dashboard.wxpay') },
-                                        ].map((item) => (
-                                            <button
-                                                key={item.value}
-                                                type="button"
-                                                onClick={() => setPaymentType(item.value)}
-                                                className={
-                                                    paymentType === item.value
-                                                        ? 'h-14 rounded-[14px] border border-[#18181b] bg-white text-sm font-semibold text-[#18181b] dark:border-white dark:bg-white/10 dark:text-white'
-                                                        : 'h-14 rounded-[14px] border border-[#e5e7eb] bg-white text-sm font-semibold text-[#45515e] transition hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-white/5 dark:text-white/70 dark:hover:border-white dark:hover:text-white'
-                                                }
-                                            >
-                                                {item.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Button
-                                    disabled={rechargeMutation.isPending}
-                                    onClick={startRecharge}
-                                    className="h-14 rounded-[14px] bg-[#181e25] text-white shadow-none hover:bg-[#111827] dark:bg-white dark:text-[#181e25]"
-                                >
-                                    {rechargeMutation.isPending
-                                        ? t('portal.dashboard.recharging')
-                                        : t('portal.dashboard.rechargeNow')}
-                                    <ExternalLink className="h-4 w-4" />
-                                </Button>
+                                <p className="text-xs text-[#8e8e93]">{t('portal.dashboard.discountCodeHelp')}</p>
                             </div>
-                        )}
+                        </div>
                     </section>
-                </CardContent>
 
-                <div className="border-t border-[#f2f3f5] dark:border-white/10">
-                <div className="flex flex-col justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+                    <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10 sm:p-6">
+                        <div>
+                            <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
+                                {t('portal.dashboard.selectPaymentMethod')}
+                            </h2>
+                            <p className="mt-1 text-sm text-[#8e8e93]">
+                                {t('portal.dashboard.paymentDescription')}
+                            </p>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {paymentMethods.map((method) => {
+                                const Icon = method.icon
+                                const active = paymentType === method.value
+                                return (
+                                    <button
+                                        key={method.value}
+                                        type="button"
+                                        disabled={method.disabled}
+                                        onClick={() => setPaymentType(method.value)}
+                                        className={
+                                            active
+                                                ? 'flex min-h-[64px] items-center gap-3 rounded-md border border-[#6f9d8d] bg-[#eef6f3] p-4 text-left transition-colors dark:border-[#9bc3b5] dark:bg-[#6f9d8d]/15'
+                                                : 'flex min-h-[64px] items-center gap-3 rounded-md border border-[#e5e7eb] bg-background p-4 text-left transition-colors hover:border-[#8e8e93] hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-45 dark:border-white/10 dark:hover:border-white/30 dark:hover:bg-white/[0.03]'
+                                        }
+                                    >
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#f2f3f5] bg-background text-[#8e8e93] dark:border-white/10">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-semibold text-[#18181b] dark:text-white">{method.label}</span>
+                                            <span className="mt-1 block truncate text-xs text-[#8e8e93]">{method.description}</span>
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        <div className="mt-5 flex flex-col gap-3 border-t border-[#f2f3f5] pt-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="text-sm text-[#5f5f5f] dark:text-white/60">
+                                <span>{t('portal.dashboard.rechargeAmount')}: </span>
+                                <span className="font-mono font-semibold text-[#18181b] dark:text-white">
+                                    {Number.isFinite(selectedAmount) && selectedAmount > 0 ? formatMoney(selectedAmount) : '-'}
+                                </span>
+                                {hasCustomAmount && (
+                                    <span className="ml-2 text-xs text-[#8e8e93]">{t('portal.dashboard.customAmountTag')}</span>
+                                )}
+                            </div>
+
+                            <Button
+                                disabled={rechargeMutation.isPending}
+                                onClick={startRecharge}
+                                className="h-11 rounded-md bg-[#181e25] px-6 text-white shadow-none hover:bg-[#111827] dark:bg-white dark:text-[#181e25] sm:min-w-[180px]"
+                            >
+                                {rechargeMutation.isPending
+                                    ? t('portal.dashboard.recharging')
+                                    : t('portal.dashboard.rechargeNow')}
+                                <ExternalLink className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </section>
+                </div>
+
+                <aside className="space-y-5">
+                    <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                            <BadgePercent className="h-4 w-4 text-[#18181b] dark:text-white" />
+                            <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#18181b] dark:text-white">
+                                {t('portal.dashboard.voucherTitle')}
+                            </h2>
+                        </div>
+                        <p className="mt-1 text-sm text-[#8e8e93]">{t('portal.dashboard.voucherDescription')}</p>
+                        <div className="mt-4 flex gap-2">
+                            <Input
+                                value={discountCode}
+                                onChange={(event) => setDiscountCode(event.target.value)}
+                                placeholder={t('portal.dashboard.voucherPlaceholder')}
+                                className="h-9 rounded-md border-[#e5e7eb] bg-background text-sm shadow-none dark:border-white/10"
+                            />
+                            <Button
+                                type="button"
+                                disabled={!discountCode.trim()}
+                                className="h-9 rounded-md bg-[#8fb6a7] px-4 text-xs text-white shadow-none hover:bg-[#7aa495]"
+                            >
+                                <Check className="h-3.5 w-3.5" />
+                                {t('portal.dashboard.redeem')}
+                            </Button>
+                        </div>
+                        <p className="mt-3 text-xs leading-[1.6] text-[#8e8e93]">{t('portal.dashboard.voucherHelp')}</p>
+                    </section>
+
+                    <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                            <CircleHelp className="h-4 w-4 text-[#18181b] dark:text-white" />
+                            <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-base font-semibold text-[#18181b] dark:text-white">
+                                {t('portal.dashboard.faqTitle')}
+                            </h2>
+                        </div>
+                        <div className="mt-3 divide-y divide-[#f2f3f5] dark:divide-white/10">
+                            {[
+                                t('portal.dashboard.faqModels'),
+                                t('portal.dashboard.faqValidity'),
+                                t('portal.dashboard.faqDiscount'),
+                                t('portal.dashboard.faqAnnouncements'),
+                            ].map((item) => (
+                                <button
+                                    key={item}
+                                    type="button"
+                                    className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-[#45515e] transition-colors hover:text-[#18181b] dark:text-white/70 dark:hover:text-white"
+                                >
+                                    <span>{item}</span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 text-[#8e8e93]" />
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                </aside>
+            </div>
+
+            <section>
+                <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                     <div>
                         <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
-                            {t('portal.logs.rechargeList')}
+                            {t('portal.dashboard.transactionHistory')}
                         </h2>
+                        <p className="mt-1 text-sm text-[#8e8e93]">{t('portal.dashboard.transactionDescription')}</p>
                     </div>
-                    <div className="inline-flex w-fit rounded-full bg-[#f7f7f7] px-3 py-1 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-semibold text-[#45515e] ring-1 ring-[#f2f3f5] dark:bg-white/10 dark:text-white/70 dark:ring-white/10">
-                        {walletLogTotal}
+                    <div className="w-fit rounded-full border border-[#e5e7eb] px-3 py-1 text-xs font-medium text-[#45515e] dark:border-white/10 dark:text-white/70">
+                        {t('portal.dashboard.totalRecords', { count: rechargeLogTotal })}
                     </div>
                 </div>
-                <div className="px-0 pb-0">
-                    <div className="px-4 pb-3 sm:px-6 sm:pb-4">
-                        <div className="space-y-3 md:hidden">
-                            {isWalletLogLoading ? (
-                                Array.from({ length: 3 }).map((_, index) => (
-                                    <Skeleton key={index} className="h-28 rounded-2xl" />
-                                ))
-                            ) : walletLogs.length > 0 ? (
-                                walletLogs.map((log) => (
-                                    <div key={log.id} className="border-b border-[#f2f3f5] py-4 last:border-b-0 dark:border-white/10">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="text-xs text-[#8e8e93]">{t('portal.logs.amount')}</div>
-                                                <div className="font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">{formatMoney(log.amount)}</div>
+
+                <div className="rounded-lg border border-[#e5e7eb] bg-background shadow-none dark:border-white/10">
+                    <div className="space-y-3 p-4 md:hidden">
+                        {isRechargeLogLoading ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                                <Skeleton key={index} className="h-28 rounded-md" />
+                            ))
+                        ) : rechargeLogs.length > 0 ? (
+                            rechargeLogs.map((log) => (
+                                <div key={log.id} className="border-b border-[#f2f3f5] py-4 last:border-b-0 dark:border-white/10">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 text-sm font-semibold text-[#18181b] dark:text-white">
+                                                <ReceiptText className="h-4 w-4 text-[#8e8e93]" />
+                                                <span className="truncate">{log.trade_no || '-'}</span>
                                             </div>
-                                            <div className="text-right text-xs text-[#8e8e93]">
-                                                {formatDateTime(log.created_at)}
-                                            </div>
+                                            <div className="mt-2 text-xs text-[#8e8e93]">{paymentTypeLabel(log.pay_type)}</div>
                                         </div>
-                                        <div className="mt-3 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-medium text-[#45515e] dark:text-white/70">
-                                            {formatMoney(log.balance_before)} → {formatMoney(log.balance_after)}
-                                        </div>
-                                        {log.remark && (
-                                            <div className="mt-3 break-words text-sm leading-[1.7] text-[#45515e] dark:text-white/70">{log.remark}</div>
-                                        )}
+                                        <Badge className={`rounded-full px-2.5 py-1 text-xs font-medium shadow-none ${getRechargeStatusClassName(log.status)}`}>
+                                            {statusLabel(log.status)}
+                                        </Badge>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="border border-dashed border-[#e5e7eb] p-6 text-center text-sm text-[#8e8e93] dark:border-white/10">
-                                    {t('table.noData')}
+                                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <div className="text-xs text-[#8e8e93]">{t('portal.dashboard.rechargeAmount')}</div>
+                                            <div className="mt-1 font-mono font-semibold text-[#18181b] dark:text-white">{formatMoney(log.amount)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-[#8e8e93]">{t('portal.dashboard.payAmount')}</div>
+                                            <div className="mt-1 font-mono font-semibold text-[#18181b] dark:text-white">{formatMoney(log.pay_amount ?? log.amount)}</div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 text-xs text-[#8e8e93]">{formatDateTime(log.created_at)}</div>
                                 </div>
-                            )}
-                        </div>
-                        <div className="hidden md:block">
-                            <DataTable
-                                table={walletLogTable}
-                                columns={walletLogColumns}
-                                isLoading={isWalletLogLoading}
-                                loadingStyle="skeleton"
-                                fixedHeader={true}
-                                showScrollShadows={false}
-                            />
-                        </div>
+                            ))
+                        ) : (
+                            <div className="border border-dashed border-[#e5e7eb] p-6 text-center text-sm text-[#8e8e93] dark:border-white/10">
+                                {t('table.noData')}
+                            </div>
+                        )}
                     </div>
+
+                    <div className="hidden md:block">
+                        <DataTable
+                            table={rechargeLogTable}
+                            columns={rechargeLogColumns}
+                            isLoading={isRechargeLogLoading}
+                            loadingStyle="skeleton"
+                            fixedHeader={true}
+                            showScrollShadows={false}
+                        />
+                    </div>
+
                     <div className="border-t border-[#f2f3f5] px-3 dark:border-white/10">
                         <ServerPagination
-                            page={walletLogPage}
-                            pageSize={walletLogPageSize}
-                            total={walletLogTotal}
-                            onPageChange={setWalletLogPage}
+                            page={rechargeLogPage}
+                            pageSize={rechargeLogPageSize}
+                            total={rechargeLogTotal}
+                            onPageChange={setRechargeLogPage}
                             onPageSizeChange={(size) => {
-                                setWalletLogPageSize(size)
-                                setWalletLogPage(1)
+                                setRechargeLogPageSize(size)
+                                setRechargeLogPage(1)
                             }}
                         />
                     </div>
                 </div>
-                </div>
-            </Card>
+            </section>
         </div>
     )
 }

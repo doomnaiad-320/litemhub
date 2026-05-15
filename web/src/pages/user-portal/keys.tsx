@@ -151,7 +151,7 @@ export default function UserPortalKeysPage() {
             accessorKey: 'group',
             header: () => <div className="py-3.5 font-medium">{t('portal.keys.group')}</div>,
             cell: ({ row }) => (
-                <Badge variant="outline" className="rounded-full border-border/70 bg-background/80 px-3 py-1">
+                <Badge variant="outline" className="rounded-md border-border bg-background px-3 py-1">
                     {row.original.group}
                 </Badge>
             ),
@@ -214,7 +214,7 @@ export default function UserPortalKeysPage() {
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-[18px] border border-white/60 bg-white/70 p-3 shadow-[0_18px_34px_-32px_rgba(15,23,42,0.32)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:rounded-[24px] sm:p-4">
+            <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-2">
                         <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
@@ -226,7 +226,7 @@ export default function UserPortalKeysPage() {
                             setGroupFilter(value)
                             setPage(1)
                         }}>
-                            <SelectTrigger className="w-full rounded-2xl sm:w-[180px]">
+                            <SelectTrigger className="w-full rounded-md sm:w-[180px]">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -237,7 +237,7 @@ export default function UserPortalKeysPage() {
                             </SelectContent>
                         </Select>
 
-                        <Button className="rounded-2xl" onClick={() => setDialogOpen(true)}>
+                        <Button className="rounded-md" onClick={() => setDialogOpen(true)}>
                             <Plus className="h-4 w-4" />
                             {t('portal.keys.create')}
                         </Button>
@@ -245,7 +245,7 @@ export default function UserPortalKeysPage() {
                 </div>
             </section>
 
-            <Card className="rounded-[24px] border-white/70 bg-white/80 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/5 sm:rounded-[28px]">
+            <Card className="rounded-md border-border bg-background shadow-none dark:border-white/10">
                 <CardHeader className="p-4 sm:p-6">
                     <CardTitle>{t('portal.keys.list')}</CardTitle>
                 </CardHeader>
@@ -254,15 +254,15 @@ export default function UserPortalKeysPage() {
                         <div className="space-y-3 md:hidden">
                             {isLoading ? (
                                 Array.from({ length: 3 }).map((_, index) => (
-                                    <div key={index} className="h-36 rounded-2xl bg-muted/70" />
+                                    <div key={index} className="h-36 rounded-md bg-muted/70" />
                                 ))
                             ) : keys.length > 0 ? (
                                 keys.map((token) => (
-                                    <div key={token.id} className="rounded-2xl border border-border/60 bg-background/75 p-4">
+                                    <div key={token.id} className="rounded-md border border-border bg-background p-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="min-w-0">
                                                 <div className="truncate text-base font-semibold">{token.name}</div>
-                                                <Badge variant="outline" className="mt-2 rounded-full border-border/70 bg-background/80 px-3 py-1">
+                                                <Badge variant="outline" className="mt-2 rounded-md border-border bg-background px-3 py-1">
                                                     {token.group}
                                                 </Badge>
                                             </div>
@@ -275,7 +275,7 @@ export default function UserPortalKeysPage() {
                                                 </Button>
                                             </div>
                                         </div>
-                                        <div className="mt-4 flex items-center gap-2 rounded-xl bg-muted/70 px-3 py-2">
+                                        <div className="mt-4 flex items-center gap-2 rounded-md bg-muted/70 px-3 py-2">
                                             <code className="min-w-0 flex-1 truncate text-xs">{token.key}</code>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyToClipboard(token.key)}>
                                                 <Copy className="h-4 w-4" />
@@ -287,7 +287,7 @@ export default function UserPortalKeysPage() {
                                     </div>
                                 ))
                             ) : (
-                                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center text-sm text-muted-foreground">
+                                <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                                     {t('table.noData')}
                                 </div>
                             )}
@@ -334,7 +334,7 @@ export default function UserPortalKeysPage() {
                                         <FormItem>
                                             <FormLabel>{t('portal.keys.name')}</FormLabel>
                                             <FormControl>
-                                                <Input {...field} className="h-11 rounded-2xl" placeholder={t('portal.keys.namePlaceholder')} />
+                                                <Input {...field} className="h-11 rounded-md" placeholder={t('portal.keys.namePlaceholder')} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -349,7 +349,7 @@ export default function UserPortalKeysPage() {
                                             <FormLabel>{t('portal.keys.group')}</FormLabel>
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <FormControl>
-                                                    <SelectTrigger className="h-11 rounded-2xl">
+                                                    <SelectTrigger className="h-11 rounded-md">
                                                         <SelectValue placeholder={t('portal.keys.groupPlaceholder')} />
                                                     </SelectTrigger>
                                                 </FormControl>
@@ -397,7 +397,7 @@ export default function UserPortalKeysPage() {
                                             <FormLabel>{t('portal.keys.group')}</FormLabel>
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <FormControl>
-                                                    <SelectTrigger className="h-11 rounded-2xl">
+                                                    <SelectTrigger className="h-11 rounded-md">
                                                         <SelectValue placeholder={t('portal.keys.groupPlaceholder')} />
                                                     </SelectTrigger>
                                                 </FormControl>

@@ -47,6 +47,27 @@ export interface UserPortalWalletLogsResponse {
     total: number
 }
 
+export type UserPortalRechargeStatus = 'success' | 'unpaid' | 'failed'
+
+export interface UserPortalRechargeLog {
+    id: number
+    user_id: number
+    amount: number
+    pay_amount?: number
+    channel?: string
+    pay_type?: string
+    trade_no?: string
+    status: UserPortalRechargeStatus
+    raw_payload?: string
+    created_at: number
+    updated_at: number
+}
+
+export interface UserPortalRechargeLogsResponse {
+    recharge_logs: UserPortalRechargeLog[]
+    total: number
+}
+
 export interface UserPortalRechargeRequest {
     amount: number
     type?: string
@@ -56,6 +77,8 @@ export interface UserPortalRechargeRequest {
 export interface UserPortalPayment {
     order_id: number
     amount: number
+    pay_amount?: number
+    discount?: number
     out_trade_no: string
     trade_no?: string
     pay_type: string

@@ -55,13 +55,13 @@ function MetricCard({ title, value, icon, className, tooltip, bgColor, iconColor
 
     const cardContent = (
         <Card className={cn(
-            "border-0 shadow-sm hover:shadow-md transition-all duration-200 h-28",
-            "dark:bg-card dark:shadow-lg dark:hover:shadow-xl",
+            "h-28 border-border shadow-none transition-colors duration-200 hover:border-foreground/20",
+            "dark:bg-card",
             bgColor,
             className
         )}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 h-full px-6 py-4">
-                <div className={cn("p-2 rounded-lg shrink-0", iconColor)}>
+                <div className={cn("shrink-0 rounded-md p-2", iconColor)}>
                     {icon}
                 </div>
                 <div className="text-right flex-1 ml-3 flex flex-col justify-center">
@@ -115,7 +115,7 @@ export function MetricsCards({
         return (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 9 }).map((_, index) => (
-                    <Card key={index} className="border-0 shadow-sm h-28 dark:bg-card">
+                    <Card key={index} className="h-28 border-border shadow-none dark:bg-card">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 h-full px-6 py-4">
                             <div className="p-2 shrink-0">
                                 <Skeleton className="h-5 w-5" />

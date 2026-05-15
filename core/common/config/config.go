@@ -29,6 +29,7 @@ var (
 	usageAlertThreshold          atomic.Int64 // default 0 means disabled
 	usageAlertWhitelist          atomic.Value
 	usageAlertMinAvgThreshold    atomic.Int64 // 前三天平均用量最低阈值，default 0 means no limit
+	duluPayRechargeDiscount      uint64       = math.Float64bits(1)
 
 	defaultWarnNotifyErrorRate uint64 = math.Float64bits(0.5)
 
@@ -293,4 +294,17 @@ func GetFuzzyTokenThreshold() int64 {
 func SetFuzzyTokenThreshold(threshold int64) {
 	threshold = env.Int64("FUZZY_TOKEN_THRESHOLD", threshold)
 	fuzzyTokenThreshold.Store(threshold)
+}
+
+func GetDuluPayRechargeDiscount() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&duluPayRechargeDiscount))
+}
+
+func SetDuluPayRechargeDiscount(discount float64) {
+	discount = env.Float64("DULUPAY_RECHARGE_DISCOUNT", discount)
+	if discount <= 0 || discount > 1 {
+		discount = 1
+	}
+
+	atomic.StoreUint64(&duluPayRechargeDiscount, math.Float64bits(discount))
 }

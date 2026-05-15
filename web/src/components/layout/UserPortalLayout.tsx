@@ -5,7 +5,6 @@ import {
     Blocks,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
     Home,
     KeyRound,
     LogOut,
@@ -68,27 +67,26 @@ export function UserPortalLayout() {
                     to={item.href}
                     onClick={onNavigate}
                     className={cn(
-                        'group flex items-center rounded-lg transition-all duration-200',
+                        'group flex items-center rounded-md transition-colors',
                         isCompact ? 'mx-2 my-1 px-4 py-3' : 'mx-2 my-1 px-6 py-3',
                         isActive
-                            ? 'bg-white/15 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.15)]'
-                            : 'text-white/90 hover:bg-white/10',
+                            ? 'bg-muted text-foreground'
+                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                         collapsed && !isCompact ? 'justify-center' : '',
                     )}
                 >
                     <div className="flex h-5 w-5 items-center justify-center">
                         <item.icon
                             className={cn(
-                                'h-5 w-5 transition-all duration-300 ease-in-out',
-                                isActive ? 'text-white' : 'text-white/90',
-                                'group-hover:scale-125 group-hover:rotate-6 group-hover:animate-bounce-subtle',
+                                'h-5 w-5 transition-colors',
+                                isActive ? 'text-foreground' : 'text-muted-foreground',
                             )}
                         />
                     </div>
                     <span
                         className={cn(
                             'ml-3 whitespace-nowrap font-medium transition-all duration-300 ease-in-out',
-                            isActive ? 'text-white' : 'text-white/90',
+                            isActive ? 'text-foreground' : 'text-muted-foreground',
                             collapsed && !isCompact ? 'w-0 overflow-hidden opacity-0' : 'w-auto opacity-100',
                         )}
                     >
@@ -99,36 +97,16 @@ export function UserPortalLayout() {
         })
     )
 
-    const sidebarParticles = (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {Array.from({ length: 25 }).map((_, index) => (
-                <div
-                    key={index}
-                    className="sidebar-particle absolute rounded-full bg-white/10 dark:bg-white/5"
-                    style={{
-                        width: `${Math.random() * 6 + 2}px`,
-                        height: `${Math.random() * 6 + 2}px`,
-                        top: `${Math.random() * 100}%`,
-                        left: `${Math.random() * 100}%`,
-                        animationDelay: `${Math.random() * 5}s`,
-                    }}
-                />
-            ))}
-        </div>
-    )
-
     return (
         <div className="flex h-dvh bg-background">
             <aside
                 className={cn(
                     'relative hidden h-full overflow-hidden lg:flex flex-col transition-all duration-300 ease-in-out',
-                    'bg-gradient-to-b from-[#6A6DE6] to-[#8A8DF7] dark:from-[#4A4DA0] dark:to-[#5155A5]',
+                    'border-r border-border bg-background',
                     collapsed ? 'w-20' : 'w-64',
                 )}
             >
-                {sidebarParticles}
-
-                <div className="relative z-10 flex items-center justify-between p-6 border-b border-white/20 dark:border-white/10">
+                <div className="relative z-10 flex items-center justify-between border-b border-border px-6 py-5">
                     <div
                         className={cn(
                             'overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0',
@@ -136,12 +114,9 @@ export function UserPortalLayout() {
                         )}
                     >
                         <div className="flex items-center gap-3 whitespace-nowrap">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white shadow-lg backdrop-blur-sm">
-                                <CreditCard className="h-5 w-5" />
-                            </div>
                             <div>
-                                <div className="text-xs font-medium text-white/70">AI Proxy</div>
-                                <div className="text-base font-semibold text-white">{t('portal.nav.console')}</div>
+                                <div className="text-xs font-medium text-muted-foreground">AI Proxy</div>
+                                <div className="text-base font-semibold text-foreground">{t('portal.nav.console')}</div>
                             </div>
                         </div>
                     </div>
@@ -151,7 +126,7 @@ export function UserPortalLayout() {
                         size="icon"
                         onClick={() => setCollapsed(!collapsed)}
                         className={cn(
-                            'rounded-full hover:bg-white/10 hover:text-white transition-all flex-shrink-0 w-8 h-8 flex items-center justify-center text-white',
+                            'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground',
                             collapsed ? 'ml-auto mr-auto' : 'ml-auto',
                         )}
                     >
@@ -168,16 +143,15 @@ export function UserPortalLayout() {
                                     <div className="flex items-center justify-center w-5 h-5">
                                         <item.icon
                                             className={cn(
-                                                'w-5 h-5 transition-all duration-300 ease-in-out',
-                                                isActive ? 'text-white' : 'text-white/90',
-                                                'group-hover:scale-125 group-hover:rotate-6 group-hover:animate-bounce-subtle',
+                                                'w-5 h-5 transition-colors',
+                                                isActive ? 'text-foreground' : 'text-muted-foreground',
                                             )}
                                         />
                                     </div>
                                     <span
                                         className={cn(
                                             'ml-3 font-medium whitespace-nowrap transition-all duration-300 ease-in-out',
-                                            isActive ? 'text-white' : 'text-white/90',
+                                            isActive ? 'text-foreground' : 'text-muted-foreground',
                                             collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
                                         )}
                                     >
@@ -192,10 +166,10 @@ export function UserPortalLayout() {
                                         <Link
                                             to={item.href}
                                             className={cn(
-                                                'group flex items-center px-6 py-3 my-1 mx-2 rounded-lg transition-all duration-200',
+                                                'group flex items-center mx-2 my-1 rounded-md px-6 py-3 transition-colors',
                                                 isActive
-                                                    ? 'bg-white/15 text-white backdrop-blur-sm shadow-[0_0_10px_rgba(255,255,255,0.15)]'
-                                                    : 'text-white/90 hover:bg-white/10',
+                                                    ? 'bg-muted text-foreground'
+                                                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                                                 collapsed ? 'justify-center' : '',
                                             )}
                                         >
@@ -209,15 +183,15 @@ export function UserPortalLayout() {
                     </TooltipProvider>
                 </div>
 
-                <div className="p-4 border-t border-white/20 dark:border-white/10 relative z-10 space-y-3">
+                <div className="relative z-10 space-y-3 border-t border-border p-4">
                     {!collapsed && (
                         <>
-                            <div className="rounded-xl bg-white/10 px-4 py-3 text-white backdrop-blur-sm">
-                                <div className="text-xs text-white/70">{t('portal.nav.currentAccount')}</div>
+                            <div className="rounded-md border border-border bg-background px-4 py-3">
+                                <div className="text-xs text-muted-foreground">{t('portal.nav.currentAccount')}</div>
                                 <div className="truncate text-sm font-medium">{account}</div>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                                <div className="rounded-lg bg-white/80 px-3 py-2 dark:bg-black/20">
+                                <div className="rounded-md border border-border bg-background px-3 py-2">
                                     <ThemeToggle />
                                 </div>
                                 <LanguageSelector variant="minimal" />
@@ -231,13 +205,13 @@ export function UserPortalLayout() {
                                 variant="secondary"
                                 onClick={handleLogout}
                                 className={cn(
-                                    'group w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200',
-                                    'text-[#6A6DE6] dark:text-[#4A4DA0] bg-white hover:bg-gray-100',
+                                    'group flex w-full items-center rounded-md px-4 py-3 transition-colors',
+                                    'border border-border bg-background text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                                     collapsed ? 'justify-center' : 'justify-start',
                                 )}
                             >
                                 <div className="flex items-center justify-center w-5 h-5">
-                                    <LogOut className="w-5 h-5 transition-all duration-300 ease-in-out group-hover:scale-125 group-hover:rotate-6 group-hover:animate-bounce-subtle" />
+                                    <LogOut className="h-5 w-5 transition-colors" />
                                 </div>
                                 <span
                                     className={cn(
@@ -254,11 +228,11 @@ export function UserPortalLayout() {
                 </div>
             </aside>
 
-            <main className="flex-1 flex flex-col overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.12),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.96)_0%,_rgba(244,246,255,0.92)_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(106,109,230,0.18),_transparent_28%),linear-gradient(180deg,_rgba(17,24,39,0.98)_0%,_rgba(10,15,28,0.98)_100%)]">
-                <header className="sticky top-0 z-30 border-b border-white/70 bg-white/80 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/75 lg:hidden">
+            <main className="flex-1 flex flex-col overflow-hidden bg-background">
+                <header className="sticky top-0 z-30 border-b border-border bg-background px-4 py-3 lg:hidden">
                     <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0 flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#6A6DE6] text-white shadow-lg shadow-indigo-500/20">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
                                 {activeNavItem && <activeNavItem.icon className="h-5 w-5" />}
                             </div>
                             <div className="min-w-0">
@@ -268,34 +242,30 @@ export function UserPortalLayout() {
                         </div>
                         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                             <SheetTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-2xl bg-white/80 dark:bg-white/5">
+                                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-md bg-background">
                                     <Menu className="h-5 w-5" />
                                     <span className="sr-only">{t('portal.nav.console')}</span>
                                 </Button>
                             </SheetTrigger>
-                            <SheetContent side="left" className="w-[86vw] max-w-[340px] border-0 bg-gradient-to-b from-[#6A6DE6] to-[#8A8DF7] p-0 text-white dark:from-[#4A4DA0] dark:to-[#5155A5]">
-                                {sidebarParticles}
-                                <SheetHeader className="relative z-10 border-b border-white/20 p-5 text-left">
+                            <SheetContent side="left" className="w-[86vw] max-w-[340px] border-r border-border bg-background p-0 text-foreground">
+                                <SheetHeader className="relative z-10 border-b border-border p-5 text-left">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white shadow-lg backdrop-blur-sm">
-                                            <CreditCard className="h-5 w-5" />
-                                        </div>
                                         <div>
-                                            <SheetDescription className="text-xs font-medium text-white/70">AI Proxy</SheetDescription>
-                                            <SheetTitle className="text-base font-semibold text-white">{t('portal.nav.console')}</SheetTitle>
+                                            <SheetDescription className="text-xs font-medium text-muted-foreground">AI Proxy</SheetDescription>
+                                            <SheetTitle className="text-base font-semibold text-foreground">{t('portal.nav.console')}</SheetTitle>
                                         </div>
                                     </div>
                                 </SheetHeader>
                                 <div className="relative z-10 flex-1 overflow-y-auto py-3">
                                     {renderNavigationLinks(true, () => setMobileMenuOpen(false))}
                                 </div>
-                                <div className="relative z-10 space-y-3 border-t border-white/20 p-4">
-                                    <div className="rounded-xl bg-white/10 px-4 py-3 text-white backdrop-blur-sm">
-                                        <div className="text-xs text-white/70">{t('portal.nav.currentAccount')}</div>
+                                <div className="relative z-10 space-y-3 border-t border-border p-4">
+                                    <div className="rounded-md border border-border bg-background px-4 py-3">
+                                        <div className="text-xs text-muted-foreground">{t('portal.nav.currentAccount')}</div>
                                         <div className="truncate text-sm font-medium">{account}</div>
                                     </div>
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="rounded-lg bg-white/80 px-3 py-2 dark:bg-black/20">
+                                        <div className="rounded-md border border-border bg-background px-3 py-2">
                                             <ThemeToggle />
                                         </div>
                                         <LanguageSelector variant="minimal" />
@@ -303,7 +273,7 @@ export function UserPortalLayout() {
                                     <Button
                                         variant="secondary"
                                         onClick={handleLogout}
-                                        className="group flex w-full items-center justify-start rounded-lg bg-white px-4 py-3 text-[#6A6DE6] transition-all duration-200 hover:bg-gray-100 dark:text-[#4A4DA0]"
+                                        className="group flex w-full items-center justify-start rounded-md border border-border bg-background px-4 py-3 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
                                     >
                                         <LogOut className="mr-3 h-5 w-5" />
                                         {t('portal.nav.logout')}

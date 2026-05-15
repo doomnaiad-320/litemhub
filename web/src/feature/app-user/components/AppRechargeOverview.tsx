@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import type { EChartsOption } from 'echarts'
@@ -6,6 +6,7 @@ import {
     Banknote,
     CalendarClock,
     CreditCard,
+    Percent,
     ReceiptText,
     RefreshCcw,
     Search,
@@ -38,7 +39,12 @@ import {
 } from '@/components/ui/table'
 import { ServerPagination } from '@/components/table/server-pagination'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
-import { useAppRechargeLogs, useAppRechargeStats } from '../hooks'
+import {
+    useAppBillingSettings,
+    useAppRechargeLogs,
+    useAppRechargeStats,
+    useUpdateAppBillingSettings,
+} from '../hooks'
 
 type Granularity = 'day' | 'week' | 'month'
 
@@ -102,6 +108,7 @@ export function AppRechargeOverview() {
     const [statusFilter, setStatusFilter] = useState('success')
     const [channelFilter, setChannelFilter] = useState('all')
     const [granularity, setGranularity] = useState<Granularity>('day')
+    const [discountInput, setDiscountInput] = useState('')
 
     const startTimestamp = dateRange?.from
         ? zonedBoundaryToUnixMs(dateRange.from, DEFAULT_TIMEZONE, false)
@@ -127,12 +134,21 @@ export function AppRechargeOverview() {
         normalizedStatus,
         normalizedChannel,
     )
+    const { data: billingSettingsData, isLoading: isBillingSettingsLoading } = useAppBillingSettings()
+    const updateBillingSettingsMutation = useUpdateAppBillingSettings()
 
     const stats = statsData?.stats
+    const rechargeDiscount = billingSettingsData?.settings.recharge_discount ?? 1
     const logs = logsData?.recharge_logs || []
     const total = logsData?.total || 0
     const channels = stats?.by_channel || []
     const topChannel = channels[0]
+
+    useEffect(() => {
+        if (billingSettingsData?.settings.recharge_discount) {
+            setDiscountInput(String(billingSettingsData.settings.recharge_discount))
+        }
+    }, [billingSettingsData?.settings.recharge_discount])
 
     const chartOption: EChartsOption = useMemo(() => {
         const series = stats?.time_series || []
@@ -229,9 +245,21 @@ export function AppRechargeOverview() {
         refetchLogs()
     }
 
+    const submitDiscount = async () => {
+        const discount = Number(discountInput)
+        if (!Number.isFinite(discount) || discount <= 0 || discount > 1) {
+            return
+        }
+
+        await updateBillingSettingsMutation.mutateAsync({
+            recharge_discount: discount,
+        })
+        setDiscountInput(String(discount))
+    }
+
     return (
         <div className="space-y-4">
-            <Card className="overflow-hidden rounded-[28px] border border-white/70 bg-white/80 shadow-[0_22px_48px_-36px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-white/10 dark:bg-card/80">
+            <Card className="overflow-hidden rounded-md border-border bg-background shadow-none">
                 <CardHeader className="space-y-5 border-b border-border/60 px-6 py-5">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                         <div className="min-w-0 space-y-1.5">
@@ -249,7 +277,7 @@ export function AppRechargeOverview() {
                         <Button
                             variant="outline"
                             onClick={refresh}
-                            className="h-10 rounded-2xl border-border/70 bg-background/80 px-4 xl:self-start"
+                            className="h-10 rounded-md border-border bg-background px-4 xl:self-start"
                         >
                             <RefreshCcw className="h-4 w-4" />
                             {t('appUser.refresh')}
@@ -266,7 +294,7 @@ export function AppRechargeOverview() {
                                     if (event.key === 'Enter') submitSearch()
                                 }}
                                 placeholder={t('appUser.rechargeStats.searchPlaceholder')}
-                                className="h-10 rounded-2xl border-border/70 bg-background/80 pl-9 shadow-none"
+                                className="h-10 rounded-md border-border bg-background pl-9 shadow-none"
                             />
                         </div>
                         <DateRangePicker
@@ -275,7 +303,7 @@ export function AppRechargeOverview() {
                                 setDateRange(value)
                                 setPage(1)
                             }}
-                            className="h-10 w-full whitespace-nowrap rounded-2xl bg-background/80"
+                            className="h-10 w-full whitespace-nowrap rounded-md bg-background"
                         />
                         <Select
                             value={statusFilter}
@@ -284,7 +312,7 @@ export function AppRechargeOverview() {
                                 setPage(1)
                             }}
                         >
-                            <SelectTrigger className="h-10 rounded-2xl border-border/70 bg-background/80 shadow-none">
+                            <SelectTrigger className="h-10 rounded-md border-border bg-background shadow-none">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -301,7 +329,7 @@ export function AppRechargeOverview() {
                                 setPage(1)
                             }}
                         >
-                            <SelectTrigger className="h-10 rounded-2xl border-border/70 bg-background/80 shadow-none">
+                            <SelectTrigger className="h-10 rounded-md border-border bg-background shadow-none">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -313,13 +341,13 @@ export function AppRechargeOverview() {
                             </SelectContent>
                         </Select>
                         <div className="flex gap-2">
-                            <Button onClick={submitSearch} className="h-10 rounded-2xl px-4">
+                            <Button onClick={submitSearch} className="h-10 rounded-md px-4">
                                 {t('appUser.rechargeStats.search')}
                             </Button>
                             <Button
                                 variant="outline"
                                 onClick={resetFilters}
-                                className="h-10 rounded-2xl border-border/70 bg-background/80 px-4"
+                                className="h-10 rounded-md border-border bg-background px-4"
                             >
                                 {t('appUser.rechargeStats.reset')}
                             </Button>
@@ -332,7 +360,7 @@ export function AppRechargeOverview() {
                         {metricCards.map((metric) => {
                             const Icon = metric.icon
                             return (
-                                <div key={metric.key} className="rounded-2xl border border-border/60 bg-background/80 p-4">
+                                <div key={metric.key} className="rounded-md border border-border bg-background p-4">
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <Icon className="h-4 w-4 text-primary" />
                                         {t(`appUser.rechargeStats.${metric.key}`)}
@@ -355,7 +383,7 @@ export function AppRechargeOverview() {
                     </div>
 
                     <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-                        <div className="rounded-[24px] border border-border/60 bg-background/80 p-4">
+                        <div className="rounded-md border border-border bg-background p-4">
                             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <div className="flex items-center gap-2 text-sm font-medium">
@@ -370,32 +398,32 @@ export function AppRechargeOverview() {
                                     value={granularity}
                                     onValueChange={(value) => setGranularity(value as Granularity)}
                                 >
-                                    <TabsList className="h-9 rounded-2xl bg-muted/70 p-1">
-                                        <TabsTrigger value="day" className="rounded-xl px-3">
+                                    <TabsList className="h-9 rounded-md bg-muted/70 p-1">
+                                        <TabsTrigger value="day" className="rounded-sm px-3">
                                             {t('appUser.rechargeStats.daily')}
                                         </TabsTrigger>
-                                        <TabsTrigger value="week" className="rounded-xl px-3">
+                                        <TabsTrigger value="week" className="rounded-sm px-3">
                                             {t('appUser.rechargeStats.weekly')}
                                         </TabsTrigger>
-                                        <TabsTrigger value="month" className="rounded-xl px-3">
+                                        <TabsTrigger value="month" className="rounded-sm px-3">
                                             {t('appUser.rechargeStats.monthly')}
                                         </TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                             </div>
                             {isStatsLoading ? (
-                                <Skeleton className="h-[320px] rounded-2xl" />
+                                <Skeleton className="h-[320px] rounded-md" />
                             ) : (
                                 <EChart option={chartOption} style={{ height: 320, width: '100%' }} />
                             )}
                         </div>
 
-                        <div className="rounded-[24px] border border-border/60 bg-background/80 p-4">
+                        <div className="rounded-md border border-border bg-background p-4">
                             <div className="mb-3 text-sm font-medium">{t('appUser.rechargeStats.channelBreakdown')}</div>
                             <div className="space-y-3">
                                 {isStatsLoading ? (
                                     Array.from({ length: 4 }).map((_, index) => (
-                                        <Skeleton key={index} className="h-12 rounded-2xl" />
+                                        <Skeleton key={index} className="h-12 rounded-md" />
                                     ))
                                 ) : channels.length > 0 ? (
                                     channels.slice(0, 6).map((channel) => {
@@ -430,7 +458,61 @@ export function AppRechargeOverview() {
                 </CardContent>
             </Card>
 
-            <Card className="overflow-hidden rounded-[28px] border border-white/70 bg-white/80 shadow-[0_22px_48px_-36px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-white/10 dark:bg-card/80">
+            <Card className="overflow-hidden rounded-md border-border bg-background shadow-none">
+                <div className="grid gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                            <Percent className="h-4 w-4 shrink-0" />
+                            {t('appUser.rechargeStats.discountSetting')}
+                        </div>
+                        <div className="mt-2 text-2xl font-semibold tracking-tight">
+                            {isBillingSettingsLoading ? (
+                                <Skeleton className="h-8 w-28 rounded-md" />
+                            ) : (
+                                t('appUser.rechargeStats.currentDiscount', {
+                                    discount: rechargeDiscount,
+                                    percent: Math.round(rechargeDiscount * 10000) / 100,
+                                })
+                            )}
+                        </div>
+                        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                            {t('appUser.rechargeStats.discountDescription')}
+                        </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <label htmlFor="recharge-discount" className="text-xs font-medium text-muted-foreground">
+                            {t('appUser.rechargeStats.discountInput')}
+                        </label>
+                        <div className="flex gap-2">
+                            <Input
+                                id="recharge-discount"
+                                type="number"
+                                min="0.01"
+                                max="1"
+                                step="0.01"
+                                value={discountInput}
+                                onChange={(event) => setDiscountInput(event.target.value)}
+                                className="h-10 rounded-md border-border bg-background font-mono shadow-none"
+                            />
+                            <Button
+                                onClick={submitDiscount}
+                                disabled={isBillingSettingsLoading || updateBillingSettingsMutation.isPending}
+                                className="h-10 rounded-md px-4"
+                            >
+                                {updateBillingSettingsMutation.isPending
+                                    ? t('appUser.rechargeStats.savingDiscount')
+                                    : t('appUser.rechargeStats.saveDiscount')}
+                            </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            {t('appUser.rechargeStats.discountHint')}
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="overflow-hidden rounded-md border-border bg-background shadow-none">
                 <div className="flex flex-col gap-2 border-b border-border/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <div className="text-lg font-semibold">{t('appUser.rechargeStats.logTitle')}</div>
@@ -441,7 +523,7 @@ export function AppRechargeOverview() {
                     </Badge>
                 </div>
                 <div className="overflow-auto px-6 py-4">
-                    <div className="overflow-hidden rounded-[22px] border border-border/60 bg-background/80">
+                    <div className="overflow-hidden rounded-md border border-border bg-background">
                         <Table>
                             <TableHeader>
                                 <TableRow>

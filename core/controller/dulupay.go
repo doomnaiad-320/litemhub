@@ -52,6 +52,8 @@ type DuluPayCreateResponse struct {
 type DuluPayRechargeResponse struct {
 	OrderID    int     `json:"order_id"`
 	Amount     float64 `json:"amount"`
+	PayAmount  float64 `json:"pay_amount"`
+	Discount   float64 `json:"discount"`
 	OutTradeNo string  `json:"out_trade_no"`
 	TradeNo    string  `json:"trade_no,omitempty"`
 	PayType    string  `json:"pay_type"`
@@ -77,6 +79,8 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	discount := normalizeRechargeDiscount(config.GetDuluPayRechargeDiscount())
+	payAmount := calculateRechargePayAmount(amount, discount)
 
 	outTradeNo := model.NewAppPaymentOutTradeNo(user.ID)
 	payType := strings.TrimSpace(req.Type)
@@ -95,7 +99,7 @@ func CreateDuluPayRecharge(c *gin.Context) {
 
 	createResp, err := requestDuluPayCreate(duluPayCreateRequest{
 		OutTradeNo: outTradeNo,
-		Amount:     amount,
+		Amount:     payAmount,
 		ClientIP:   c.ClientIP(),
 		Type:       payType,
 		Device:     device,
@@ -108,6 +112,7 @@ func CreateDuluPayRecharge(c *gin.Context) {
 	order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
 		UserID:     user.ID,
 		Amount:     amount,
+		PayAmount:  payAmount,
 		Channel:    duluPayChannel,
 		OutTradeNo: outTradeNo,
 		TradeNo:    createResp.TradeNo,
@@ -123,6 +128,8 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		"payment": DuluPayRechargeResponse{
 			OrderID:    order.ID,
 			Amount:     order.Amount,
+			PayAmount:  order.ExpectedPayAmount(),
+			Discount:   discount,
 			OutTradeNo: order.OutTradeNo,
 			TradeNo:    string(order.TradeNo),
 			PayType:    string(order.PayType),
@@ -280,7 +287,7 @@ func validateDuluPayCallback(values url.Values) error {
 		return errors.New("invalid money")
 	}
 
-	if !moneyEqual(order.Amount, amount) {
+	if !moneyEqual(order.ExpectedPayAmount(), amount) {
 		return model.ErrAppPaymentOrderAmountMismatch
 	}
 
@@ -302,6 +309,25 @@ func normalizeRechargeAmount(amount float64) (float64, string) {
 	}
 
 	return amount, ""
+}
+
+func normalizeRechargeDiscount(discount float64) float64 {
+	if discount <= 0 || discount > 1 {
+		return 1
+	}
+
+	return decimal.NewFromFloat(discount).Round(4).InexactFloat64()
+}
+
+func calculateRechargePayAmount(amount float64, discount float64) float64 {
+	payAmount := decimal.NewFromFloat(amount).
+		Mul(decimal.NewFromFloat(normalizeRechargeDiscount(discount))).
+		Round(2)
+	if payAmount.LessThanOrEqual(decimal.Zero) {
+		return amount
+	}
+
+	return payAmount.InexactFloat64()
 }
 
 func validateDuluPayConfig() error {
