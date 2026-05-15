@@ -7,389 +7,112 @@
   [![Go Version](https://img.shields.io/github/go-mod/go-version/labring/aiproxy?filename=core%2Fgo.mod)](https://github.com/labring/aiproxy/blob/main/core/go.mod)
   [![Build Status](https://img.shields.io/github/actions/workflow/status/labring/aiproxy/release.yml?branch=main)](https://github.com/labring/aiproxy/actions)
   
-  [English](./README.md) | [简体中文](./README.zh.md)
-</div>
+# AI Proxy
 
----
+AI Proxy 是一个面向 AI 应用和模型运营场景的统一模型网关。它将不同模型供应商、不同协议形态、不同计费规则和不同用户凭证收敛到一个可管理、可观测、可计费的调用入口，让业务系统可以用统一的 API 接入多种大模型能力。
 
-## 🚀 Overview
+项目核心目标不是简单转发请求，而是把模型接入、渠道路由、权限隔离、用量审计、价格管理、用户自助和工具扩展放在同一个平台里管理，适合用于企业内部模型网关、AI 应用中台、开发者 API 平台或多模型聚合服务。
 
-AI Proxy is a powerful, production-ready AI gateway that provides intelligent request routing, comprehensive monitoring, and seamless multi-tenant management. Built with OpenAI-compatible, Anthropic and Gemini protocols, it serves as the perfect middleware for AI applications requiring reliability, scalability, and advanced features.
+## 项目定位
 
-## ✨ Key Features
+AI Proxy 位于业务应用和上游模型供应商之间，负责统一处理模型请求的认证、路由、协议转换、重试、限额、计费和日志。
 
-### 🔄 **Intelligent Request Management**
+它可以帮助你解决这些问题：
 
-- **Smart Retry Logic**: Intelligent retry strategies with automatic error recovery
-- **Priority-based Channel Selection**: Route requests based on channel priority and error rates
-- **Load Balancing**: Efficiently distribute traffic across multiple AI providers
-- **Protocol Conversion**: Seamless protocol conversion between OpenAI Chat Completions, Claude Messages, Gemini, and OpenAI Responses API
-  - Chat/Claude/Gemini → Responses API: Use responses-only models with any protocol
+- 一个业务系统需要同时接入 OpenAI、Anthropic、Gemini、Azure OpenAI、DeepSeek、通义千问、豆包、智谱、Moonshot、OpenRouter 等多个模型渠道。
+- 同一个模型需要配置多个供应渠道，并根据优先级、可用性、错误率和倍率进行调度。
+- 不同用户、分组或租户需要使用不同的模型权限、价格倍率、额度限制和 API Key。
+- 平台需要查看每一次模型调用的请求、响应、耗时、Token、费用、错误原因和渠道状态。
+- 对外提供开发者自助能力时，需要注册、登录、充值、余额、Key 管理和消费日志。
+- 希望在模型请求链路中加入缓存、联网搜索、推理内容拆分、超时保护等可扩展能力。
 
-### 📊 **Comprehensive Monitoring & Analytics**
+## 核心能力
 
-- **Real-time Alerts**: Proactive notifications for balance warnings, error rates, and anomalies
-- **Detailed Logging**: Complete request/response tracking with audit trails
-- **Advanced Analytics**: Request volume, error statistics, RPM/TPM metrics, and cost analysis
-- **Channel Performance**: Error rate analysis and performance monitoring
+### 统一模型接入
 
-### 🏢 **Multi-tenant Architecture**
+AI Proxy 支持以 OpenAI-compatible API 作为主要调用入口，同时兼容 Anthropic、Gemini 和 OpenAI Responses API 等协议形态。业务侧可以尽量保持统一调用方式，由网关完成上游模型的协议适配和转换。
 
-- **Organization Isolation**: Complete separation between different organizations
-- **Flexible Access Control**: Token-based authentication with subnet restrictions
-- **Resource Quotas**: RPM/TPM limits and usage quotas per group
-- **Custom Pricing**: Per-group model pricing and billing configuration
+项目内置多种渠道适配器，覆盖主流国内外模型供应商和 OpenAI 兼容服务，并支持模型别名、模型映射、默认模型列表和渠道级模型配置。
 
-### 🤖 **MCP (Model Context Protocol) Support**
+### 智能路由与高可用
 
-- **Public MCP Servers**: Ready-to-use MCP integrations
-- **Organization MCP Servers**: Private MCP servers for organizations
-- **Embedded MCP**: Built-in MCP servers with configuration templates
-- **OpenAPI to MCP**: Automatic conversion of OpenAPI specs to MCP tools
+同一个模型可以绑定多个渠道。AI Proxy 会根据渠道配置、优先级、错误状态、重试策略和可用性进行请求分发，降低单一供应商异常对业务的影响。
 
-### 🔌 **Plugin System**
+平台还提供渠道测试、余额检测、错误率统计、异常模型禁用、请求重试和后台巡检任务，便于持续维护模型服务质量。
 
-- **Cache Plugin**: High-performance caching for identical requests with Redis/memory storage
-- **Web Search Plugin**: Real-time web search capabilities with support for Google, Bing, and Arxiv
-- **Think Split Plugin**: Support for reasoning models with content splitting, automatically handling `<think>` tags
-- **Stream Fake Plugin**: Avoid non-streaming request timeouts through internal streaming transmission
-- **Extensible Architecture**: Easy to add custom plugins for additional functionality
+### 多租户与权限管理
 
-### 🔧 **Advanced Capabilities**
+AI Proxy 通过分组、Token、模型配置和渠道集合来管理访问边界。不同分组可以拥有不同模型权限、价格倍率、限额策略和可用渠道。
 
-- **Multi-format Support**: Text, image, audio, and document processing
-- **Model Mapping**: Flexible model aliasing and routing
-- **Prompt Caching**: Intelligent caching with billing support
-- **Think Mode**: Support for reasoning models with content splitting
-- **Built-in Tokenizer**: No external tiktoken dependencies
+管理端可以集中维护：
 
-## 📊 Management Panel
+- 模型与价格配置
+- 分组与倍率配置
+- 渠道与上游密钥
+- API Token 与访问限制
+- 用户、钱包和消费记录
+- MCP 服务与插件配置
 
-AI Proxy provides a management panel for managing AI Proxy's configuration and monitoring.
+### 计费与钱包
+
+项目支持基于模型价格的用量计算，覆盖输入 Token、输出 Token、按次费用、缓存费用、图片、音频、推理内容、联网搜索等多种计费维度。
+
+在用户自助场景中，AI Proxy 提供预付费钱包能力。用户可以注册账号、查看余额、创建自己的 API Key、选择可用分组，并通过请求前预占和请求后结算的方式完成消费扣减，降低并发调用下的超额消费风险。
+
+### 监控、日志与审计
+
+AI Proxy 会记录模型调用过程中的关键数据，包括请求量、错误率、耗时、Token 用量、消费金额、命中渠道、响应状态和详细日志。
+
+管理面板提供仪表盘、日志检索、渠道监控、模型错误率、用量统计和告警相关能力，方便排查问题、分析成本和观察模型服务质量。
 
 ![Dashboard](./docs/images/dashboard.png)
+
 ![Logs](./docs/images/logs.png)
 
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    Client[Client Applications] --> Gateway[AI Proxy Gateway]
-    Gateway --> Auth[Authentication & Authorization]
-    Gateway --> Router[Intelligent Router]
-    Gateway --> Monitor[Monitoring & Analytics]
-    Gateway --> Plugins[Plugin System]
-
-    Plugins --> CachePlugin[Cache Plugin]
-    Plugins --> SearchPlugin[Web Search Plugin]
-    Plugins --> ThinkSplitPlugin[Think Split Plugin]
-    Plugins --> StreamFakePlugin[Stream Fake Plugin]
-
-    Router --> Provider1[OpenAI]
-    Router --> Provider2[Anthropic]
-    Router --> Provider3[Azure OpenAI]
-    Router --> ProviderN[Other Providers]
+### MCP 与工具扩展
 
-    Gateway --> MCP[MCP Servers]
-    MCP --> PublicMCP[Public MCP]
-    MCP --> GroupMCP[Organization MCP]
-    MCP --> EmbedMCP[Embedded MCP]
+AI Proxy 内置 MCP（Model Context Protocol）相关能力，支持公共 MCP、组织 MCP、嵌入式 MCP 和 OpenAPI 转 MCP。平台可以把外部工具、业务 API 或第三方服务转换为模型可调用的工具能力。
 
-    Monitor --> Alerts[Alert System]
-    Monitor --> Analytics[Analytics Dashboard]
-    Monitor --> Logs[Audit Logs]
-```
+项目还包含一批本地和托管 MCP 服务，覆盖搜索、文档、地图、文件系统、数据库、浏览器自动化、代码工具、办公工具等场景。
 
-## 🚀 Quick Start
+### 插件系统
 
-### Docker (Recommended)
+请求链路可以通过插件扩展。当前项目包含缓存、联网搜索、推理内容拆分、请求补丁、超时控制、流式伪装、监控等插件能力。
 
-```bash
-# Quick start with default configuration
-docker run -d \
-  --name aiproxy \
-  -p 3000:3000 \
-  -v $(pwd)/aiproxy:/aiproxy \
-  -e ADMIN_KEY=your-admin-key \
-  ghcr.io/labring/aiproxy:latest
+这些插件可以用于优化成本、增强模型能力、兼容不同响应格式，或在不改业务代码的情况下调整模型请求行为。
 
-# Nightly build
-docker run -d \
-  --name aiproxy \
-  -p 3000:3000 \
-  -v $(pwd)/aiproxy:/aiproxy \
-  -e ADMIN_KEY=your-admin-key \
-  ghcr.io/labring/aiproxy:main
-```
+## 系统组成
 
-### Docker Compose
+- `core`：Go 实现的核心网关服务，负责 HTTP API、模型转发、渠道路由、协议适配、计费、日志、任务调度和管理接口。
+- `web`：React 管理面板和用户门户，提供管理员配置、模型目录、用户注册登录、钱包、Key 管理和用量日志等页面。
+- `mcp-servers`：内置 MCP 服务集合，包含本地型和托管型工具服务。
+- `openapi-mcp`：OpenAPI 到 MCP 工具的转换相关模块。
+- `docs`：项目设计、功能方案和配套说明文档。
 
-```bash
-# Download docker-compose.yaml
-curl -O https://raw.githubusercontent.com/labring/aiproxy/main/docker-compose.yaml
+## 典型使用场景
 
-# Start services
-docker-compose up -d
-```
+- 企业内部统一模型出口：集中管理多个模型供应商、账号密钥、调用权限和成本。
+- AI 应用中台：为多个产品线提供统一模型 API、稳定路由、审计日志和用量统计。
+- 开发者 API 平台：开放用户注册、充值、API Key 创建、模型目录和消费记录。
+- 多模型聚合服务：将不同模型、协议和渠道封装成统一体验，降低业务接入成本。
+- 模型能力增强平台：通过 MCP 和插件给模型请求增加工具调用、联网搜索、缓存和格式兼容能力。
 
-## 🔧 Configuration
+## 管理端与用户端
 
-### Environment Variables
+AI Proxy 同时服务平台管理员和最终 API 用户。
 
-#### **Core Settings**
+管理员侧关注渠道、模型、价格、分组、用户、日志、监控和 MCP 配置，负责维护平台能力和服务质量。
 
-```bash
-LISTEN=:3000                    # Server listen address
-ADMIN_KEY=your-admin-key        # Admin API key
-DISABLE_WEB_ROOT=true           # Redirect only `/` to GitHub, keep other web routes available
-```
+用户侧关注模型浏览、账号登录、余额充值、API Key、调用日志和消费明细，负责自助接入和使用模型服务。
 
-#### **Database Configuration**
+## 技术栈
 
-```bash
-SQL_DSN=postgres://user:pass@host:5432/db    # Primary database
-LOG_SQL_DSN=postgres://user:pass@host:5432/log_db  # Log database (optional)
-REDIS=redis://localhost:6379     # Redis for caching
-```
+- 后端：Go、Gin、GORM
+- 前端：React、TypeScript、Vite、Tailwind CSS
+- 存储：SQLite / PostgreSQL
+- 缓存与队列能力：Redis
+- 扩展协议：OpenAI-compatible API、Anthropic API、Gemini API、MCP
 
-#### **Feature Toggles**
+## License
 
-```bash
-BILLING_ENABLED=true           # Enable billing features
-SAVE_ALL_LOG_DETAIL=true     # Log all request details
-```
-
-### Advanced Configuration
-
-<details>
-<summary>Click to expand advanced configuration options</summary>
-
-#### **Quotas**
-
-```bash
-GROUP_MAX_TOKEN_NUM=100        # Max tokens per group
-```
-
-#### **Logging & Retention**
-
-```bash
-LOG_STORAGE_HOURS=168          # Log retention (0 = unlimited)
-LOG_DETAIL_STORAGE_HOURS=72    # Detail log retention
-CLEAN_LOG_BATCH_SIZE=5000      # Log cleanup batch size
-```
-
-#### **Security & Access Control**
-
-```bash
-IP_GROUPS_THRESHOLD=5          # IP sharing alert threshold
-IP_GROUPS_BAN_THRESHOLD=10     # IP sharing ban threshold
-```
-
-</details>
-
-## 🔌 Plugins
-
-AI Proxy supports a plugin system that extends its functionality. Currently available plugins:
-
-### Cache Plugin
-
-The Cache Plugin provides high-performance caching for AI API requests:
-
-- **Dual Storage**: Supports both Redis and in-memory caching
-- **Content-based Keys**: Uses SHA256 hash of request body
-- **Configurable TTL**: Custom time-to-live for cached items
-- **Size Limits**: Prevents memory issues with configurable limits
-
-[View Cache Plugin Documentation](./core/relay/plugin/cache/README.md)
-
-### Web Search Plugin
-
-The Web Search Plugin adds real-time web search capabilities:
-
-- **Multiple Search Engines**: Supports Google, Bing, and Arxiv
-- **Smart Query Rewriting**: AI-powered query optimization
-- **Reference Management**: Automatic citation formatting
-- **Dynamic Control**: User-controllable search depth
-
-[View Web Search Plugin Documentation](./core/relay/plugin/web-search/README.md)
-
-### Think Split Plugin
-
-The Think Split Plugin supports content splitting for reasoning models:
-
-- **Automatic Recognition**: Automatically detects `<think>...</think>` tags in responses
-- **Content Separation**: Extracts thinking content to `reasoning_content` field
-- **Streaming Support**: Supports both streaming and non-streaming responses
-
-[View Think Split Plugin Documentation](./core/relay/plugin/thinksplit/README.md)
-
-### Stream Fake Plugin
-
-The Stream Fake Plugin solves timeout issues with non-streaming requests:
-
-- **Timeout Avoidance**: Prevents request timeouts through internal streaming transmission
-- **Transparent Conversion**: Automatically converts non-streaming requests to streaming format, transparent to clients
-- **Response Reconstruction**: Collects all streaming data chunks and reconstructs them into complete non-streaming responses
-- **Connection Keep-Alive**: Maintains active connections through streaming transmission to avoid network timeouts
-
-[View Stream Fake Plugin Documentation](./core/relay/plugin/streamfake/README.md)
-
-## 📚 API Documentation
-
-### Interactive API Explorer
-
-Visit `http://localhost:3000/swagger/index.html` for the complete API documentation with interactive examples.
-
-### Quick API Examples
-
-#### **List Available Models**
-
-```bash
-curl -H "Authorization: Bearer your-token" \
-  http://localhost:3000/v1/models
-```
-
-#### **Chat Completion**
-
-```bash
-curl -X POST http://localhost:3000/v1/chat/completions \
-  -H "Authorization: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-```
-
-#### **Claude API**
-
-```bash
-# Use Claude models through OpenAI API format
-curl -X POST http://localhost:3000/v1/messages \
-  -H "X-Api-Key: Bearer your-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-5",
-    "messages": [{"role": "user", "content": "Hello Claude!"}]
-  }'
-```
-
-## 🔌 Integrations
-
-### Sealos Platform
-
-Deploy instantly on Sealos with built-in model capabilities:
-[Deploy to Sealos](https://hzh.sealos.run/?openapp=system-aiproxy)
-
-### FastGPT Integration
-
-Seamlessly integrate with FastGPT for enhanced AI workflows:
-[FastGPT Documentation](https://doc.fastgpt.cn/docs/introduction/development/modelConfig/ai-proxy)
-
-### Claude Code Integration
-
-Use AI Proxy with Claude Code by configuring these environment variables:
-
-```bash
-export ANTHROPIC_BASE_URL=http://127.0.0.1:3000
-export ANTHROPIC_AUTH_TOKEN=sk-xxx
-export ANTHROPIC_MODEL=gpt-5
-export ANTHROPIC_SMALL_FAST_MODEL=gpt-5-nano
-```
-
-### Gemini CLI Integration
-
-Use AI Proxy with Gemini CLI by configuring these environment variables:
-
-```bash
-export GOOGLE_GEMINI_BASE_URL=http://127.0.0.1:3000
-export GEMINI_API_KEY=sk-xxx
-```
-
-Alternatively, you can use the `/auth` command in the Gemini CLI to output the `GEMINI_API_KEY`.
-
-### Codex Integration
-
-Use AI Proxy with Codex by configuring `~/.codex/config.toml`:
-
-```toml
-# Recall that in TOML, root keys must be listed before tables.
-model = "gpt-4o"
-model_provider = "aiproxy"
-
-[model_providers.aiproxy]
-# Name of the provider that will be displayed in the Codex UI.
-name = "AIProxy"
-# The path `/chat/completions` will be amended to this URL to make the POST
-# request for the chat completions.
-base_url = "http://127.0.0.1:3000/v1"
-# If `env_key` is set, identifies an environment variable that must be set when
-# using Codex with this provider. The value of the environment variable must be
-# non-empty and will be used in the `Bearer TOKEN` HTTP header for the POST request.
-env_key = "AIPROXY_API_KEY"
-# Valid values for wire_api are "chat" and "responses". Defaults to "chat" if omitted.
-wire_api = "chat"
-```
-
-**Protocol Conversion Support**:
-
-- **Responses-only models**: AI Proxy automatically converts Chat/Claude/Gemini requests to Responses API format for models that only support the Responses API
-- **Multi-protocol access**: Use any protocol (Chat Completions, Claude Messages, or Gemini) to access responses-only models
-- **Transparent conversion**: No client-side changes needed - AI Proxy handles protocol translation automatically
-
-### MCP (Model Context Protocol)
-
-AI Proxy provides comprehensive MCP support for extending AI capabilities:
-
-- **Public MCP Servers**: Community-maintained integrations
-- **Organization MCP Servers**: Private organizational tools
-- **Embedded MCP**: Easy-to-configure built-in functionality
-- **OpenAPI to MCP**: Automatic tool generation from API specifications
-
-## 🛠️ Development
-
-### Prerequisites
-
-- Go 1.24+
-- Node.js 22+ (for frontend development)
-- PostgreSQL (optional, SQLite by default)
-- Redis (optional, for caching)
-
-### Building from Source
-
-```bash
-# Clone repository
-git clone https://github.com/labring/aiproxy.git
-cd aiproxy
-
-# Build frontend (optional)
-cd web && npm install -g pnpm && pnpm install && pnpm run build && cp -r dist ../core/public/dist/ && cd ..
-
-# Build backend
-cd core && go build -o aiproxy .
-
-# Run
-./aiproxy
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Ways to Contribute
-
-- 🐛 Report bugs and issues
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Submit pull requests
-- ⭐ Star the repository
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenAI for the API specification
-- The open-source community for various integrations
-- All contributors and users of AI Proxy
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
