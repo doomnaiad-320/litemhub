@@ -22,6 +22,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 import { ROUTES } from '@/routes/constants'
+import { UserPortalAnnouncementBanner } from '@/feature/user-portal/components/UserPortalAnnouncementBanner'
 
 interface PortalNavItem {
     label: string
@@ -314,6 +315,7 @@ export function UserPortalLayout() {
                 </header>
                 <div className="flex-1 overflow-auto">
                     <div className="min-h-full p-3 sm:p-5 lg:p-6">
+                        <UserPortalAnnouncementBanner />
                         <Outlet />
                     </div>
                 </div>
