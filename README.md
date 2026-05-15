@@ -1,12 +1,4 @@
-<div align="center">
-  <h1>AI Proxy</h1>
-  <p>Next-generation AI gateway with OpenAI-compatible protocol</p>
-  
-  [![Release](https://img.shields.io/github/release/labring/aiproxy)](https://github.com/labring/aiproxy/releases)
-  [![License](https://img.shields.io/github/license/labring/aiproxy)](https://github.com/labring/aiproxy/blob/main/LICENSE)
-  [![Go Version](https://img.shields.io/github/go-mod/go-version/labring/aiproxy?filename=core%2Fgo.mod)](https://github.com/labring/aiproxy/blob/main/core/go.mod)
-  [![Build Status](https://img.shields.io/github/actions/workflow/status/labring/aiproxy/release.yml?branch=main)](https://github.com/labring/aiproxy/actions)
-  
+
 # AI Proxy
 
 AI Proxy 是一个面向 AI 应用和模型运营场景的统一模型网关。它将不同模型供应商、不同协议形态、不同计费规则和不同用户凭证收敛到一个可管理、可观测、可计费的调用入口，让业务系统可以用统一的 API 接入多种大模型能力。
