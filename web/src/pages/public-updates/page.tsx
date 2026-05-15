@@ -34,6 +34,14 @@ const updateMetaTag = (selector: string, attribute: "content" | "href", value: s
   }
 };
 
+const categoryPillClassNames: Record<string, string> = {
+  "API 更新": "border-[#bfdbfe] bg-[#eff6ff] text-[#1456f0] dark:border-[#1d4ed8]/40 dark:bg-[#1d4ed8]/15 dark:text-[#93c5fd]",
+  "AI 更新": "border-[#c7d2fe] bg-[#eef2ff] text-[#4f46e5] dark:border-[#6366f1]/40 dark:bg-[#6366f1]/15 dark:text-[#c4b5fd]",
+  "系统公告": "border-[#d4d4d8] bg-[#f4f4f5] text-[#3f3f46] dark:border-white/15 dark:bg-white/10 dark:text-white/75",
+  "计费与价格": "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d] dark:border-[#22c55e]/40 dark:bg-[#22c55e]/15 dark:text-[#86efac]",
+  "维护通知": "border-[#fed7aa] bg-[#fff7ed] text-[#c2410c] dark:border-[#f97316]/40 dark:bg-[#f97316]/15 dark:text-[#fdba74]",
+};
+
 const markdownComponents: Components = {
   h1: (props) => (
     <h3
@@ -108,6 +116,7 @@ export default function PublicUpdatesPage() {
   const { data: categoriesData } = usePublicAnnouncementCategories();
   const announcements = data?.announcements || [];
   const categories = categoriesData?.categories || [];
+  const categoryItems = ["all", ...categories];
 
   useEffect(() => {
     const title = "API 更新 | LiteMHub";
@@ -145,72 +154,71 @@ export default function PublicUpdatesPage() {
             </p>
           </div>
 
-          <div className="mt-12">
+          <div className="mt-12 grid gap-10 lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-14">
             {categories.length > 0 && (
-              <div className="mb-10 flex flex-wrap gap-2 border-b border-[#e5e7eb] pb-5 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("all")}
-                  className={cn(
-                    "h-8 rounded-[6px] border px-3 text-sm font-medium transition",
-                    categoryFilter === "all"
-                      ? "border-[#18181b] bg-[#18181b] text-white dark:border-white dark:bg-white dark:text-[#18181b]"
-                      : "border-[#e5e7eb] bg-white text-[#45515e] hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-transparent dark:text-white/60 dark:hover:border-white dark:hover:text-white",
-                  )}
-                >
-                  全部
-                </button>
-                {categories.map((category) => (
+              <aside className="lg:sticky lg:top-[82px] lg:self-start">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#8e8e93] dark:text-white/35">
+                  Categories
+                </div>
+                <nav className="flex gap-2 overflow-x-auto border-b border-[#e5e7eb] pb-4 dark:border-white/10 lg:block lg:space-y-1 lg:overflow-visible lg:border-b-0 lg:pb-0">
+                  {categoryItems.map((category) => {
+                    const isAll = category === "all";
+                    const active = categoryFilter === category;
+                    return (
                   <button
                     key={category}
                     type="button"
                     onClick={() => setCategoryFilter(category)}
                     className={cn(
-                      "h-8 rounded-[6px] border px-3 text-sm font-medium transition",
-                      categoryFilter === category
-                        ? "border-[#18181b] bg-[#18181b] text-white dark:border-white dark:bg-white dark:text-[#18181b]"
-                        : "border-[#e5e7eb] bg-white text-[#45515e] hover:border-[#18181b] hover:text-[#18181b] dark:border-white/10 dark:bg-transparent dark:text-white/60 dark:hover:border-white dark:hover:text-white",
+                      "flex h-9 shrink-0 items-center rounded-[6px] px-3 text-sm font-medium transition lg:w-full",
+                      active
+                        ? "bg-[#18181b] text-white dark:bg-white dark:text-[#18181b]"
+                        : "text-[#45515e] hover:bg-black/[0.04] hover:text-[#18181b] dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white",
                     )}
                   >
-                    {category}
+                    {isAll ? "全部" : category}
                   </button>
-                ))}
-              </div>
+                    );
+                  })}
+                </nav>
+              </aside>
             )}
 
-            {isLoading && (
-              <div className="flex items-center gap-2 py-12 text-sm text-[#8e8e93]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                正在加载更新...
-              </div>
-            )}
-
-            {isError && (
-              <div className="border-l border-[#e5e7eb] py-8 pl-6 text-sm text-[#45515e] dark:border-white/10 dark:text-white/70">
-                公告加载失败，请稍后重试。
-              </div>
-            )}
-
-            {!isLoading && !isError && announcements.length === 0 && (
-              <div className="border-l border-[#e5e7eb] py-8 pl-6 text-sm text-[#45515e] dark:border-white/10 dark:text-white/70">
-                暂无公告。
-              </div>
-            )}
-
-            {!isLoading && !isError && announcements.length > 0 && (
-              <div className="relative">
-                <div className="absolute bottom-0 left-[1rem] top-0 hidden w-px bg-[#e5e7eb] dark:bg-white/10 md:block" />
-                <div className="space-y-14">
-                  {announcements.map((announcement, index) => (
-                    <TimelineItem
-                      key={announcement.id}
-                      announcement={announcement}
-                      isFirst={index === 0}
-                    />
-                  ))}
+            <div className="min-w-0">
+              {isLoading && (
+                <div className="flex items-center gap-2 py-12 text-sm text-[#8e8e93]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  正在加载更新...
                 </div>
-              </div>
-            )}
+              )}
+
+              {isError && (
+                <div className="border-l border-[#e5e7eb] py-8 pl-6 text-sm text-[#45515e] dark:border-white/10 dark:text-white/70">
+                  公告加载失败，请稍后重试。
+                </div>
+              )}
+
+              {!isLoading && !isError && announcements.length === 0 && (
+                <div className="border-l border-[#e5e7eb] py-8 pl-6 text-sm text-[#45515e] dark:border-white/10 dark:text-white/70">
+                  暂无公告。
+                </div>
+              )}
+
+              {!isLoading && !isError && announcements.length > 0 && (
+                <div className="relative">
+                  <div className="absolute bottom-0 left-[1rem] top-0 hidden w-px bg-[#e5e7eb] dark:bg-white/10 md:block" />
+                  <div className="space-y-14">
+                    {announcements.map((announcement, index) => (
+                      <TimelineItem
+                        key={announcement.id}
+                        announcement={announcement}
+                        isFirst={index === 0}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </main>
@@ -227,6 +235,9 @@ function TimelineItem({
 }) {
   const timestamp = announcement.published_at || announcement.updated_at;
   const markdown = normalizeMarkdownContent(announcement.content);
+  const categoryClassName = announcement.category
+    ? categoryPillClassNames[announcement.category] || categoryPillClassNames["系统公告"]
+    : "";
 
   return (
     <article className="grid min-w-0 gap-5 md:grid-cols-[2rem_5.5rem_minmax(0,1fr)] md:gap-8">
@@ -258,7 +269,16 @@ function TimelineItem({
 
         <div className="min-w-0 overflow-hidden border-b border-[#e5e7eb] pb-12 dark:border-white/10">
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-[#8e8e93] dark:text-white/45">
-            {announcement.category && <span>{announcement.category}</span>}
+            {announcement.category && (
+              <span
+                className={cn(
+                  "inline-flex h-6 items-center rounded-full border px-2.5 text-xs font-semibold leading-none",
+                  categoryClassName,
+                )}
+              >
+                {announcement.category}
+              </span>
+            )}
             {announcement.version && (
               <span className="font-mono text-[#45515e] dark:text-white/65">
                 {announcement.version}
