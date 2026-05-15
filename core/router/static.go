@@ -27,6 +27,8 @@ const (
 	publicModelsDescription       = "Browse AI models, providers, capabilities, context windows, and API pricing available through the LiteMHub OpenAI-compatible API."
 	publicModelDetailTitle        = "%s API Pricing, Context, and Capabilities | LiteMHub"
 	publicModelDetailDescription  = "Explore %s on LiteMHub, including API pricing, context window, capabilities, and OpenAI-compatible request examples."
+	publicUpdatesTitle            = "API Updates | LiteMHub"
+	publicUpdatesDescription      = "Track LiteMHub API releases, model changes, platform updates, and service announcements."
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
@@ -135,6 +137,9 @@ func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 		if tryServeIndexWithPublicModelsMeta(ctx, fs) {
 			return
 		}
+		if tryServeIndexWithPublicUpdatesMeta(ctx, fs) {
+			return
+		}
 
 		ctx.FileFromFS("", fs)
 	}
@@ -152,6 +157,9 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 		f, err := fs.Open(c.Request.URL.Path)
 		if err != nil {
 			if tryServeIndexWithPublicModelsMeta(c, fs) {
+				return
+			}
+			if tryServeIndexWithPublicUpdatesMeta(c, fs) {
 				return
 			}
 
@@ -192,6 +200,29 @@ func tryServeIndexWithPublicModelsMeta(ctx *gin.Context, fs http.FileSystem) boo
 
 	content = replaceHTMLMeta(content, title, description)
 
+	ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
+
+	return true
+}
+
+func tryServeIndexWithPublicUpdatesMeta(ctx *gin.Context, fs http.FileSystem) bool {
+	path := strings.TrimRight(ctx.Request.URL.Path, "/")
+	if path != "/updates" {
+		return false
+	}
+
+	index, err := fs.Open("index.html")
+	if err != nil {
+		return false
+	}
+	defer index.Close()
+
+	content, err := io.ReadAll(index)
+	if err != nil {
+		return false
+	}
+
+	content = replaceHTMLMeta(content, publicUpdatesTitle, publicUpdatesDescription)
 	ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
 
 	return true

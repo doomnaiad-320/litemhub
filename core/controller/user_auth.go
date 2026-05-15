@@ -2,8 +2,8 @@ package controller
 
 import (
 	"errors"
-	"net/mail"
 	"net/http"
+	"net/mail"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,14 +14,18 @@ import (
 )
 
 type UserAuthRegisterRequest struct {
-	Email    string `json:"email"`
-	Code     string `json:"code"`
-	Password string `json:"password"`
+	Username      string `json:"username"`
+	Email         string `json:"email"`
+	Code          string `json:"code"`
+	Password      string `json:"password"`
+	AcceptedTerms bool   `json:"accepted_terms"`
 }
 
 type UserAuthLoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Account       string `json:"account"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	AcceptedTerms bool   `json:"accepted_terms"`
 }
 
 type UserAuthEmailCodeRequest struct {
@@ -35,6 +39,7 @@ type UserAuthEmailCodeResponse struct {
 
 type AppUserResponse struct {
 	ID        int    `json:"id"`
+	Username  string `json:"username,omitempty"`
 	Email     string `json:"email,omitempty"`
 	Status    int    `json:"status"`
 	CreatedAt int64  `json:"created_at"`
@@ -44,6 +49,7 @@ type AppUserResponse struct {
 func buildAppUserResponse(user *model.AppUser) *AppUserResponse {
 	return &AppUserResponse{
 		ID:        user.ID,
+		Username:  string(user.Username),
 		Email:     string(user.Email),
 		Status:    user.Status,
 		CreatedAt: user.CreatedAt.UnixMilli(),
@@ -53,6 +59,33 @@ func buildAppUserResponse(user *model.AppUser) *AppUserResponse {
 
 func normalizeUserPortalEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func normalizeUserPortalUsername(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
+
+func validateUserPortalUsername(username string) string {
+	username = normalizeUserPortalUsername(username)
+	if username == "" {
+		return "username is required"
+	}
+
+	if len(username) < 3 || len(username) > 32 {
+		return "username must be 3 to 32 characters"
+	}
+
+	for _, r := range username {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= '0' && r <= '9':
+		case r == '_' || r == '-':
+		default:
+			return "username can only contain lowercase letters, numbers, underscores and hyphens"
+		}
+	}
+
+	return ""
 }
 
 func validateUserPortalEmail(email string) string {
@@ -88,9 +121,9 @@ func validateUserPortalVerificationCode(code string) string {
 	return ""
 }
 
-func validateUserPortalLoginRequest(email, password string) string {
-	if message := validateUserPortalEmail(email); message != "" {
-		return message
+func validateUserPortalLoginRequest(account, password string) string {
+	if strings.TrimSpace(account) == "" {
+		return "email or username is required"
 	}
 
 	if strings.TrimSpace(password) == "" {
@@ -100,7 +133,19 @@ func validateUserPortalLoginRequest(email, password string) string {
 	return ""
 }
 
-func validateUserPortalRegisterRequest(email, code, password string) string {
+func validateUserPortalAcceptedTerms(accepted bool) string {
+	if !accepted {
+		return "terms must be accepted"
+	}
+
+	return ""
+}
+
+func validateUserPortalRegisterRequest(username, email, code, password string) string {
+	if message := validateUserPortalUsername(username); message != "" {
+		return message
+	}
+
 	if message := validateUserPortalEmail(email); message != "" {
 		return message
 	}
@@ -116,9 +161,9 @@ func normalizeUserAuthAccount(email, phone string) (string, string) {
 	return strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(phone)
 }
 
-func validateUserRegisterRequest(email, phone, password string) string {
-	if email == "" && phone == "" {
-		return "email or phone is required"
+func validateUserRegisterRequest(username, email, phone, password string) string {
+	if username == "" && email == "" && phone == "" {
+		return "username, email or phone is required"
 	}
 
 	return validateUserPassword(password)
@@ -144,8 +189,14 @@ func RegisterAppUser(c *gin.Context) {
 	}
 
 	req.Email = normalizeUserPortalEmail(req.Email)
+	req.Username = normalizeUserPortalUsername(req.Username)
 
-	if message := validateUserPortalRegisterRequest(req.Email, req.Code, req.Password); message != "" {
+	if message := validateUserPortalAcceptedTerms(req.AcceptedTerms); message != "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, message)
+		return
+	}
+
+	if message := validateUserPortalRegisterRequest(req.Username, req.Email, req.Code, req.Password); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
 		return
 	}
@@ -171,6 +222,7 @@ func RegisterAppUser(c *gin.Context) {
 	}
 
 	user := &model.AppUser{
+		Username:     model.EmptyNullString(req.Username),
 		Email:        model.EmptyNullString(req.Email),
 		PasswordHash: string(passwordHash),
 		Status:       model.AppUserStatusEnabled,
@@ -198,17 +250,25 @@ func LoginAppUser(c *gin.Context) {
 		return
 	}
 
-	req.Email = normalizeUserPortalEmail(req.Email)
+	req.Account = strings.TrimSpace(req.Account)
+	if req.Account == "" {
+		req.Account = strings.TrimSpace(req.Email)
+	}
 
-	if message := validateUserPortalLoginRequest(req.Email, req.Password); message != "" {
+	if message := validateUserPortalAcceptedTerms(req.AcceptedTerms); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
 		return
 	}
 
-	user, err := model.GetAppUserByEmail(req.Email)
+	if message := validateUserPortalLoginRequest(req.Account, req.Password); message != "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, message)
+		return
+	}
+
+	user, err := model.GetAppUserByEmailOrUsername(req.Account)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email or password")
+			middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid account or password")
 			return
 		}
 
@@ -222,7 +282,7 @@ func LoginAppUser(c *gin.Context) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid email or password")
+		middleware.ErrorResponse(c, http.StatusUnauthorized, "invalid account or password")
 		return
 	}
 

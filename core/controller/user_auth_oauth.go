@@ -78,6 +78,11 @@ type userOAuthGoogleProfile struct {
 func StartUserOAuthLogin(c *gin.Context) {
 	provider := normalizeUserOAuthProvider(c.Param("provider"))
 	frontendOrigin := captureUserOAuthFrontendOrigin(c.Request)
+	if c.Query("accepted_terms") != "true" {
+		redirectUserOAuthError(c, frontendOrigin, "请先阅读并同意服务条款和隐私政策")
+		return
+	}
+
 	callbackURL, err := buildUserOAuthCallbackURL(c.Request, provider)
 	if err != nil {
 		redirectUserOAuthError(c, frontendOrigin, "第三方登录暂时不可用")
@@ -472,7 +477,13 @@ func getOrCreateUserByEmailForOAuth(email string) (*model.AppUser, error) {
 		return nil, err
 	}
 
+	username, err := buildOAuthUsername(email)
+	if err != nil {
+		return nil, err
+	}
+
 	user = &model.AppUser{
+		Username:     model.EmptyNullString(username),
 		Email:        model.EmptyNullString(email),
 		PasswordHash: passwordHash,
 		Status:       model.AppUserStatusEnabled,
@@ -487,6 +498,21 @@ func getOrCreateUserByEmailForOAuth(email string) (*model.AppUser, error) {
 	}
 
 	return user, nil
+}
+
+func buildOAuthUsername(email string) (string, error) {
+	localPart := email
+	if index := strings.Index(email, "@"); index > 0 {
+		localPart = email[:index]
+	}
+
+	username := model.SanitizeAppUserUsernameSeed(localPart)
+	suffix, err := generateUserOAuthState()
+	if err != nil {
+		return "", err
+	}
+
+	return username + "-" + suffix[:8], nil
 }
 
 func generateOAuthPasswordHash() (string, error) {

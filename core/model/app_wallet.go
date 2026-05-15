@@ -173,11 +173,12 @@ func GetAppUsers(keyword string, page, perPage int, order string, status int) (
 		if id := String2Int(keyword); id > 0 {
 			tx = tx.Where(
 				DB.Where("id = ?", id).
+					Or("username LIKE ?", likeKeyword).
 					Or("email LIKE ?", likeKeyword).
 					Or("phone LIKE ?", likeKeyword),
 			)
 		} else {
-			tx = tx.Where("email LIKE ? OR phone LIKE ?", likeKeyword, likeKeyword)
+			tx = tx.Where("username LIKE ? OR email LIKE ? OR phone LIKE ?", likeKeyword, likeKeyword, likeKeyword)
 		}
 	}
 
@@ -261,11 +262,12 @@ func appPaymentOrderQuery(
 		if id := String2Int(keyword); id > 0 {
 			tx = tx.Where(
 				DB.Where("recharge_orders.user_id = ?", id).
+					Or("app_user.username LIKE ?", likeKeyword).
 					Or("app_user.email LIKE ?", likeKeyword).
 					Or("app_user.phone LIKE ?", likeKeyword),
 			)
 		} else {
-			tx = tx.Where("app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword)
+			tx = tx.Where("app_user.username LIKE ? OR app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword, likeKeyword)
 		}
 	}
 	channel = strings.TrimSpace(channel)
@@ -423,11 +425,12 @@ func appRechargeLogQuery(
 		if id := String2Int(keyword); id > 0 {
 			tx = tx.Where(
 				DB.Where("app_recharge_log.user_id = ?", id).
+					Or("app_user.username LIKE ?", likeKeyword).
 					Or("app_user.email LIKE ?", likeKeyword).
 					Or("app_user.phone LIKE ?", likeKeyword),
 			)
 		} else {
-			tx = tx.Where("app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword)
+			tx = tx.Where("app_user.username LIKE ? OR app_user.email LIKE ? OR app_user.phone LIKE ?", likeKeyword, likeKeyword, likeKeyword)
 		}
 	}
 	channel = strings.TrimSpace(channel)

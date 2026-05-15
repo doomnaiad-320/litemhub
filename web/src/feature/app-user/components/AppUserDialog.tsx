@@ -40,6 +40,7 @@ interface AppUserDialogProps {
 }
 
 interface AppUserFormValues {
+    username: string
     email: string
     phone: string
     password: string
@@ -59,12 +60,18 @@ export function AppUserDialog({
     const isLoading = mode === 'create' ? isCreating : isUpdating
 
     const schema = useMemo(() => z.object({
+        username: z.string().trim().regex(/^[a-zA-Z0-9_-]*$/, t('appUser.dialog.usernameInvalid')),
         email: z.string().trim().email(t('appUser.dialog.emailInvalid')).or(z.literal('')),
         phone: z.string().trim(),
         password: z.string(),
         status: z.enum(['1', '2']),
     }).superRefine((value, ctx) => {
-        if (!value.email && !value.phone.trim()) {
+        if (!value.username.trim() && !value.email && !value.phone.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: t('appUser.dialog.accountRequired'),
+                path: ['username'],
+            })
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: t('appUser.dialog.accountRequired'),
@@ -74,6 +81,14 @@ export function AppUserDialog({
                 code: z.ZodIssueCode.custom,
                 message: t('appUser.dialog.accountRequired'),
                 path: ['phone'],
+            })
+        }
+
+        if (value.username.trim() && (value.username.trim().length < 3 || value.username.trim().length > 32)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: t('appUser.dialog.usernameLength'),
+                path: ['username'],
             })
         }
 
@@ -89,6 +104,7 @@ export function AppUserDialog({
     const form = useForm<AppUserFormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
+            username: '',
             email: '',
             phone: '',
             password: '',
@@ -102,6 +118,7 @@ export function AppUserDialog({
         }
 
         form.reset({
+            username: user?.username || '',
             email: user?.email || '',
             phone: user?.phone || '',
             password: '',
@@ -111,6 +128,7 @@ export function AppUserDialog({
 
     const onSubmit = (values: AppUserFormValues) => {
         const payload = {
+            username: values.username.trim().toLowerCase() || undefined,
             email: values.email.trim() || undefined,
             phone: values.phone.trim() || undefined,
         }
@@ -154,6 +172,23 @@ export function AppUserDialog({
                 <div className="px-6 py-6">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                            <FormField
+                                control={form.control}
+                                name="username"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t('appUser.username')}</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder={t('appUser.dialog.usernamePlaceholder')}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <FormField
                                     control={form.control}

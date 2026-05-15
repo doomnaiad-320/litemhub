@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { Cpu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { UserPortalMarketingHeader } from '@/feature/user-portal/components/UserPortalMarketingHeader'
 
 type UserPortalAuthMode = 'login' | 'register'
 
@@ -15,13 +14,14 @@ export function UserPortalAuthShell({ mode, children }: UserPortalAuthShellProps
     const t = rawT as (key: string) => string
 
     return (
-        <div className="min-h-[100dvh] overflow-x-hidden bg-[#f3f3f3] font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#151515] transition-colors duration-200 dark:bg-[#0c0d0f] dark:text-[#f3f4f6]">
-            <div className="absolute right-5 top-5">
-                <ThemeToggle />
-            </div>
+        <div className="min-h-screen overflow-x-hidden bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] transition-colors duration-200 dark:bg-[#080b12] dark:text-white">
+            <UserPortalMarketingHeader />
 
-            <main className="flex min-h-[100dvh] flex-col items-center justify-center px-4 py-10">
-                <div className="grid w-full max-w-[896px] overflow-hidden rounded-[13px] border border-[#d9d9d9] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#111316] md:min-h-[572px] md:grid-cols-2">
+            <main className="relative flex min-h-[calc(100dvh-58px)] flex-col items-center justify-center overflow-hidden border-b border-[#f2f3f5] bg-white px-4 py-10 dark:border-white/10 dark:bg-[#080b12]">
+                <div className="pointer-events-none absolute right-[-10rem] top-[-16rem] h-[34rem] w-[34rem] rounded-full bg-[#1456f0]/10 blur-3xl dark:bg-[#3b82f6]/[0.08]" />
+                <div className="pointer-events-none absolute bottom-[-14rem] left-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#ea5ec1]/10 blur-3xl dark:bg-[#ea5ec1]/[0.06]" />
+
+                <div className="relative grid w-full max-w-[896px] overflow-hidden rounded-[13px] border border-[#d9d9d9] bg-white shadow-[rgba(36,36,36,0.04)_0px_12px_24px] dark:border-white/10 dark:bg-[#0b0f18] dark:shadow-none md:min-h-[572px] md:grid-cols-2">
                     <section className="flex flex-col bg-white px-8 py-9 dark:bg-[#111316] sm:px-10 md:px-8 lg:px-10">
                         <div className="mx-auto mb-9 flex items-center gap-3">
                             <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#151515] text-[12px] font-semibold text-white dark:bg-[#f4f4f5] dark:text-[#111316]">
@@ -39,15 +39,7 @@ export function UserPortalAuthShell({ mode, children }: UserPortalAuthShellProps
 
                     <section className="hidden border-l border-[#d9d9d9] bg-[#e8e8e8] dark:border-white/10 dark:bg-[#1b1d21] md:block">
                         <div className="relative flex h-full min-h-[572px] items-center justify-center overflow-hidden">
-                            <div className="absolute h-40 w-px rotate-45 bg-[#d3d3d3] dark:bg-white/[0.08]" />
-                            <div className="absolute h-40 w-px -rotate-45 bg-[#d3d3d3] dark:bg-white/[0.08]" />
-                            <div className="absolute h-32 w-px bg-[#d3d3d3] dark:bg-white/[0.08]" />
-                            <div className="absolute h-px w-32 bg-[#d3d3d3] dark:bg-white/[0.08]" />
-                            <div className="absolute h-32 w-32 rounded-full border border-[#d5d5d5] dark:border-white/10" />
-                            <div className="absolute h-14 w-14 rounded-full border border-[#d0d0d0] bg-[#ededed] dark:border-white/10 dark:bg-[#202328]" />
-                            <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-[#cfcfcf] bg-[#efefef] text-[#8d8d8d] dark:border-white/10 dark:bg-[#202328] dark:text-white/45">
-                                <Cpu className="h-5 w-5" strokeWidth={1.7} />
-                            </div>
+                            <AuthSideIllustration />
                             <div className="absolute bottom-6 right-6 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-medium uppercase text-[#b5b5b5] dark:text-white/[0.18]">
                                 {mode === 'login' ? 'Sign in' : 'Create account'}
                             </div>
@@ -56,13 +48,92 @@ export function UserPortalAuthShell({ mode, children }: UserPortalAuthShellProps
                 </div>
 
                 <p className="mt-6 text-center text-xs leading-6 text-[#6f6f6f] dark:text-white/40">
-                    {t('portalAuth.termsPrefix')}
-                    <span className="mx-1 underline underline-offset-2">{t('portalAuth.terms')}</span>
-                    {t('portalAuth.termsJoiner')}
-                    <span className="mx-1 underline underline-offset-2">{t('portalAuth.privacy')}</span>
-                    {t('portalAuth.termsSuffix')}
+                    {t('portalAuth.agreementNotice')}
                 </p>
             </main>
         </div>
+    )
+}
+
+function AuthSideIllustration() {
+    return (
+        <svg
+            aria-hidden="true"
+            className="h-full w-full"
+            viewBox="0 0 448 572"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <defs>
+                <linearGradient id="auth-hero-blue" x1="100" y1="90" x2="356" y2="420" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#1456F0" />
+                    <stop offset="1" stopColor="#3DAEFF" />
+                </linearGradient>
+                <linearGradient id="auth-hero-pink" x1="133" y1="156" x2="323" y2="430" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#EA5EC1" />
+                    <stop offset="1" stopColor="#60A5FA" />
+                </linearGradient>
+                <radialGradient id="auth-hero-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(226 276) rotate(90) scale(230 180)">
+                    <stop stopColor="#60A5FA" stopOpacity=".34" />
+                    <stop offset=".62" stopColor="#EA5EC1" stopOpacity=".13" />
+                    <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+                </radialGradient>
+                <filter id="auth-hero-shadow" x="64" y="95" width="326" height="382" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                    <feDropShadow dx="6" dy="2" stdDeviation="13" floodColor="#2C1E74" floodOpacity=".14" />
+                </filter>
+                <pattern id="auth-hero-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <path d="M32 0H0V32" stroke="currentColor" strokeOpacity=".22" />
+                </pattern>
+            </defs>
+
+            <rect width="448" height="572" className="fill-[#e8e8e8] dark:fill-[#1b1d21]" />
+            <rect width="448" height="572" fill="url(#auth-hero-glow)" />
+            <rect width="448" height="572" fill="url(#auth-hero-grid)" className="text-[#cfcfcf] dark:text-white/[0.05]" />
+
+            <g opacity=".68">
+                <path d="M59 128C124 92 181 97 232 143C281 187 336 188 391 146" className="stroke-[#c6c6c6] dark:stroke-white/10" strokeWidth="1.2" />
+                <path d="M64 442C126 399 190 398 245 438C293 473 347 471 392 424" className="stroke-[#c6c6c6] dark:stroke-white/10" strokeWidth="1.2" />
+            </g>
+
+            <g filter="url(#auth-hero-shadow)">
+                <rect x="118" y="138" width="212" height="296" rx="24" className="fill-white dark:fill-[#202328]" />
+                <rect x="118.5" y="138.5" width="211" height="295" rx="23.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
+
+                <rect x="142" y="162" width="164" height="44" rx="12" fill="url(#auth-hero-blue)" />
+                <circle cx="165" cy="184" r="8" fill="white" fillOpacity=".92" />
+                <path d="M185 178H276M185 190H244" stroke="white" strokeOpacity=".78" strokeWidth="6" strokeLinecap="round" />
+
+                <path d="M224 224V259" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
+                <path d="M174 292H224H274" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
+                <path d="M174 292V332M274 292V332" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
+
+                <rect x="168" y="244" width="112" height="64" rx="18" fill="url(#auth-hero-pink)" />
+                <rect x="186" y="263" width="76" height="8" rx="4" fill="white" fillOpacity=".86" />
+                <rect x="198" y="281" width="52" height="8" rx="4" fill="white" fillOpacity=".62" />
+                <circle cx="224" cy="334" r="12" fill="#1456F0" />
+                <circle cx="174" cy="356" r="12" fill="#EA5EC1" />
+                <circle cx="274" cy="356" r="12" fill="#3DAEFF" />
+
+                <rect x="146" y="375" width="156" height="34" rx="12" className="fill-[#f4f7ff] dark:fill-white/[0.06]" />
+                <path d="M165 392H220M235 392H283" className="stroke-[#8e8e93] dark:stroke-white/35" strokeWidth="6" strokeLinecap="round" />
+            </g>
+
+            <g>
+                <rect x="72" y="220" width="94" height="58" rx="16" className="fill-white dark:fill-[#202328]" />
+                <rect x="72.5" y="220.5" width="93" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
+                <path d="M94 242H137M94 258H124" className="stroke-[#45515e] dark:stroke-white/45" strokeWidth="6" strokeLinecap="round" />
+            </g>
+
+            <g>
+                <rect x="286" y="326" width="92" height="58" rx="16" className="fill-white dark:fill-[#202328]" />
+                <rect x="286.5" y="326.5" width="91" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
+                <path d="M309 348H352M309 364H338" className="stroke-[#45515e] dark:stroke-white/45" strokeWidth="6" strokeLinecap="round" />
+            </g>
+
+            <path d="M166 249C189 239 194 231 207 207" className="stroke-[#1456f0] dark:stroke-[#60a5fa]" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 8" />
+            <path d="M280 329C298 316 307 301 313 278" className="stroke-[#ea5ec1] dark:stroke-[#ea5ec1]" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 8" />
+            <circle cx="209" cy="206" r="4" fill="#1456F0" />
+            <circle cx="313" cy="278" r="4" fill="#EA5EC1" />
+        </svg>
     )
 }

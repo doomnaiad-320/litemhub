@@ -27,6 +27,8 @@ const UserPortalLayout = lazy(() =>
 const UserPortalLandingPage = lazy(() => import("@/pages/user-portal/landing"))
 const PublicModelsPage = lazy(() => import("@/pages/public-models/page"))
 const PublicModelDetailPage = lazy(() => import("@/pages/public-models/detail"))
+const PublicUpdatesPage = lazy(() => import("@/pages/public-updates/page"))
+const PublicAgreementPage = lazy(() => import("@/pages/public-agreements/page"))
 const LoginPage = lazy(() => import("@/pages/auth/login"))
 const UserPortalLoginPage = lazy(() => import("@/pages/user-portal/login"))
 const UserPortalRegisterPage = lazy(() => import("@/pages/user-portal/register"))
@@ -35,6 +37,7 @@ const GroupPage = lazy(() => import("@/pages/group/page"))
 const ConsumptionRankingPage = lazy(() => import("@/pages/consumption-ranking/page"))
 const AppUserPage = lazy(() => import("@/pages/app-user/page"))
 const BillingPage = lazy(() => import("@/pages/billing/page"))
+const AnnouncementPage = lazy(() => import("@/pages/announcement/page"))
 const TokenPage = lazy(() => import("@/pages/token/page"))
 const ChannelPage = lazy(() => import("@/pages/channel/page"))
 const ModelPage = lazy(() => import("@/pages/model/page"))
@@ -63,6 +66,9 @@ export function useRoutes(): RouteObject[] {
         { path: "/", element: lazyLoad(UserPortalLandingPage) },
         { path: ROUTES.PUBLIC_MODELS, element: lazyLoad(PublicModelsPage) },
         { path: ROUTES.PUBLIC_MODEL_DETAIL, element: lazyLoad(PublicModelDetailPage) },
+        { path: ROUTES.PUBLIC_API_UPDATES, element: lazyLoad(PublicUpdatesPage) },
+        { path: ROUTES.PUBLIC_TERMS, element: lazyLoad(PublicAgreementPage) },
+        { path: ROUTES.PUBLIC_PRIVACY, element: lazyLoad(PublicAgreementPage) },
         { path: ROUTES.ADMIN_LOGIN, element: lazyLoad(LoginPage) },
         { path: ROUTES.USER_LOGIN, element: lazyLoad(UserPortalLoginPage) },
         { path: ROUTES.USER_REGISTER, element: lazyLoad(UserPortalRegisterPage) },
@@ -93,6 +99,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.BILLING,
                     element: lazyLoad(BillingPage),
+                },
+                {
+                    path: ROUTES.ANNOUNCEMENTS,
+                    element: lazyLoad(AnnouncementPage),
                 },
                 {
                     path: ROUTES.LEGACY_GROUP_RANKING,

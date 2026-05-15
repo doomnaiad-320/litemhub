@@ -13,4 +13,10 @@ func SetPublicAPIRouter(router *gin.Engine) {
 		modelsRoute.GET("", controller.GetPublicModels)
 		modelsRoute.GET("/*model", controller.GetPublicModel)
 	}
+
+	announcementsRoute := publicAPI.Group("/announcements")
+	{
+		announcementsRoute.GET("", controller.GetPublicAnnouncements)
+		announcementsRoute.GET("/", controller.GetPublicAnnouncements)
+	}
 }

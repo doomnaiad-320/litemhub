@@ -7,6 +7,7 @@ import {
     BarChart2,
     Database,
     Calendar,
+    Bell,
     ChevronLeft,
     ChevronRight,
     FileText,
@@ -79,6 +80,12 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             display: true,
         },
         {
+            title: t("sidebar.announcements"),
+            icon: Bell,
+            href: ROUTES.ANNOUNCEMENTS,
+            display: true,
+        },
+        {
             title: t("sidebar.consumptionRanking"),
             icon: Trophy,
             href: ROUTES.CONSUMPTION_RANKING,
@@ -118,6 +125,7 @@ interface SidebarDisplayConfig {
     group?: boolean
     appUsers?: boolean
     billing?: boolean
+    announcements?: boolean
     consumptionRanking?: boolean
     key?: boolean
     channel?: boolean
@@ -147,6 +155,7 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
         let configKey: keyof SidebarDisplayConfig = "monitor"
         if (item.href === ROUTES.GROUP) configKey = "group"
         if (item.href === ROUTES.APP_USERS) configKey = "appUsers"
+        if (item.href === ROUTES.ANNOUNCEMENTS) configKey = "announcements"
         if (item.href === ROUTES.CONSUMPTION_RANKING) configKey = "consumptionRanking"
         if (item.href === ROUTES.KEY) configKey = "key"
         if (item.href === ROUTES.CHANNEL) configKey = "channel"

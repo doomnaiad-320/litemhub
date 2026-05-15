@@ -9,7 +9,7 @@ import { ROUTES } from "@/routes/constants";
 import { cn } from "@/lib/utils";
 
 type PublicSiteHeaderVariant = "light" | "dark";
-type PublicSiteHeaderItem = "home" | "models";
+type PublicSiteHeaderItem = "home" | "models" | "updates";
 
 interface PublicSiteHeaderProps {
   activeItem?: PublicSiteHeaderItem;
@@ -76,7 +76,11 @@ export function PublicSiteHeader({
             <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_API_DOCS}>
               {t("publicModels.nav.apiDocs")}
             </PublicHeaderLink>
-            <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_API_UPDATES}>
+            <PublicHeaderLink
+              active={activeItem === "updates"}
+              isDark={isDark}
+              to={ROUTES.PUBLIC_API_UPDATES}
+            >
               {t("publicModels.nav.apiUpdates")}
             </PublicHeaderLink>
             <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_BLOG}>

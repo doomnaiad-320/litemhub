@@ -157,6 +157,7 @@ func migrateDB() error {
 		&AppWalletReservation{},
 		&AppWalletLog{},
 		&AppUserGroup{},
+		&Announcement{},
 		&Token{},
 		&PublicMCP{},
 		&GroupModelConfig{},
@@ -171,6 +172,10 @@ func migrateDB() error {
 	}
 
 	if err := CleanupAppWalletConsumptionLogs(); err != nil {
+		return err
+	}
+
+	if err := BackfillAppUserUsernames(); err != nil {
 		return err
 	}
 

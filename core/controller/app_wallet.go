@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,7 @@ type AppWalletLogResponse struct {
 
 type AppUserAdminResponse struct {
 	ID               int     `json:"id"`
+	Username         string  `json:"username,omitempty"`
 	Email            string  `json:"email,omitempty"`
 	Phone            string  `json:"phone,omitempty"`
 	Status           int     `json:"status"`
@@ -66,6 +68,7 @@ type AdjustAppUserWalletBalanceRequest struct {
 }
 
 type CreateAppUserRequest struct {
+	Username string `json:"username"`
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`
 	Password string `json:"password"`
@@ -73,8 +76,9 @@ type CreateAppUserRequest struct {
 }
 
 type UpdateAppUserRequest struct {
-	Email *string `json:"email"`
-	Phone *string `json:"phone"`
+	Username *string `json:"username"`
+	Email    *string `json:"email"`
+	Phone    *string `json:"phone"`
 }
 
 type ResetAppUserPasswordRequest struct {
@@ -127,6 +131,7 @@ func buildAppWalletLogResponses(logs []*model.AppWalletLog) []*AppWalletLogRespo
 func buildAppUserAdminResponse(user *model.AppUser, wallet *model.AppUserWallet) *AppUserAdminResponse {
 	response := &AppUserAdminResponse{
 		ID:        user.ID,
+		Username:  string(user.Username),
 		Email:     string(user.Email),
 		Phone:     string(user.Phone),
 		Status:    user.Status,
@@ -370,9 +375,16 @@ func CreateAppUser(c *gin.Context) {
 	}
 
 	req.Email, req.Phone = normalizeUserAuthAccount(req.Email, req.Phone)
-	if message := validateUserRegisterRequest(req.Email, req.Phone, req.Password); message != "" {
+	req.Username = normalizeUserPortalUsername(req.Username)
+	if message := validateUserRegisterRequest(req.Username, req.Email, req.Phone, req.Password); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
 		return
+	}
+	if req.Username != "" {
+		if message := validateUserPortalUsername(req.Username); message != "" {
+			middleware.ErrorResponse(c, http.StatusBadRequest, message)
+			return
+		}
 	}
 
 	status := req.Status
@@ -391,6 +403,7 @@ func CreateAppUser(c *gin.Context) {
 	}
 
 	user := &model.AppUser{
+		Username:     model.EmptyNullString(req.Username),
 		Email:        model.EmptyNullString(req.Email),
 		Phone:        model.EmptyNullString(req.Phone),
 		PasswordHash: string(passwordHash),
@@ -442,7 +455,7 @@ func UpdateAppUser(c *gin.Context) {
 		return
 	}
 
-	if req.Email == nil && req.Phone == nil {
+	if req.Username == nil && req.Email == nil && req.Phone == nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "no fields to update")
 		return
 	}
@@ -458,8 +471,12 @@ func UpdateAppUser(c *gin.Context) {
 		return
 	}
 
+	username := string(user.Username)
 	email := string(user.Email)
 	phone := string(user.Phone)
+	if req.Username != nil {
+		username = strings.TrimSpace(*req.Username)
+	}
 	if req.Email != nil {
 		email = *req.Email
 	}
@@ -467,8 +484,15 @@ func UpdateAppUser(c *gin.Context) {
 		phone = *req.Phone
 	}
 
+	username = normalizeUserPortalUsername(username)
+	if username != "" {
+		if message := validateUserPortalUsername(username); message != "" {
+			middleware.ErrorResponse(c, http.StatusBadRequest, message)
+			return
+		}
+	}
 	email, phone = normalizeUserAuthAccount(email, phone)
-	user, err = model.UpdateAppUserAccount(userID, email, phone)
+	user, err = model.UpdateAppUserAccount(userID, username, email, phone)
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):

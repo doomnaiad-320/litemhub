@@ -50,7 +50,7 @@ const sanitizeObjectForDisplay = (value: unknown): unknown => {
     return value
 }
 
-const getAppUserAccount = (log: LogRecord) => log.app_user?.email || log.app_user?.phone || ''
+const getAppUserAccount = (log: LogRecord) => log.app_user?.username || log.app_user?.email || log.app_user?.phone || ''
 
 export const ExpandedLogContent = ({
     log,

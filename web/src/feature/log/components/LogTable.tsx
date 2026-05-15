@@ -120,7 +120,7 @@ export function LogTable({
         return `x${Number(multiplier.toFixed(4)).toString()}`
     }
 
-    const getAppUserAccount = (log: LogRecord) => log.app_user?.email || log.app_user?.phone || ''
+    const getAppUserAccount = (log: LogRecord) => log.app_user?.username || log.app_user?.email || log.app_user?.phone || ''
 
     const renderAppUser = (log: LogRecord) => {
         const userID = log.app_user?.id || log.owner_user_id

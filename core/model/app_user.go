@@ -49,6 +49,7 @@ const (
 
 type AppUser struct {
 	ID           int             `json:"id"            gorm:"primaryKey"`
+	Username     EmptyNullString `json:"username"      gorm:"size:64;uniqueIndex"`
 	Email        EmptyNullString `json:"email"         gorm:"size:255;uniqueIndex"`
 	Phone        EmptyNullString `json:"phone"         gorm:"size:32;uniqueIndex"`
 	PasswordHash string          `json:"-"             gorm:"size:255;not null"`
@@ -62,8 +63,8 @@ func (*AppUser) TableName() string {
 }
 
 func (u *AppUser) BeforeSave(_ *gorm.DB) error {
-	if u.Email == "" && u.Phone == "" {
-		return errors.New("email or phone is required")
+	if u.Username == "" && u.Email == "" && u.Phone == "" {
+		return errors.New("username, email or phone is required")
 	}
 
 	if u.PasswordHash == "" {

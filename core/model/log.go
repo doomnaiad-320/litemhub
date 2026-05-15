@@ -140,9 +140,10 @@ type Log struct {
 }
 
 type LogAppUser struct {
-	ID    int    `json:"id"`
-	Email string `json:"email,omitempty"`
-	Phone string `json:"phone,omitempty"`
+	ID       int    `json:"id"`
+	Username string `json:"username,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Phone    string `json:"phone,omitempty"`
 }
 
 func attachAppUsersToLogs(logs []*Log) error {
@@ -170,16 +171,17 @@ func attachAppUsersToLogs(logs []*Log) error {
 	}
 
 	users := make([]*AppUser, 0, len(userIDs))
-	if err := DB.Select("id", "email", "phone").Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+	if err := DB.Select("id", "username", "email", "phone").Where("id IN ?", userIDs).Find(&users).Error; err != nil {
 		return err
 	}
 
 	userMap := make(map[int]*LogAppUser, len(users))
 	for _, user := range users {
 		userMap[user.ID] = &LogAppUser{
-			ID:    user.ID,
-			Email: string(user.Email),
-			Phone: string(user.Phone),
+			ID:       user.ID,
+			Username: string(user.Username),
+			Email:    string(user.Email),
+			Phone:    string(user.Phone),
 		}
 	}
 

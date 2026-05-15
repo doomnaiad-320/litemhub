@@ -384,8 +384,9 @@ func TestUpdateAppUserAccount(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)
 
-		updatedUser, err := model.UpdateAppUserAccount(user.ID, "New@Example.com", " 13800138000 ")
+		updatedUser, err := model.UpdateAppUserAccount(user.ID, "new-user", "New@Example.com", " 13800138000 ")
 		require.NoError(t, err)
+		require.Equal(t, "new-user", string(updatedUser.Username))
 		require.Equal(t, "new@example.com", string(updatedUser.Email))
 		require.Equal(t, "13800138000", string(updatedUser.Phone))
 	})
@@ -395,7 +396,7 @@ func TestUpdateAppUserAccountInvalid(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)
 
-		_, err := model.UpdateAppUserAccount(user.ID, "", "")
+		_, err := model.UpdateAppUserAccount(user.ID, "", "", "")
 		require.ErrorIs(t, err, model.ErrAppUserAccountInvalid)
 	})
 }

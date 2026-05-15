@@ -197,6 +197,18 @@ func SetAPIRouter(router *gin.Engine) {
 			)
 		}
 
+		announcementsRoute := apiRouter.Group("/announcements")
+		{
+			announcementsRoute.GET("", controller.GetAnnouncements)
+			announcementsRoute.GET("/", controller.GetAnnouncements)
+			announcementsRoute.POST("", controller.CreateAnnouncement)
+			announcementsRoute.POST("/", controller.CreateAnnouncement)
+			announcementsRoute.GET("/:id", controller.GetAnnouncement)
+			announcementsRoute.PUT("/:id", controller.UpdateAnnouncement)
+			announcementsRoute.DELETE("/:id", controller.DeleteAnnouncement)
+			announcementsRoute.POST("/:id/status", controller.UpdateAnnouncementStatus)
+		}
+
 		logsRoute := apiRouter.Group("/logs")
 		{
 			logsRoute.GET("/export", controller.ExportLogs)

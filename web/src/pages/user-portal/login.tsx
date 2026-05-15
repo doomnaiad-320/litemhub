@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,11 +21,12 @@ import { useUserPortalLogin } from '@/feature/user-portal/hooks'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 import { UserPortalAuthShell } from '@/feature/user-portal/components/UserPortalAuthShell'
 import { UserPortalOAuthButtons } from '@/feature/user-portal/components/UserPortalOAuthButtons'
+import { UserPortalAgreementConsent } from '@/feature/user-portal/components/UserPortalAgreementConsent'
 import { ROUTES } from '@/routes/constants'
 import type { UserPortalAuthResponse } from '@/types/user-portal'
 
 interface UserPortalLoginForm {
-    email: string
+    account: string
     password: string
 }
 
@@ -35,16 +36,18 @@ export default function UserPortalLoginPage() {
     const navigate = useNavigate()
     const loginMutation = useUserPortalLogin()
     const login = useUserPortalAuthStore((state) => state.login)
+    const [agreementAccepted, setAgreementAccepted] = useState(false)
+    const [agreementError, setAgreementError] = useState(false)
 
     const schema = useMemo(() => z.object({
-        email: z.string().trim().email(t('portalAuth.emailInvalid')),
+        account: z.string().trim().min(1, t('portalAuth.accountRequired')),
         password: z.string().trim().min(6, t('portalAuth.passwordMin')),
     }), [t])
 
     const form = useForm<UserPortalLoginForm>({
         resolver: zodResolver(schema),
         defaultValues: {
-            email: '',
+            account: '',
             password: '',
         },
     })
@@ -92,10 +95,32 @@ export default function UserPortalLoginPage() {
         }
     }, [login, navigate, t])
 
+    const ensureAgreementAccepted = () => {
+        if (agreementAccepted) {
+            return true
+        }
+
+        setAgreementError(true)
+        toast.error(t('portalAuth.agreementRequired'))
+        return false
+    }
+
+    const handleAgreementChange = (checked: boolean) => {
+        setAgreementAccepted(checked)
+        if (checked) {
+            setAgreementError(false)
+        }
+    }
+
     const onSubmit = (values: UserPortalLoginForm) => {
+        if (!ensureAgreementAccepted()) {
+            return
+        }
+
         loginMutation.mutate({
-            email: values.email.trim().toLowerCase(),
+            account: values.account.trim(),
             password: values.password.trim(),
+            accepted_terms: true,
         })
     }
 
@@ -105,31 +130,24 @@ export default function UserPortalLoginPage() {
                 <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[26px] font-semibold leading-tight text-[#151515] dark:text-white">
                     {t('portalAuth.loginTitle')}
                 </h1>
-                <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-white/55">
-                    {t('portalAuth.loginDescription')}
-                </p>
-            </div>
-
-            <div className="mb-6">
-                <UserPortalOAuthButtons />
             </div>
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                     <FormField
                         control={form.control}
-                        name="email"
+                        name="account"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
-                                    {t('portalAuth.email')}
+                                    {t('portalAuth.account')}
                                 </FormLabel>
                                 <FormControl>
                                     <Input
                                         {...field}
-                                        type="email"
-                                        autoComplete="email"
-                                        placeholder={t('portalAuth.emailPlaceholder')}
+                                        type="text"
+                                        autoComplete="username"
+                                        placeholder={t('portalAuth.accountPlaceholder')}
                                         className="h-9 rounded-[8px] border-[#d9d9d9] bg-white px-3 text-sm text-[#151515] shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-visible:border-[#151515] focus-visible:ring-[#151515]/10 dark:border-white/10 dark:bg-[#15181c] dark:text-white dark:focus-visible:border-white dark:focus-visible:ring-white/10"
                                     />
                                 </FormControl>
@@ -163,6 +181,12 @@ export default function UserPortalLoginPage() {
                         )}
                     />
 
+                    <UserPortalAgreementConsent
+                        checked={agreementAccepted}
+                        error={agreementError}
+                        onCheckedChange={handleAgreementChange}
+                    />
+
                     <Button
                         type="submit"
                         className="mt-1 h-9 w-full rounded-[8px] bg-[#151515] text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px dark:bg-white dark:text-[#111316] dark:hover:bg-white/90"
@@ -188,6 +212,10 @@ export default function UserPortalLoginPage() {
                 <Link to={ROUTES.USER_REGISTER} className="ml-1 underline underline-offset-2 hover:text-[#4b4b4b] dark:hover:text-white">
                     {t('portalAuth.toRegister')}
                 </Link>
+            </div>
+
+            <div className="mt-7">
+                <UserPortalOAuthButtons dividerPosition="top" onBeforeStart={ensureAgreementAccepted} />
             </div>
         </UserPortalAuthShell>
     )

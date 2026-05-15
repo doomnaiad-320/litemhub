@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Mail, Send, ShieldCheck } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,9 +23,11 @@ import {
 } from '@/feature/user-portal/hooks'
 import { UserPortalAuthShell } from '@/feature/user-portal/components/UserPortalAuthShell'
 import { UserPortalOAuthButtons } from '@/feature/user-portal/components/UserPortalOAuthButtons'
+import { UserPortalAgreementConsent } from '@/feature/user-portal/components/UserPortalAgreementConsent'
 import { ROUTES } from '@/routes/constants'
 
 interface UserPortalRegisterForm {
+    username: string
     email: string
     code: string
     password: string
@@ -42,8 +45,11 @@ export default function UserPortalRegisterPage() {
     const [now, setNow] = useState(() => Date.now())
     const [codeCooldownEndsAt, setCodeCooldownEndsAt] = useState<number | null>(null)
     const [codeEmail, setCodeEmail] = useState('')
+    const [agreementAccepted, setAgreementAccepted] = useState(false)
+    const [agreementError, setAgreementError] = useState(false)
 
     const schema = useMemo(() => z.object({
+        username: z.string().trim().min(3, t('portalAuth.usernameMin')).max(32, t('portalAuth.usernameMax')).regex(/^[a-zA-Z0-9_-]+$/, t('portalAuth.usernameInvalid')),
         email: z.string().trim().email(t('portalAuth.emailInvalid')),
         code: z.string().trim().min(1, t('portalAuth.codeRequired')).regex(/^\d{6}$/, t('portalAuth.codeInvalid')),
         password: z.string().trim().min(6, t('portalAuth.passwordMin')),
@@ -56,6 +62,7 @@ export default function UserPortalRegisterPage() {
     const form = useForm<UserPortalRegisterForm>({
         resolver: zodResolver(schema),
         defaultValues: {
+            username: '',
             email: '',
             code: '',
             password: '',
@@ -111,7 +118,28 @@ export default function UserPortalRegisterPage() {
     const emailIsValid = z.string().trim().email().safeParse(normalizedEmail).success
     const canSendCode = emailIsValid && !sendCodeMutation.isPending && codeCooldownSeconds === 0
 
+    const ensureAgreementAccepted = () => {
+        if (agreementAccepted) {
+            return true
+        }
+
+        setAgreementError(true)
+        toast.error(t('portalAuth.agreementRequired'))
+        return false
+    }
+
+    const handleAgreementChange = (checked: boolean) => {
+        setAgreementAccepted(checked)
+        if (checked) {
+            setAgreementError(false)
+        }
+    }
+
     const handleSendCode = async () => {
+        if (!ensureAgreementAccepted()) {
+            return
+        }
+
         const emailValid = await form.trigger('email')
         if (!emailValid) {
             return
@@ -140,11 +168,17 @@ export default function UserPortalRegisterPage() {
     }
 
     const onSubmit = (values: UserPortalRegisterForm) => {
+        if (!ensureAgreementAccepted()) {
+            return
+        }
+
         registerMutation.mutate(
             {
                 email: values.email.trim().toLowerCase(),
+                username: values.username.trim().toLowerCase(),
                 code: values.code.trim(),
                 password: values.password.trim(),
+                accepted_terms: true,
             },
             {
                 onSuccess: () => {
@@ -166,11 +200,36 @@ export default function UserPortalRegisterPage() {
             </div>
 
             <div className="mb-6">
-                <UserPortalOAuthButtons />
+                <UserPortalOAuthButtons onBeforeStart={ensureAgreementAccepted} />
             </div>
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                    {t('portalAuth.username')}
+                                </FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="text"
+                                        autoComplete="username"
+                                        placeholder={t('portalAuth.usernamePlaceholder')}
+                                        className={authInputClassName}
+                                    />
+                                </FormControl>
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                    {t('portalAuth.usernameHint')}
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
                     <FormField
                         control={form.control}
                         name="email"
@@ -290,6 +349,12 @@ export default function UserPortalRegisterPage() {
                                 <FormMessage />
                             </FormItem>
                         )}
+                    />
+
+                    <UserPortalAgreementConsent
+                        checked={agreementAccepted}
+                        error={agreementError}
+                        onCheckedChange={handleAgreementChange}
                     />
 
                     <Button

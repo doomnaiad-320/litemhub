@@ -108,7 +108,7 @@ export function AppUserDetailSheet({
     const currentUser = userData?.user || user
     const wallet = walletData?.wallet
     const walletLogs = walletLogData?.wallet_logs || []
-    const account = currentUser?.email || currentUser?.phone || `#${currentUser?.id ?? ''}`
+    const account = currentUser?.username || currentUser?.email || currentUser?.phone || `#${currentUser?.id ?? ''}`
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -175,6 +175,8 @@ export function AppUserDetailSheet({
                                         <CardTitle className="text-base">{t('appUser.detail.userInfo')}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="px-5">
+                                        <InfoRow label={t('appUser.username')} value={currentUser.username || '-'} />
+                                        <Separator />
                                         <InfoRow label={t('appUser.email')} value={currentUser.email || '-'} />
                                         <Separator />
                                         <InfoRow label={t('appUser.phone')} value={currentUser.phone || '-'} />

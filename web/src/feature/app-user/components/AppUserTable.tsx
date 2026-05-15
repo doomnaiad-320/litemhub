@@ -73,7 +73,7 @@ const formatDateTime = (timestamp: number) => {
 
 const formatMoney = (amount: number) => `$${(amount || 0).toFixed(4)}`
 
-const getUserDisplayName = (user: AppUser) => user.email || user.phone || `#${user.id}`
+const getUserDisplayName = (user: AppUser) => user.username || user.email || user.phone || `#${user.id}`
 
 const getStatusBadgeClass = (status: number) => status === APP_USER_STATUS.DISABLED
     ? 'border-transparent bg-zinc-200/80 text-zinc-700 dark:bg-zinc-700/70 dark:text-zinc-100'
@@ -196,9 +196,7 @@ export function AppUserTable() {
                 <div className="space-y-1">
                     <div className="font-medium">{getUserDisplayName(row.original)}</div>
                     <div className="text-xs text-muted-foreground">
-                        {row.original.email && row.original.phone
-                            ? `${row.original.email} / ${row.original.phone}`
-                            : row.original.email || row.original.phone || t('appUser.emptyAccount')}
+                        {[row.original.email, row.original.phone].filter(Boolean).join(' / ') || t('appUser.emptyAccount')}
                     </div>
                 </div>
             ),

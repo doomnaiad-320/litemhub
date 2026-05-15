@@ -7,6 +7,7 @@ export type AppUserStatus = typeof APP_USER_STATUS[keyof typeof APP_USER_STATUS]
 
 export interface AppUser {
     id: number
+    username?: string
     email?: string
     phone?: string
     status: AppUserStatus
@@ -55,6 +56,7 @@ export interface AppUserWalletLogsResponse {
 }
 
 export interface CreateAppUserRequest {
+    username?: string
     email?: string
     phone?: string
     password: string
@@ -62,6 +64,7 @@ export interface CreateAppUserRequest {
 }
 
 export interface UpdateAppUserRequest {
+    username?: string
     email?: string
     phone?: string
 }

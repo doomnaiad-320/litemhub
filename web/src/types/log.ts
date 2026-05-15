@@ -59,6 +59,7 @@ export interface LogRequestDetail {
 
 export interface LogAppUser {
   id: number
+  username?: string
   email?: string
   phone?: string
 }
