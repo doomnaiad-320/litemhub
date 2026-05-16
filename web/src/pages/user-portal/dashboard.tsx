@@ -39,6 +39,7 @@ import {
 } from '@/feature/user-portal/hooks'
 
 const presetAmounts = [10, 50, 100, 500, 1000, 5000]
+const normalizeDiscountCodeInput = (value: string) => value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
 
 const formatMoney = (amount?: number) => `$${(amount || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -106,7 +107,7 @@ export default function UserPortalDashboardPage() {
         const response = await rechargeMutation.mutateAsync({
             amount,
             type: paymentType,
-            discount_code: discountCode.trim() || undefined,
+            discount_code: normalizeDiscountCodeInput(discountCode) || undefined,
         })
         const payment = response.payment
         if (payment.pay_type === 'jump' || payment.pay_type === 'urlscheme') {
@@ -349,7 +350,8 @@ export default function UserPortalDashboardPage() {
                                         <Input
                                             id="discount-code"
                                             value={discountCode}
-                                            onChange={(event) => setDiscountCode(event.target.value)}
+                                            onChange={(event) => setDiscountCode(normalizeDiscountCodeInput(event.target.value))}
+                                            maxLength={6}
                                             placeholder={t('portal.dashboard.discountCodePlaceholder')}
                                             className="h-11 rounded-md border-[#e5e7eb] bg-background pl-10 text-sm shadow-none focus-visible:border-[#6f9d8d] focus-visible:ring-[#6f9d8d]/20 dark:border-white/10"
                                         />

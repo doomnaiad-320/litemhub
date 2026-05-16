@@ -157,10 +157,15 @@ export interface UserPortalCreateKeyRequest {
     name: string
     subnets?: string[]
     models?: string[]
+    quota?: number
+    expired_at?: number
 }
 
 export interface UserPortalUpdateKeyRequest {
     group: string
+    models?: string[]
+    quota?: number
+    expired_at?: number
 }
 
 export interface UserPortalPlaygroundMessage {

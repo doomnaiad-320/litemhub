@@ -9,7 +9,7 @@ import {
     getCoreRowModel,
     type ColumnDef,
 } from '@tanstack/react-table'
-import { Copy, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarIcon, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,13 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Calendar } from '@/components/ui/calendar'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 import {
     Form,
     FormControl,
@@ -39,21 +46,160 @@ import {
 } from '@/components/ui/select'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
+import { MultiSelectCombobox } from '@/components/select/MultiSelectCombobox'
 import { useUserPortalCreateKey, useUserPortalDeleteKey, useUserPortalGroups, useUserPortalKeys, useUserPortalUpdateKey } from '@/feature/user-portal/hooks'
 import type { Token } from '@/types/token'
 
 interface CreateKeyFormValues {
     name: string
     group: string
+    models: string[]
+    unlimitedQuota: boolean
+    quota?: number
+    expiredDate?: string
+    expiredTime: string
 }
 
 interface UpdateKeyGroupFormValues {
     group: string
+    models: string[]
+    unlimitedQuota: boolean
+    quota?: number
+    expiredDate?: string
+    expiredTime: string
+}
+
+const formatQuota = (quota?: number) => {
+    if (!quota || quota <= 0) return '∞'
+
+    return `$${quota.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`
+}
+
+const formatExpirationDate = (value?: number) => {
+    if (!value) return ''
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+
+    const pad = (number: number) => String(number).padStart(2, '0')
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+const formatExpirationTime = (value?: number) => {
+    if (!value) return '23:59'
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '23:59'
+
+    const pad = (number: number) => String(number).padStart(2, '0')
+
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const expirationInputToTimestamp = (dateValue?: string, timeValue = '23:59') => {
+    if (!dateValue) return 0
+
+    const date = new Date(`${dateValue}T${timeValue || '23:59'}`)
+    if (Number.isNaN(date.getTime())) return 0
+
+    return date.getTime()
+}
+
+const hourOptions = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0'))
+const minuteOptions = ['00', '15', '30', '45']
+
+function DateTimePicker({
+    dateValue,
+    timeValue,
+    onDateChange,
+    onTimeChange,
+    placeholder,
+    clearLabel,
+}: {
+    dateValue?: string
+    timeValue: string
+    onDateChange: (value: string) => void
+    onTimeChange: (value: string) => void
+    placeholder: string
+    clearLabel: string
+}) {
+    const selectedDate = dateValue ? new Date(`${dateValue}T00:00`) : undefined
+    const [hour = '23', minute = '59'] = (timeValue || '23:59').split(':')
+    const displayValue = dateValue
+        ? format(new Date(`${dateValue}T${timeValue || '23:59'}`), 'yyyy-MM-dd HH:mm')
+        : placeholder
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-11 w-full justify-start rounded-md border-border bg-background text-left font-normal shadow-none ${!dateValue ? 'text-muted-foreground' : ''}`}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {displayValue}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    autoFocus
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                        if (!date) {
+                            onDateChange('')
+                            return
+                        }
+
+                        onDateChange(format(date, 'yyyy-MM-dd'))
+                    }}
+                />
+                <div className="flex items-center gap-2 border-t border-border p-3">
+                    <Select value={hour} onValueChange={(value) => onTimeChange(`${value}:${minute}`)}>
+                        <SelectTrigger className="h-10 w-[92px] rounded-md">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                            {hourOptions.map((value) => (
+                                <SelectItem key={value} value={value}>{value}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">:</span>
+                    <Select value={minute} onValueChange={(value) => onTimeChange(`${hour}:${value}`)}>
+                        <SelectTrigger className="h-10 w-[92px] rounded-md">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {minuteOptions.map((value) => (
+                                <SelectItem key={value} value={value}>{value}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {dateValue && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="ml-auto h-10 px-3 text-xs"
+                            onClick={() => onDateChange('')}
+                        >
+                            {clearLabel}
+                        </Button>
+                    )}
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
 }
 
 export default function UserPortalKeysPage() {
     const { t: rawT } = useTranslation()
-    const t = rawT as (key: string) => string
+    const t = rawT as (key: string, options?: Record<string, unknown>) => string
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [groupFilter, setGroupFilter] = useState<string>('all')
@@ -70,10 +216,21 @@ export default function UserPortalKeysPage() {
     const groups = groupsData?.groups || []
     const keys = data?.keys || []
     const total = data?.total || 0
+    const groupModelsByGroup = useMemo(() => {
+        return new Map(groups.map((group) => [group.group, group.models || []]))
+    }, [groups])
 
-    const schema = useMemo(() => z.object({
+    const schema = useMemo((): z.ZodType<CreateKeyFormValues> => z.object({
         name: z.string().trim().min(1, t('portal.keys.nameRequired')),
         group: z.string().trim().min(1, t('portal.keys.groupRequired')),
+        models: z.array(z.string()),
+        unlimitedQuota: z.boolean(),
+        quota: z.coerce.number().optional(),
+        expiredDate: z.string().optional(),
+        expiredTime: z.string(),
+    }).refine((value) => value.unlimitedQuota || (value.quota ?? 0) > 0, {
+        path: ['quota'],
+        message: t('portal.keys.quotaRequired'),
     }), [t])
 
     const form = useForm<CreateKeyFormValues>({
@@ -81,30 +238,60 @@ export default function UserPortalKeysPage() {
         defaultValues: {
             name: '',
             group: '',
+            models: [],
+            unlimitedQuota: true,
+            quota: undefined,
+            expiredDate: '',
+            expiredTime: '23:59',
         },
     })
 
-    const editSchema = useMemo(() => z.object({
+    const editSchema = useMemo((): z.ZodType<UpdateKeyGroupFormValues> => z.object({
         group: z.string().trim().min(1, t('portal.keys.groupRequired')),
+        models: z.array(z.string()),
+        unlimitedQuota: z.boolean(),
+        quota: z.coerce.number().optional(),
+        expiredDate: z.string().optional(),
+        expiredTime: z.string(),
+    }).refine((value) => value.unlimitedQuota || (value.quota ?? 0) > 0, {
+        path: ['quota'],
+        message: t('portal.keys.quotaRequired'),
     }), [t])
 
     const editForm = useForm<UpdateKeyGroupFormValues>({
         resolver: zodResolver(editSchema),
         defaultValues: {
             group: '',
+            models: [],
+            unlimitedQuota: true,
+            quota: undefined,
+            expiredDate: '',
+            expiredTime: '23:59',
         },
     })
+    const selectedCreateGroup = form.watch('group')
+    const selectedEditGroup = editForm.watch('group')
+    const createGroupModels = groupModelsByGroup.get(selectedCreateGroup) || []
+    const editGroupModels = groupModelsByGroup.get(selectedEditGroup) || []
 
     const onSubmit = (values: CreateKeyFormValues) => {
         createKeyMutation.mutate({
             name: values.name.trim(),
             group: values.group,
+            models: values.models,
+            quota: values.unlimitedQuota ? 0 : (values.quota || 0),
+            expired_at: expirationInputToTimestamp(values.expiredDate, values.expiredTime),
         }, {
             onSuccess: () => {
                 setDialogOpen(false)
                 form.reset({
                     name: '',
                     group: '',
+                    models: [],
+                    unlimitedQuota: true,
+                    quota: undefined,
+                    expiredDate: '',
+                    expiredTime: '23:59',
                 })
             },
         })
@@ -121,7 +308,14 @@ export default function UserPortalKeysPage() {
 
     const openEditDialog = (token: Token) => {
         setEditingKey(token)
-        editForm.reset({ group: token.group })
+        editForm.reset({
+            group: token.group,
+            models: token.models || [],
+            unlimitedQuota: !token.quota || token.quota <= 0,
+            quota: token.quota && token.quota > 0 ? token.quota : undefined,
+            expiredDate: formatExpirationDate(token.expired_at),
+            expiredTime: formatExpirationTime(token.expired_at),
+        })
         setEditDialogOpen(true)
     }
 
@@ -132,7 +326,12 @@ export default function UserPortalKeysPage() {
 
         updateKeyMutation.mutate({
             id: editingKey.id,
-            data: { group: values.group },
+            data: {
+                group: values.group,
+                models: values.models,
+                quota: values.unlimitedQuota ? 0 : (values.quota || 0),
+                expired_at: expirationInputToTimestamp(values.expiredDate, values.expiredTime),
+            },
         }, {
             onSuccess: () => {
                 setEditDialogOpen(false)
@@ -171,6 +370,35 @@ export default function UserPortalKeysPage() {
             ),
         },
         {
+            accessorKey: 'models',
+            header: () => <div className="py-3.5 font-medium">{t('portal.keys.models')}</div>,
+            cell: ({ row }) => (
+                <div className="text-sm text-muted-foreground">
+                    {row.original.models && row.original.models.length > 0
+                        ? t('portal.keys.modelLimitCount', { count: row.original.models.length })
+                        : t('portal.keys.allModels')}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'quota',
+            header: () => <div className="py-3.5 font-medium">{t('portal.keys.quota')}</div>,
+            cell: ({ row }) => (
+                <div className="text-sm text-muted-foreground">
+                    {formatQuota(row.original.quota)}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'expired_at',
+            header: () => <div className="py-3.5 font-medium">{t('portal.keys.expiredAt')}</div>,
+            cell: ({ row }) => (
+                <div className="text-sm text-muted-foreground">
+                    {row.original.expired_at ? format(new Date(row.original.expired_at), 'yyyy-MM-dd HH:mm') : t('portal.keys.neverExpires')}
+                </div>
+            ),
+        },
+        {
             accessorKey: 'created_at',
             header: () => <div className="py-3.5 font-medium">{t('portal.keys.createdAt')}</div>,
             cell: ({ row }) => (
@@ -204,7 +432,7 @@ export default function UserPortalKeysPage() {
                 </div>
             ),
         },
-    ], [deleteKeyMutation, t])
+    ], [deleteKeyMutation, t, updateKeyMutation])
 
     const table = useReactTable({
         data: keys,
@@ -284,6 +512,28 @@ export default function UserPortalKeysPage() {
                                         <div className="mt-3 text-xs text-muted-foreground">
                                             {format(new Date(token.created_at), 'yyyy-MM-dd HH:mm')}
                                         </div>
+                                        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
+                                            <div>
+                                                <div className="text-muted-foreground">{t('portal.keys.quota')}</div>
+                                                <div className="mt-1 font-mono text-sm font-semibold">{formatQuota(token.quota)}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground">{t('portal.keys.expiredAt')}</div>
+                                                <div className="mt-1 text-sm font-medium">
+                                                    {token.expired_at
+                                                        ? format(new Date(token.expired_at), 'yyyy-MM-dd HH:mm')
+                                                        : t('portal.keys.neverExpires')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 border-t border-border/60 pt-3 text-xs">
+                                            <div className="text-muted-foreground">{t('portal.keys.models')}</div>
+                                            <div className="mt-1 text-sm font-medium">
+                                                {token.models && token.models.length > 0
+                                                    ? t('portal.keys.modelLimitCount', { count: token.models.length })
+                                                    : t('portal.keys.allModels')}
+                                            </div>
+                                        </div>
                                     </div>
                                 ))
                             ) : (
@@ -347,7 +597,13 @@ export default function UserPortalKeysPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t('portal.keys.group')}</FormLabel>
-                                            <Select value={field.value} onValueChange={field.onChange}>
+                                            <Select
+                                                value={field.value}
+                                                onValueChange={(value) => {
+                                                    field.onChange(value)
+                                                    form.setValue('models', [], { shouldDirty: true, shouldValidate: true })
+                                                }}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger className="h-11 rounded-md">
                                                         <SelectValue placeholder={t('portal.keys.groupPlaceholder')} />
@@ -361,6 +617,108 @@ export default function UserPortalKeysPage() {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="models"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <MultiSelectCombobox<string>
+                                                    label={t('portal.keys.models')}
+                                                    placeholder={t('portal.keys.modelSelectPlaceholder')}
+                                                    dropdownItems={createGroupModels}
+                                                    selectedItems={field.value || []}
+                                                    setSelectedItems={(value) => {
+                                                        const next = typeof value === 'function'
+                                                            ? value(field.value || [])
+                                                            : value
+                                                        field.onChange(next)
+                                                    }}
+                                                    handleFilteredDropdownItems={(items, selectedItems, inputValue) => items.filter((item) => {
+                                                        return !selectedItems.includes(item) &&
+                                                            item.toLowerCase().includes(inputValue.toLowerCase())
+                                                    })}
+                                                    handleDropdownItemDisplay={(item) => item}
+                                                    handleSelectedItemDisplay={(item) => item}
+                                                />
+                                            </FormControl>
+                                            <p className="text-xs text-muted-foreground">{t('portal.keys.modelLimitHint')}</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="unlimitedQuota"
+                                    render={({ field }) => (
+                                        <FormItem className="rounded-md border border-border p-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <FormLabel>{t('portal.keys.unlimitedQuota')}</FormLabel>
+                                                    <p className="mt-1 text-xs text-muted-foreground">{t('portal.keys.unlimitedQuotaHint')}</p>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {!form.watch('unlimitedQuota') && (
+                                    <FormField
+                                        control={form.control}
+                                        name="quota"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('portal.keys.quota')}</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        value={field.value ?? ''}
+                                                        onChange={(event) => field.onChange(event.target.value === '' ? undefined : Number(event.target.value))}
+                                                        className="h-11 rounded-md"
+                                                        placeholder={t('portal.keys.quotaPlaceholder')}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                <FormField
+                                    control={form.control}
+                                    name="expiredDate"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('portal.keys.expiredAt')}</FormLabel>
+                                            <FormField
+                                                control={form.control}
+                                                name="expiredTime"
+                                                render={({ field: timeField }) => (
+                                                    <FormControl>
+                                                        <DateTimePicker
+                                                            dateValue={field.value}
+                                                            timeValue={timeField.value}
+                                                            onDateChange={field.onChange}
+                                                            onTimeChange={timeField.onChange}
+                                                            placeholder={t('portal.keys.neverExpires')}
+                                                            clearLabel={t('portal.keys.clearExpiration')}
+                                                        />
+                                                    </FormControl>
+                                                )}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('portal.keys.expiredAtHint')}</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -395,7 +753,13 @@ export default function UserPortalKeysPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>{t('portal.keys.group')}</FormLabel>
-                                            <Select value={field.value} onValueChange={field.onChange}>
+                                            <Select
+                                                value={field.value}
+                                                onValueChange={(value) => {
+                                                    field.onChange(value)
+                                                    editForm.setValue('models', [], { shouldDirty: true, shouldValidate: true })
+                                                }}
+                                            >
                                                 <FormControl>
                                                     <SelectTrigger className="h-11 rounded-md">
                                                         <SelectValue placeholder={t('portal.keys.groupPlaceholder')} />
@@ -409,6 +773,108 @@ export default function UserPortalKeysPage() {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="models"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <MultiSelectCombobox<string>
+                                                    label={t('portal.keys.models')}
+                                                    placeholder={t('portal.keys.modelSelectPlaceholder')}
+                                                    dropdownItems={editGroupModels}
+                                                    selectedItems={field.value || []}
+                                                    setSelectedItems={(value) => {
+                                                        const next = typeof value === 'function'
+                                                            ? value(field.value || [])
+                                                            : value
+                                                        field.onChange(next)
+                                                    }}
+                                                    handleFilteredDropdownItems={(items, selectedItems, inputValue) => items.filter((item) => {
+                                                        return !selectedItems.includes(item) &&
+                                                            item.toLowerCase().includes(inputValue.toLowerCase())
+                                                    })}
+                                                    handleDropdownItemDisplay={(item) => item}
+                                                    handleSelectedItemDisplay={(item) => item}
+                                                />
+                                            </FormControl>
+                                            <p className="text-xs text-muted-foreground">{t('portal.keys.modelLimitHint')}</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="unlimitedQuota"
+                                    render={({ field }) => (
+                                        <FormItem className="rounded-md border border-border p-4">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div>
+                                                    <FormLabel>{t('portal.keys.unlimitedQuota')}</FormLabel>
+                                                    <p className="mt-1 text-xs text-muted-foreground">{t('portal.keys.unlimitedQuotaHint')}</p>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {!editForm.watch('unlimitedQuota') && (
+                                    <FormField
+                                        control={editForm.control}
+                                        name="quota"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('portal.keys.quota')}</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        value={field.value ?? ''}
+                                                        onChange={(event) => field.onChange(event.target.value === '' ? undefined : Number(event.target.value))}
+                                                        className="h-11 rounded-md"
+                                                        placeholder={t('portal.keys.quotaPlaceholder')}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="expiredDate"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('portal.keys.expiredAt')}</FormLabel>
+                                            <FormField
+                                                control={editForm.control}
+                                                name="expiredTime"
+                                                render={({ field: timeField }) => (
+                                                    <FormControl>
+                                                        <DateTimePicker
+                                                            dateValue={field.value}
+                                                            timeValue={timeField.value}
+                                                            onDateChange={field.onChange}
+                                                            onTimeChange={timeField.onChange}
+                                                            placeholder={t('portal.keys.neverExpires')}
+                                                            clearLabel={t('portal.keys.clearExpiration')}
+                                                        />
+                                                    </FormControl>
+                                                )}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('portal.keys.expiredAtHint')}</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
