@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
     createColumnHelper,
@@ -6,6 +6,7 @@ import {
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +28,34 @@ const columnHelper = createColumnHelper<LogRecord>()
 // 点击 group/token_name 时不展开行的列 ID
 const NON_EXPAND_COLUMNS = new Set(['details', 'group', 'token_name', 'model'])
 const RIGHT_ALIGNED_COLUMNS = new Set(['input_tokens', 'output_tokens', 'duration', 'used_amount'])
+
+function useMediaQuery(query: string) {
+    const getMatches = () => {
+        if (typeof window === 'undefined') {
+            return false
+        }
+
+        return window.matchMedia(query).matches
+    }
+
+    const [matches, setMatches] = useState(getMatches)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia(query)
+        const handleChange = () => setMatches(mediaQuery.matches)
+
+        handleChange()
+        mediaQuery.addEventListener('change', handleChange)
+
+        return () => mediaQuery.removeEventListener('change', handleChange)
+    }, [query])
+
+    return matches
+}
 
 interface LogTableProps {
     data: LogRecord[]
@@ -55,6 +84,15 @@ export function LogTable({
     const { t } = useTranslation()
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
     const [selectedMobileLog, setSelectedMobileLog] = useState<LogRecord | null>(null)
+    const isDesktop = useMediaQuery('(min-width: 768px)')
+    const desktopScrollRef = useRef<HTMLDivElement>(null)
+    const mobileScrollRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (isDesktop) {
+            setSelectedMobileLog(null)
+        }
+    }, [isDesktop])
 
     const toggleRowExpansion = (rowId: number) => {
         const newExpanded = new Set(expandedRows)
@@ -303,169 +341,239 @@ export function LogTable({
         manualPagination: true,
         pageCount: Math.ceil(total / pageSize),
     })
+    const tableRows = table.getRowModel().rows
+    const headerGroups = table.getHeaderGroups()
+    const leafHeaders = headerGroups[0]?.headers ?? []
+    const desktopGridTemplateColumns = leafHeaders
+        .map((header) => `minmax(${header.getSize()}px, ${header.getSize()}fr)`)
+        .join(' ')
+    const desktopTableWidth = leafHeaders.reduce((width, header) => width + header.getSize(), 0)
+
+    const desktopVirtualizer = useVirtualizer({
+        count: tableRows.length,
+        getScrollElement: () => desktopScrollRef.current,
+        estimateSize: (index) => {
+            const rowId = tableRows[index]?.original.id
+            return rowId && expandedRows.has(rowId) ? 360 : 54
+        },
+        getItemKey: (index) => tableRows[index]?.original.id ?? index,
+        overscan: 8,
+    })
+
+    const mobileVirtualizer = useVirtualizer({
+        count: data.length,
+        getScrollElement: () => mobileScrollRef.current,
+        estimateSize: () => 220,
+        getItemKey: (index) => data[index]?.id ?? index,
+        overscan: 6,
+    })
+
+    useEffect(() => {
+        desktopVirtualizer.measure()
+    }, [desktopVirtualizer, expandedRows, tableRows.length])
+
+    useEffect(() => {
+        mobileVirtualizer.measure()
+    }, [mobileVirtualizer, data])
 
     return (
         <div className="h-full flex flex-col">
             <div className="flex-1 min-h-0">
-                <div className="space-y-3 md:hidden">
-                    {loading ? (
-                        <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                            <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
-                            {t('common.loading')}
-                        </div>
-                    ) : data.length === 0 ? (
-                        <div className="rounded-md border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                            {t('common.noResult')}
-                        </div>
-                    ) : (
-                        data.map((log) => {
-                            const isSuccess = log.code === 200
-
-                            return (
-                                <div key={log.id} className="rounded-md border border-border bg-card p-3 shadow-none">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="truncate font-mono text-[14px] font-semibold leading-5 text-foreground">
-                                                {log.model || '-'}
-                                            </div>
-                                            <div className="mt-1 font-mono text-[11px] leading-4 text-muted-foreground">
-                                                {formatCreatedAt(log.created_at)}
-                                            </div>
-                                        </div>
-                                        <div className={isSuccess ? 'shrink-0 text-[14px] font-medium text-green-500' : 'shrink-0 text-[14px] font-medium text-destructive'}>
-                                            {isSuccess ? t('log.success') : t('log.failed')}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-5 flex items-center justify-between gap-3 text-[12px] leading-4 text-muted-foreground">
-                                        <button
-                                            type="button"
-                                            className={onOpenGroupLog && log.group ? 'min-w-0 truncate text-left transition-colors hover:text-primary' : 'min-w-0 truncate text-left'}
-                                            onClick={() => log.group && onOpenGroupLog?.(log.group, log.token_name || undefined)}
+                {isDesktop ? (
+                    <div className="rounded-lg border border-border bg-card shadow-none h-full overflow-hidden">
+                        <div ref={desktopScrollRef} className="overflow-auto h-full">
+                            <div
+                                className="w-full min-w-[980px]"
+                                style={{ minWidth: Math.max(980, desktopTableWidth) }}
+                            >
+                                <div className="sticky top-0 z-10 bg-muted/50">
+                                    {headerGroups.map((headerGroup) => (
+                                        <div
+                                            key={headerGroup.id}
+                                            className="grid border-b border-border"
+                                            style={{ gridTemplateColumns: desktopGridTemplateColumns }}
                                         >
-                                            {t('log.group')}: {log.group || '-'}
-                                        </button>
-                                        <div className="shrink-0 whitespace-nowrap">倍率: {getPriceMultiplier(log)}</div>
-                                        <div className="shrink-0 whitespace-nowrap">消费: {formatUsedAmount(log)}</div>
-                                    </div>
+                                            {headerGroup.headers.map((header, index) => {
+                                                const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(header.column.id)
 
-                                    <div className="mt-4 border-t border-border/70" />
-
-                                    <div className="mt-4 grid w-full grid-cols-4 gap-1">
-                                        {renderMobileMetric(t('log.duration'), formatDuration(log))}
-                                        {renderMobileMetric(t('log.ttfb'), `${log.ttfb_milliseconds || 0}ms`)}
-                                        {renderMobileMetric(t('log.inputTokens'), (log.usage?.input_tokens || 0).toLocaleString())}
-                                        {renderMobileMetric(t('log.outputTokens'), (log.usage?.output_tokens || 0).toLocaleString())}
-                                    </div>
-
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="mt-5 h-8 w-full rounded-lg text-[14px] font-normal text-muted-foreground hover:text-foreground"
-                                        onClick={() => setSelectedMobileLog(log)}
-                                    >
-                                        {t('log.details')}
-                                    </Button>
+                                                return (
+                                                    <div
+                                                        key={header.id}
+                                                        className={`px-4 py-3 ${isRightAligned ? 'text-right' : 'text-left'} text-xs font-medium text-muted-foreground uppercase tracking-wider ${
+                                                            index === 0 ? 'rounded-tl-lg' : ''
+                                                        } ${
+                                                            index === headerGroup.headers.length - 1 ? 'rounded-tr-lg' : ''
+                                                        }`}
+                                                    >
+                                                        {header.isPlaceholder
+                                                            ? null
+                                                            : flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ))}
                                 </div>
-                            )
-                        })
-                    )}
-                </div>
-                <div className="hidden rounded-lg border border-border bg-card shadow-none h-full overflow-hidden md:block">
-                    <div className="overflow-auto h-full">
-                        <table className="min-w-[980px] w-full table-fixed">
-                            <thead className="sticky top-0 bg-muted/50">
-                                <tr className="border-b border-border">
-                                    {table.getHeaderGroups().map((headerGroup) =>
-                                        headerGroup.headers.map((header, index) => {
-                                            const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(header.column.id)
+
+                                {loading ? (
+                                    <div className="px-4 py-8 text-center">
+                                        <div className="flex items-center justify-center">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                            <span className="ml-2">{t('common.loading')}</span>
+                                        </div>
+                                    </div>
+                                ) : data.length === 0 ? (
+                                    <div className="px-4 py-8 text-center text-muted-foreground">
+                                        {t('common.noResult')}
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="relative"
+                                        style={{ height: desktopVirtualizer.getTotalSize() }}
+                                    >
+                                        {desktopVirtualizer.getVirtualItems().map((virtualRow) => {
+                                            const row = tableRows[virtualRow.index]
+
+                                            if (!row) {
+                                                return null
+                                            }
 
                                             return (
-                                                <th
-                                                    key={header.id}
-                                                    className={`px-4 py-3 ${isRightAligned ? 'text-right' : 'text-left'} text-xs font-medium text-muted-foreground uppercase tracking-wider ${
-                                                        index === 0 ? 'rounded-tl-lg' : ''
-                                                    } ${
-                                                        index === headerGroup.headers.length - 1 ? 'rounded-tr-lg' : ''
-                                                    }`}
-                                                    style={{ width: header.getSize() }}
+                                                <div
+                                                    key={row.original.id}
+                                                    ref={desktopVirtualizer.measureElement}
+                                                    data-index={virtualRow.index}
+                                                    className="absolute left-0 top-0 w-full border-b border-border bg-card"
+                                                    style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                </th>
-                                            )
-                                        })
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="px-4 py-8 text-center">
-                                            <div className="flex items-center justify-center">
-                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                                <span className="ml-2">{t('common.loading')}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
-                                            {t('common.noResult')}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    table.getRowModel().rows.map((row) => (
-                                        <React.Fragment key={row.original.id}>
-                                            <tr
-                                                className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                                                onClick={(e) => {
-                                                    // 找到点击所在的 td，获取对应的列 ID
-                                                    const td = (e.target as HTMLElement).closest('td')
-                                                    if (!td) return
-                                                    const cellIndex = Array.from(td.parentElement!.children).indexOf(td)
-                                                    const columnId = row.getVisibleCells()[cellIndex]?.column.id
-                                                    // 非特殊列点击展开行
-                                                    if (!NON_EXPAND_COLUMNS.has(columnId)) {
-                                                        toggleRowExpansion(row.original.id)
-                                                    }
-                                                }}
-                                            >
-                                                {row.getVisibleCells().map((cell) => {
-                                                    const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(cell.column.id)
+                                                    <div
+                                                        className="grid cursor-pointer transition-colors hover:bg-muted/50"
+                                                        style={{ gridTemplateColumns: desktopGridTemplateColumns }}
+                                                        onClick={(e) => {
+                                                            const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-column-id]')
+                                                            const columnId = cell?.dataset.columnId
 
-                                                    return (
-                                                        <td
-                                                            key={cell.id}
-                                                            className={`px-4 py-3 text-sm ${isRightAligned ? 'text-right' : ''}`}
-                                                            style={{ width: cell.column.getSize() }}
-                                                        >
-                                                            {flexRender(
-                                                                cell.column.columnDef.cell,
-                                                                cell.getContext()
-                                                            )}
-                                                        </td>
-                                                    )
-                                                })}
-                                            </tr>
-                                            {expandedRows.has(row.original.id) && (
-                                                <tr>
-                                                    <td colSpan={columns.length} className="p-0">
+                                                            if (!columnId || !NON_EXPAND_COLUMNS.has(columnId)) {
+                                                                toggleRowExpansion(row.original.id)
+                                                            }
+                                                        }}
+                                                    >
+                                                        {row.getVisibleCells().map((cell) => {
+                                                            const isRightAligned = RIGHT_ALIGNED_COLUMNS.has(cell.column.id)
+
+                                                            return (
+                                                                <div
+                                                                    key={cell.id}
+                                                                    data-column-id={cell.column.id}
+                                                                    className={`min-w-0 px-4 py-3 text-sm ${isRightAligned ? 'text-right' : ''}`}
+                                                                >
+                                                                    {flexRender(
+                                                                        cell.column.columnDef.cell,
+                                                                        cell.getContext()
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    {expandedRows.has(row.original.id) && (
                                                         <ExpandedLogContent log={row.original} scope={detailScope} />
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    ))
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
                                 )}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div ref={mobileScrollRef} className="h-full min-h-[420px] overflow-auto pr-1">
+                        {loading ? (
+                            <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                                <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
+                                {t('common.loading')}
+                            </div>
+                        ) : data.length === 0 ? (
+                            <div className="rounded-md border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                                {t('common.noResult')}
+                            </div>
+                        ) : (
+                            <div
+                                className="relative"
+                                style={{ height: mobileVirtualizer.getTotalSize() }}
+                            >
+                                {mobileVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const log = data[virtualRow.index]
+
+                                    if (!log) {
+                                        return null
+                                    }
+
+                                    const isSuccess = log.code === 200
+
+                                    return (
+                                        <div
+                                            key={log.id}
+                                            ref={mobileVirtualizer.measureElement}
+                                            data-index={virtualRow.index}
+                                            className="absolute left-0 top-0 w-full pb-3"
+                                            style={{ transform: `translateY(${virtualRow.start}px)` }}
+                                        >
+                                            <div className="rounded-md border border-border bg-card p-3 shadow-none">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="truncate font-mono text-[14px] font-semibold leading-5 text-foreground">
+                                                            {log.model || '-'}
+                                                        </div>
+                                                        <div className="mt-1 font-mono text-[11px] leading-4 text-muted-foreground">
+                                                            {formatCreatedAt(log.created_at)}
+                                                        </div>
+                                                    </div>
+                                                    <div className={isSuccess ? 'shrink-0 text-[14px] font-medium text-green-500' : 'shrink-0 text-[14px] font-medium text-destructive'}>
+                                                        {isSuccess ? t('log.success') : t('log.failed')}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-5 flex items-center justify-between gap-3 text-[12px] leading-4 text-muted-foreground">
+                                                    <button
+                                                        type="button"
+                                                        className={onOpenGroupLog && log.group ? 'min-w-0 truncate text-left transition-colors hover:text-primary' : 'min-w-0 truncate text-left'}
+                                                        onClick={() => log.group && onOpenGroupLog?.(log.group, log.token_name || undefined)}
+                                                    >
+                                                        {t('log.group')}: {log.group || '-'}
+                                                    </button>
+                                                    <div className="shrink-0 whitespace-nowrap">倍率: {getPriceMultiplier(log)}</div>
+                                                    <div className="shrink-0 whitespace-nowrap">消费: {formatUsedAmount(log)}</div>
+                                                </div>
+
+                                                <div className="mt-4 border-t border-border/70" />
+
+                                                <div className="mt-4 grid w-full grid-cols-4 gap-1">
+                                                    {renderMobileMetric(t('log.duration'), formatDuration(log))}
+                                                    {renderMobileMetric(t('log.ttfb'), `${log.ttfb_milliseconds || 0}ms`)}
+                                                    {renderMobileMetric(t('log.inputTokens'), (log.usage?.input_tokens || 0).toLocaleString())}
+                                                    {renderMobileMetric(t('log.outputTokens'), (log.usage?.output_tokens || 0).toLocaleString())}
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    className="mt-5 h-8 w-full rounded-lg text-[14px] font-normal text-muted-foreground hover:text-foreground"
+                                                    onClick={() => setSelectedMobileLog(log)}
+                                                >
+                                                    {t('log.details')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* 分页控制 - 固定在底部 */}
@@ -529,21 +637,23 @@ export function LogTable({
                     </div>
                 </div>
             </div>
-            <Dialog open={!!selectedMobileLog} onOpenChange={(open) => !open && setSelectedMobileLog(null)}>
-                <DialogContent className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-3xl">
-                    <DialogHeader className="border-b border-border/60 px-4 py-4 text-left sm:px-6">
-                        <DialogTitle className="break-all pr-8 font-mono text-base leading-6">
-                            {selectedMobileLog?.model || t('log.details')}
-                        </DialogTitle>
-                        <DialogDescription className="break-all text-xs">
-                            {selectedMobileLog?.request_id || (selectedMobileLog ? `#${selectedMobileLog.id}` : '')}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="max-h-[calc(88dvh-92px)] overflow-y-auto p-3 sm:p-4">
-                        {selectedMobileLog && <ExpandedLogContent log={selectedMobileLog} scope={detailScope} />}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {!isDesktop && (
+                <Dialog open={!!selectedMobileLog} onOpenChange={(open) => !open && setSelectedMobileLog(null)}>
+                    <DialogContent className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+                        <DialogHeader className="border-b border-border/60 px-4 py-4 text-left sm:px-6">
+                            <DialogTitle className="break-all pr-8 font-mono text-base leading-6">
+                                {selectedMobileLog?.model || t('log.details')}
+                            </DialogTitle>
+                            <DialogDescription className="break-all text-xs">
+                                {selectedMobileLog?.request_id || (selectedMobileLog ? `#${selectedMobileLog.id}` : '')}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="max-h-[calc(88dvh-92px)] overflow-y-auto p-3 sm:p-4">
+                            {selectedMobileLog && <ExpandedLogContent log={selectedMobileLog} scope={detailScope} />}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     )
 }

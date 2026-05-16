@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { RefreshCw } from 'lucide-react'
 
 import { useLogs, useLogStats } from '@/feature/log/hooks'
 import { LogExportDialog } from '@/feature/log/components/LogExportDialog'
@@ -7,10 +9,13 @@ import { LogStatsCards } from '@/feature/log/components/LogStatsCards'
 import { LogTable } from '@/feature/log/components/LogTable'
 import { GroupDialog } from '@/feature/group/components/GroupDialog'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
+import { Button } from '@/components/ui/button'
 import type { LogFilters as LogFiltersType } from '@/types/log'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
 
 export default function LogPage() {
+    const { t: rawT } = useTranslation()
+    const t = rawT as (key: string) => string
 
     const getDefaultFilters = (): LogFiltersType => {
         const today = new Date()
@@ -37,10 +42,16 @@ export default function LogPage() {
     const {
         data: logData,
         isLoading,
+        isFetching,
         error,
         refetch
     } = useLogs(filters)
-    const { data: statsData, isLoading: isStatsLoading } = useLogStats(filters)
+    const {
+        data: statsData,
+        isLoading: isStatsLoading,
+        isFetching: isStatsFetching,
+        refetch: refetchStats,
+    } = useLogStats(filters)
 
     const handleFiltersChange = (newFilters: LogFiltersType) => {
         setFilters(newFilters)
@@ -58,6 +69,11 @@ export default function LogPage() {
         refetch()
     }
 
+    const handleRefresh = () => {
+        refetch()
+        refetchStats()
+    }
+
     // 点击 group/token_name → 打开 GroupDialog 的日志标签
     const handleOpenGroupLog = useCallback((group: string, tokenName?: string) => {
         setGroupDialogGroupId(group)
@@ -69,7 +85,18 @@ export default function LogPage() {
         <div className="h-full flex flex-col">
             <div className="flex-shrink-0 p-6 pb-2">
                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRefresh}
+                            disabled={isFetching || isStatsFetching}
+                            className="h-9 px-3"
+                        >
+                            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching || isStatsFetching ? 'animate-spin' : ''}`} />
+                            {t('common.refresh')}
+                        </Button>
                         <LogExportDialog
                             scope="global"
                             currentFilters={filters}

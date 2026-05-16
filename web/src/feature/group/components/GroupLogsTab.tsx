@@ -1,10 +1,13 @@
 // src/feature/group/components/GroupLogsTab.tsx
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { RefreshCw } from 'lucide-react'
 import { logApi } from '@/api/log'
 import { LogExportDialog } from '@/feature/log/components/LogExportDialog'
 import { LogTable } from '@/feature/log/components/LogTable'
 import { LogFilters } from '@/feature/log/components/LogFilters'
+import { Button } from '@/components/ui/button'
 import type { LogFilters as LogFiltersType } from '@/types/log'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
 
@@ -14,6 +17,9 @@ interface GroupLogsTabProps {
 }
 
 export function GroupLogsTab({ groupId, initialTokenName }: GroupLogsTabProps) {
+    const { t: rawT } = useTranslation()
+    const t = rawT as (key: string) => string
+
     const getDefaultFilters = (): LogFiltersType => {
         const today = new Date()
         const oneDayAgo = new Date()
@@ -31,10 +37,13 @@ export function GroupLogsTab({ groupId, initialTokenName }: GroupLogsTabProps) {
 
     const [filters, setFilters] = useState<LogFiltersType>(getDefaultFilters())
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isFetching, refetch } = useQuery({
         queryKey: ['groupLogs', groupId, filters],
         queryFn: () => logApi.getLogsByGroup(groupId, filters),
-        refetchOnWindowFocus: true,
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
         retry: false,
     })
 
@@ -54,7 +63,18 @@ export function GroupLogsTab({ groupId, initialTokenName }: GroupLogsTabProps) {
         <div className="flex flex-col h-full gap-2">
             <div className="flex-shrink-0">
                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                            className="h-9 px-3"
+                        >
+                            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                            {t('common.refresh')}
+                        </Button>
                         <LogExportDialog
                             scope="group"
                             groupId={groupId}

@@ -161,6 +161,11 @@ export const useUserPortalModelLogs = (page: number, perPage: number, enabled = 
         queryKey: ['userPortalModelLogs', page, perPage],
         queryFn: () => userPortalApi.getModelLogs(page, perPage),
         enabled,
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        retry: false,
     })
 }
 
