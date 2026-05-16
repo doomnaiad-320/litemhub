@@ -49,9 +49,8 @@ const uniqueTags = (values: string[]) =>
   Array.from(new Set(values.filter(Boolean)));
 
 const defaultProviderMetrics = {
-  latency: "0.82秒",
-  throughput: "64吨/秒",
-  uptime: 3,
+  requests: "1.2k",
+  successRate: 100,
 };
 
 const categoryColors = ["#9b5cff", "#2f8cff", "#6668ff", "#00a2ff", "#d8951b"];
@@ -1189,9 +1188,9 @@ function ProviderResultRow({
         input: "输入价格",
         output: "输出价格",
         maxOutput: "最大输出",
-        throughput: "吞吐量",
-        uptime: "Uptime",
-        latency: "延迟",
+        throughput: "成功率",
+        uptime: "健康度",
+        latency: "请求数",
       }
     : {
         cache: "Cache read",
@@ -1199,9 +1198,9 @@ function ProviderResultRow({
         input: "Input price",
         output: "Output price",
         maxOutput: "Max output",
-        throughput: "Throughput",
-        uptime: "Uptime",
-        latency: "Latency",
+        throughput: "Success",
+        uptime: "Health",
+        latency: "Requests",
   };
   const unit = isChinese ? "/M 代币" : "/M tokens";
   const displayGroupName = groupName ? `${groupName} 分组` : "";
@@ -1224,29 +1223,20 @@ function ProviderResultRow({
           </span>
         </div>
 
-        <div className="mr-4 grid w-[215px] grid-cols-[55px_76px_74px] items-center gap-2 whitespace-nowrap text-right">
+        <div className="mr-4 grid w-[238px] grid-cols-[68px_84px_74px] items-center gap-2 whitespace-nowrap text-right">
           <ProviderTopMetric
             label={metricLabels.latency}
-            value={defaultProviderMetrics.latency}
+            value={defaultProviderMetrics.requests}
           />
           <ProviderTopMetric
             label={metricLabels.throughput}
-            value={defaultProviderMetrics.throughput}
+            value={`${defaultProviderMetrics.successRate}%`}
           />
           <div className="flex min-h-[35px] flex-col justify-center">
             <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
               {metricLabels.uptime}
             </div>
-            <div className="mt-[8px] flex justify-end gap-[3px]">
-              {Array.from({ length: defaultProviderMetrics.uptime }).map(
-                (_, index) => (
-                  <span
-                    key={index}
-                    className="h-[10px] w-[4px] rounded-[1px] bg-[#24c37a]"
-                  />
-                ),
-              )}
-            </div>
+            <HealthBars score={defaultProviderMetrics.successRate} />
           </div>
         </div>
       </div>
@@ -1327,6 +1317,30 @@ function ProviderTopMetric({ label, value }: { label: string; value: string }) {
       <div className="mt-[8px] font-mono text-[14px] font-semibold leading-none text-[#18181b] dark:text-[#c9ccd5]">
         {value}
       </div>
+    </div>
+  );
+}
+
+function HealthBars({ score }: { score: number }) {
+  const normalizedScore = Math.max(0, Math.min(100, score));
+  const activeBars = normalizedScore > 0 ? Math.ceil(normalizedScore / 20) : 0;
+
+  return (
+    <div
+      className="mt-[8px] flex justify-end gap-[3px]"
+      aria-label={`${normalizedScore}%`}
+    >
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span
+          key={index}
+          className={cn(
+            "h-[14px] w-[4px] rounded-[1px]",
+            index < activeBars
+              ? "bg-[#24c37a]"
+              : "bg-[#d8dce3] dark:bg-[#2a2d34]",
+          )}
+        />
+      ))}
     </div>
   );
 }

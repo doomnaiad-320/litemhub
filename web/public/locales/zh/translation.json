@@ -1691,6 +1691,7 @@
     "priceUnit": "价格按 {{unit}} 展示",
     "freePrice": "Free",
     "perRequestUnit": "次",
+    "health": "健康度",
     "stats": {
       "models": "可用模型",
       "providers": "供应商",
