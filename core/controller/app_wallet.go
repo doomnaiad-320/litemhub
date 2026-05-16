@@ -66,11 +66,18 @@ type AppRechargeLogResponse struct {
 }
 
 type AppBillingSettingsResponse struct {
-	RechargeDiscount float64 `json:"recharge_discount"`
+	RechargeDiscount    float64 `json:"recharge_discount"`
+	RechargeRebateRatio float64 `json:"recharge_rebate_ratio"`
 }
 
 type UpdateAppBillingSettingsRequest struct {
-	RechargeDiscount float64 `json:"recharge_discount"`
+	RechargeDiscount    float64 `json:"recharge_discount"`
+	RechargeRebateRatio float64 `json:"recharge_rebate_ratio"`
+}
+
+type UserDiscountCodeResponse struct {
+	Code      string `json:"code"`
+	CreatedAt int64  `json:"created_at"`
 }
 
 type AdjustAppUserWalletBalanceRequest struct {
@@ -221,6 +228,17 @@ func buildAppPaymentOrderResponses(orders []*model.AppPaymentOrderWithUser) []*A
 	return responses
 }
 
+func buildUserDiscountCodeResponse(code *model.AppUserDiscountCode) *UserDiscountCodeResponse {
+	if code == nil {
+		return nil
+	}
+
+	return &UserDiscountCodeResponse{
+		Code:      code.Code,
+		CreatedAt: code.CreatedAt.UnixMilli(),
+	}
+}
+
 func parseAppUserID(c *gin.Context) (int, bool) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id <= 0 {
@@ -289,7 +307,7 @@ func GetCurrentUserWalletLogs(c *gin.Context) {
 		page,
 		perPage,
 		order,
-		[]string{model.AppWalletLogTypeRecharge},
+		[]string{model.AppWalletLogTypeRecharge, model.AppWalletLogTypeRebate},
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -332,7 +350,8 @@ func GetCurrentUserRechargeLogs(c *gin.Context) {
 func GetAppBillingSettings(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"settings": AppBillingSettingsResponse{
-			RechargeDiscount: config.GetDuluPayRechargeDiscount(),
+			RechargeDiscount:    config.GetDuluPayRechargeDiscount(),
+			RechargeRebateRatio: config.GetDuluPayRechargeRebateRatio(),
 		},
 	})
 }
@@ -348,17 +367,58 @@ func UpdateAppBillingSettings(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "recharge discount must be greater than 0 and less than or equal to 1")
 		return
 	}
+	if req.RechargeRebateRatio < 0 || req.RechargeRebateRatio > 1 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "recharge rebate ratio must be greater than or equal to 0 and less than or equal to 1")
+		return
+	}
 
 	value := strconv.FormatFloat(req.RechargeDiscount, 'f', -1, 64)
 	if err := model.UpdateOption("DuluPayRechargeDiscount", value); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	value = strconv.FormatFloat(req.RechargeRebateRatio, 'f', -1, 64)
+	if err := model.UpdateOption("DuluPayRechargeRebateRatio", value); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	middleware.SuccessResponse(c, gin.H{
 		"settings": AppBillingSettingsResponse{
-			RechargeDiscount: config.GetDuluPayRechargeDiscount(),
+			RechargeDiscount:    config.GetDuluPayRechargeDiscount(),
+			RechargeRebateRatio: config.GetDuluPayRechargeRebateRatio(),
 		},
+	})
+}
+
+func GetCurrentUserDiscountCode(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	code, err := model.GetAppUserDiscountCodeByUserID(user.ID)
+	if err != nil {
+		if errors.Is(err, model.ErrAppUserDiscountCodeNotFound) {
+			middleware.SuccessResponse(c, gin.H{"discount_code": nil})
+			return
+		}
+
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"discount_code": buildUserDiscountCodeResponse(code),
+	})
+}
+
+func GenerateCurrentUserDiscountCode(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	code, err := model.GetOrCreateAppUserDiscountCode(user.ID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"discount_code": buildUserDiscountCodeResponse(code),
 	})
 }
 

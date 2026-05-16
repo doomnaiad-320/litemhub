@@ -30,14 +30,17 @@ var (
 )
 
 type AppPaymentCreateParams struct {
-	UserID     int
-	Amount     float64
-	PayAmount  float64
-	Channel    string
-	OutTradeNo string
-	TradeNo    string
-	PayType    string
-	PayInfo    string
+	UserID       int
+	Amount       float64
+	PayAmount    float64
+	Channel      string
+	OutTradeNo   string
+	TradeNo      string
+	PayType      string
+	PayInfo      string
+	DiscountCode string
+	RebateUserID int
+	RebateRatio  float64
 }
 
 type AppPaymentPaidParams struct {
@@ -76,15 +79,18 @@ func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, err
 	}
 
 	order := &AppPaymentOrder{
-		UserID:     params.UserID,
-		Amount:     normalizeMoney(params.Amount),
-		PayAmount:  normalizeMoney(payAmount),
-		Channel:    channel,
-		OutTradeNo: outTradeNo,
-		TradeNo:    EmptyNullString(strings.TrimSpace(params.TradeNo)),
-		PayType:    EmptyNullString(strings.TrimSpace(params.PayType)),
-		PayInfo:    strings.TrimSpace(params.PayInfo),
-		Status:     AppPaymentStatusPending,
+		UserID:       params.UserID,
+		Amount:       normalizeMoney(params.Amount),
+		PayAmount:    normalizeMoney(payAmount),
+		Channel:      channel,
+		OutTradeNo:   outTradeNo,
+		TradeNo:      EmptyNullString(strings.TrimSpace(params.TradeNo)),
+		PayType:      EmptyNullString(strings.TrimSpace(params.PayType)),
+		PayInfo:      strings.TrimSpace(params.PayInfo),
+		Status:       AppPaymentStatusPending,
+		DiscountCode: EmptyNullString(NormalizeAppUserDiscountCode(params.DiscountCode)),
+		RebateUserID: params.RebateUserID,
+		RebateRatio:  params.RebateRatio,
 	}
 
 	if err := DB.Create(order).Error; err != nil {
@@ -176,7 +182,32 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 			return rechargeErr
 		}
 
-		return tx.Model(order).Update("recharge_log_id", rechargeLog.ID).Error
+		updates := map[string]any{
+			"recharge_log_id": rechargeLog.ID,
+		}
+
+		if order.RebateUserID > 0 && order.RebateRatio > 0 && order.RebateUserID != order.UserID {
+			rebateAmount := calculateRebateAmount(order.ExpectedPayAmount(), order.RebateRatio)
+			if rebateAmount > 0 {
+				_, rebateLog, err := rebateAppUserBalanceWithTx(tx, AppUserRebateParams{
+					UserID:       order.RebateUserID,
+					Amount:       rebateAmount,
+					SourceUserID: order.UserID,
+					OrderNo:      order.OutTradeNo,
+					DiscountCode: string(order.DiscountCode),
+				})
+				if err != nil {
+					return err
+				}
+
+				order.RebateAmount = rebateAmount
+				order.RebateLogID = rebateLog.ID
+				updates["rebate_amount"] = rebateAmount
+				updates["rebate_log_id"] = rebateLog.ID
+			}
+		}
+
+		return tx.Model(order).Updates(updates).Error
 	})
 
 	return order, wallet, rechargeLog, err
@@ -184,6 +215,14 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 
 func normalizeMoney(amount float64) float64 {
 	return decimal.NewFromFloat(amount).Round(2).InexactFloat64()
+}
+
+func calculateRebateAmount(payAmount float64, rebateRatio float64) float64 {
+	if payAmount <= 0 || rebateRatio <= 0 {
+		return 0
+	}
+
+	return normalizeMoney(payAmount * rebateRatio)
 }
 
 func (o *AppPaymentOrder) ExpectedPayAmount() float64 {

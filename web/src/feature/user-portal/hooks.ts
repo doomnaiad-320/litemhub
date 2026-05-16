@@ -117,6 +117,30 @@ export const useUserPortalRechargeLogs = (page: number, perPage: number, enabled
     })
 }
 
+export const useUserPortalDiscountCode = (enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalDiscountCode'],
+        queryFn: () => userPortalApi.getDiscountCode(),
+        enabled,
+    })
+}
+
+export const useGenerateUserPortalDiscountCode = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: () => userPortalApi.generateDiscountCode(),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['userPortalDiscountCode'] })
+            toast.success('折扣码已生成')
+        },
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '生成折扣码失败'
+            toast.error(message)
+        },
+    })
+}
+
 export const useUserPortalDuluPayRecharge = () => {
     const queryClient = useQueryClient()
 

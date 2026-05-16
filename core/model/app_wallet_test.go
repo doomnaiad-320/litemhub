@@ -357,6 +357,70 @@ func TestMarkAppPaymentOrderPaidRejectsAmountDifferentFromPayAmount(t *testing.T
 	})
 }
 
+func TestMarkAppPaymentOrderPaidCreditsRebateToReferrer(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		referrer := createTestAppUserWithEmail(t, "referrer@example.com")
+		payer := createTestAppUserWithEmail(t, "payer@example.com")
+
+		code, err := model.GetOrCreateAppUserDiscountCode(referrer.ID)
+		require.NoError(t, err)
+		require.NotEmpty(t, code.Code)
+
+		order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:       payer.ID,
+			Amount:       100,
+			PayAmount:    90,
+			Channel:      "dulupay",
+			OutTradeNo:   "UP-rebate",
+			DiscountCode: code.Code,
+			RebateUserID: referrer.ID,
+			RebateRatio:  0.1,
+		})
+		require.NoError(t, err)
+		require.Equal(t, code.Code, string(order.DiscountCode))
+
+		order, payerWallet, rechargeLog, err := model.MarkAppPaymentOrderPaid(model.AppPaymentPaidParams{
+			OutTradeNo:    "UP-rebate",
+			TradeNo:       "dulupay-rebate",
+			Amount:        90,
+			NotifyPayload: `{"money":"90.00"}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, 100.0, payerWallet.AvailableBalance)
+		require.Equal(t, 100.0, rechargeLog.Amount)
+		require.Equal(t, 9.0, order.RebateAmount)
+		require.NotZero(t, order.RebateLogID)
+
+		referrerWallet, err := model.GetAppUserWalletByUserID(referrer.ID)
+		require.NoError(t, err)
+		require.Equal(t, 9.0, referrerWallet.AvailableBalance)
+
+		referrerLogs, total, err := model.GetAppWalletLogsByTypes(
+			referrer.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeRebate},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, total)
+		require.Len(t, referrerLogs, 1)
+		require.Equal(t, model.AppWalletLogTypeRebate, referrerLogs[0].Type)
+		require.Equal(t, 9.0, referrerLogs[0].Amount)
+
+		payerLogs, total, err := model.GetAppWalletLogsByTypes(
+			payer.ID,
+			1,
+			10,
+			"id-asc",
+			[]string{model.AppWalletLogTypeRebate},
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 0, total)
+		require.Empty(t, payerLogs)
+	})
+}
+
 func TestReleaseAppUserReservation(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)
@@ -599,6 +663,7 @@ func withTestAppWalletDB(t *testing.T, fn func()) {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(
 		&model.AppUser{},
+		&model.AppUserDiscountCode{},
 		&model.AppUserWallet{},
 		&model.AppRechargeLog{},
 		&model.AppPaymentOrder{},
@@ -626,8 +691,14 @@ func withTestAppWalletDB(t *testing.T, fn func()) {
 func createTestAppUser(t *testing.T) *model.AppUser {
 	t.Helper()
 
+	return createTestAppUserWithEmail(t, "wallet@example.com")
+}
+
+func createTestAppUserWithEmail(t *testing.T, email string) *model.AppUser {
+	t.Helper()
+
 	user := &model.AppUser{
-		Email:        model.EmptyNullString("wallet@example.com"),
+		Email:        model.EmptyNullString(email),
 		PasswordHash: "hashed-password",
 		Status:       model.AppUserStatusEnabled,
 	}

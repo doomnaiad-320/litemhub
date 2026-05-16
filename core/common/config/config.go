@@ -30,6 +30,7 @@ var (
 	usageAlertWhitelist          atomic.Value
 	usageAlertMinAvgThreshold    atomic.Int64 // 前三天平均用量最低阈值，default 0 means no limit
 	duluPayRechargeDiscount      uint64       = math.Float64bits(1)
+	duluPayRechargeRebateRatio   uint64       = math.Float64bits(0)
 
 	defaultWarnNotifyErrorRate uint64 = math.Float64bits(0.5)
 
@@ -307,4 +308,17 @@ func SetDuluPayRechargeDiscount(discount float64) {
 	}
 
 	atomic.StoreUint64(&duluPayRechargeDiscount, math.Float64bits(discount))
+}
+
+func GetDuluPayRechargeRebateRatio() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&duluPayRechargeRebateRatio))
+}
+
+func SetDuluPayRechargeRebateRatio(ratio float64) {
+	ratio = env.Float64("DULUPAY_RECHARGE_REBATE_RATIO", ratio)
+	if ratio < 0 || ratio > 1 {
+		ratio = 0
+	}
+
+	atomic.StoreUint64(&duluPayRechargeRebateRatio, math.Float64bits(ratio))
 }

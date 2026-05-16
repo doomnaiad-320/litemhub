@@ -92,6 +92,7 @@ func ReloadEnv() {
 	DuluPayMinAmount = env.Float64("DULUPAY_MIN_AMOUNT", 1)
 	DuluPayMaxAmount = env.Float64("DULUPAY_MAX_AMOUNT", 50000)
 	SetDuluPayRechargeDiscount(1)
+	SetDuluPayRechargeRebateRatio(0)
 	UserOAuthGitHubClientID = os.Getenv("USER_OAUTH_GITHUB_CLIENT_ID")
 	UserOAuthGitHubClientSecret = os.Getenv("USER_OAUTH_GITHUB_CLIENT_SECRET")
 	UserOAuthGoogleClientID = os.Getenv("USER_OAUTH_GOOGLE_CLIENT_ID")

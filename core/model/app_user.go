@@ -45,6 +45,7 @@ const (
 	AppWalletLogTypeSettle   = "settle"
 	AppWalletLogTypeRelease  = "release"
 	AppWalletLogTypeAdjust   = "adjust"
+	AppWalletLogTypeRebate   = "rebate"
 )
 
 type AppUser struct {
@@ -69,6 +70,31 @@ func (u *AppUser) BeforeSave(_ *gorm.DB) error {
 
 	if u.PasswordHash == "" {
 		return errors.New("password hash is required")
+	}
+
+	return nil
+}
+
+type AppUserDiscountCode struct {
+	ID        int       `json:"id"         gorm:"primaryKey"`
+	UserID    int       `json:"user_id"    gorm:"uniqueIndex;not null"`
+	Code      string    `json:"code"       gorm:"size:32;uniqueIndex;not null"`
+	Status    int       `json:"status"     gorm:"default:1;index"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (*AppUserDiscountCode) TableName() string {
+	return "app_user_discount_code"
+}
+
+func (c *AppUserDiscountCode) BeforeSave(_ *gorm.DB) error {
+	if c.UserID == 0 {
+		return errors.New("user id is required")
+	}
+
+	if c.Code == "" {
+		return errors.New("discount code is required")
 	}
 
 	return nil
@@ -144,6 +170,11 @@ type AppPaymentOrder struct {
 	Status        string          `json:"status"           gorm:"size:32;index;not null"`
 	NotifyPayload string          `json:"notify_payload"   gorm:"type:text"`
 	RechargeLogID int             `json:"recharge_log_id"  gorm:"index"`
+	DiscountCode  EmptyNullString `json:"discount_code"    gorm:"size:32;index"`
+	RebateUserID  int             `json:"rebate_user_id"   gorm:"index"`
+	RebateRatio   float64         `json:"rebate_ratio"`
+	RebateAmount  float64         `json:"rebate_amount"`
+	RebateLogID   int             `json:"rebate_log_id"    gorm:"index"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 	PaidAt        *time.Time      `json:"paid_at,omitempty"`

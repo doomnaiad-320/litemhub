@@ -5,6 +5,7 @@ import type { LogRequestDetail } from '@/types/log'
 import type {
     UserPortalAuthResponse,
     UserPortalCreateKeyRequest,
+    UserPortalDiscountCodeResponse,
     UserPortalEmailCodeRequest,
     UserPortalEmailCodeResponse,
     UserPortalGroupsResponse,
@@ -136,6 +137,14 @@ export const userPortalApi = {
             p: page,
             per_page: perPage,
         })
+    },
+
+    getDiscountCode: async () => {
+        return get<UserPortalDiscountCodeResponse>('wallet/discount-code')
+    },
+
+    generateDiscountCode: async () => {
+        return post<UserPortalDiscountCodeResponse>('wallet/discount-code')
     },
 
     createDuluPayRecharge: async (data: UserPortalRechargeRequest) => {

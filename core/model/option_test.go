@@ -49,3 +49,43 @@ func TestUpdateDuluPayRechargeDiscountOptionRejectsInvalidValue(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 1.0, config.GetDuluPayRechargeDiscount())
 }
+
+func TestUpdateDuluPayRechargeRebateRatioOption(t *testing.T) {
+	oldDB := model.DB
+	oldRatio := config.GetDuluPayRechargeRebateRatio()
+
+	db, err := model.OpenSQLite(filepath.Join(t.TempDir(), "option_rebate_test.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Option{}))
+
+	model.DB = db
+	config.SetDuluPayRechargeRebateRatio(0)
+	t.Cleanup(func() {
+		model.DB = oldDB
+		config.SetDuluPayRechargeRebateRatio(oldRatio)
+
+		sqlDB, err := db.DB()
+		require.NoError(t, err)
+		require.NoError(t, sqlDB.Close())
+	})
+
+	require.NoError(t, model.InitOption2DB())
+	require.NoError(t, model.UpdateOption("DuluPayRechargeRebateRatio", "0.1"))
+	require.Equal(t, 0.1, config.GetDuluPayRechargeRebateRatio())
+
+	option, err := model.GetOption("DuluPayRechargeRebateRatio")
+	require.NoError(t, err)
+	require.Equal(t, "0.1", option.Value)
+}
+
+func TestUpdateDuluPayRechargeRebateRatioOptionRejectsInvalidValue(t *testing.T) {
+	oldRatio := config.GetDuluPayRechargeRebateRatio()
+	config.SetDuluPayRechargeRebateRatio(0)
+	t.Cleanup(func() {
+		config.SetDuluPayRechargeRebateRatio(oldRatio)
+	})
+
+	err := model.UpdateOption("DuluPayRechargeRebateRatio", "1.2")
+	require.Error(t, err)
+	require.Equal(t, 0.0, config.GetDuluPayRechargeRebateRatio())
+}

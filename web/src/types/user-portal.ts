@@ -72,6 +72,7 @@ export interface UserPortalRechargeRequest {
     amount: number
     type?: string
     device?: string
+    discount_code?: string
 }
 
 export interface UserPortalPayment {
@@ -87,6 +88,15 @@ export interface UserPortalPayment {
 
 export interface UserPortalRechargeResponse {
     payment: UserPortalPayment
+}
+
+export interface UserPortalDiscountCode {
+    code: string
+    created_at: number
+}
+
+export interface UserPortalDiscountCodeResponse {
+    discount_code: UserPortalDiscountCode | null
 }
 
 export interface UserPortalModelLogsResponse {

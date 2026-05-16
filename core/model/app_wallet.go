@@ -38,6 +38,14 @@ type AppUserRechargeParams struct {
 	Remark     string
 }
 
+type AppUserRebateParams struct {
+	UserID       int
+	Amount       float64
+	SourceUserID int
+	OrderNo      string
+	DiscountCode string
+}
+
 type AppUserWalletAdjustParams struct {
 	UserID int
 	Amount float64
@@ -794,6 +802,67 @@ func rechargeAppUserBalanceWithTx(
 	}
 
 	return wallet, rechargeLog, nil
+}
+
+func rebateAppUserBalanceWithTx(
+	tx *gorm.DB,
+	params AppUserRebateParams,
+) (wallet *AppUserWallet, walletLog *AppWalletLog, err error) {
+	if params.UserID == 0 {
+		return nil, nil, errors.New("user id is empty")
+	}
+
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
+		return nil, nil, errors.New("rebate amount must be greater than zero")
+	}
+
+	wallet = &AppUserWallet{}
+	if err := tx.
+		Where("user_id = ?", params.UserID).
+		Attrs(AppUserWallet{UserID: params.UserID}).
+		FirstOrCreate(wallet).Error; err != nil {
+		return nil, nil, err
+	}
+
+	amount := normalizeMoney(params.Amount)
+	result := tx.
+		Model(wallet).
+		Clauses(clause.Returning{
+			Columns: []clause.Column{
+				{Name: "available_balance"},
+				{Name: "updated_at"},
+			},
+		}).
+		Where("id = ?", wallet.ID).
+		Update("available_balance", gorm.Expr("available_balance + ?", amount))
+	if err := HandleUpdateResult(result, ErrAppUserWalletNotFound); err != nil {
+		return nil, nil, err
+	}
+
+	balanceAfter := wallet.AvailableBalance
+	balanceBefore := balanceAfter - amount
+	remark := fmt.Sprintf(
+		"Recharge rebate from user #%d order %s",
+		params.SourceUserID,
+		strings.TrimSpace(params.OrderNo),
+	)
+	if code := NormalizeAppUserDiscountCode(params.DiscountCode); code != "" {
+		remark += " code " + code
+	}
+
+	walletLog = &AppWalletLog{
+		UserID:        params.UserID,
+		Type:          AppWalletLogTypeRebate,
+		Amount:        amount,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter,
+		Remark:        remark,
+	}
+	if err := tx.Create(walletLog).Error; err != nil {
+		return nil, nil, err
+	}
+
+	return wallet, walletLog, nil
 }
 
 func AdjustAppUserWalletBalance(params AppUserWalletAdjustParams) (

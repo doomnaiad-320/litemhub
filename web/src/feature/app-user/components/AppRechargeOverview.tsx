@@ -109,6 +109,7 @@ export function AppRechargeOverview() {
     const [channelFilter, setChannelFilter] = useState('all')
     const [granularity, setGranularity] = useState<Granularity>('day')
     const [discountInput, setDiscountInput] = useState('')
+    const [rebateRatioInput, setRebateRatioInput] = useState('')
 
     const startTimestamp = dateRange?.from
         ? zonedBoundaryToUnixMs(dateRange.from, DEFAULT_TIMEZONE, false)
@@ -139,6 +140,7 @@ export function AppRechargeOverview() {
 
     const stats = statsData?.stats
     const rechargeDiscount = billingSettingsData?.settings.recharge_discount ?? 1
+    const rechargeRebateRatio = billingSettingsData?.settings.recharge_rebate_ratio ?? 0
     const logs = logsData?.recharge_logs || []
     const total = logsData?.total || 0
     const channels = stats?.by_channel || []
@@ -148,7 +150,10 @@ export function AppRechargeOverview() {
         if (billingSettingsData?.settings.recharge_discount) {
             setDiscountInput(String(billingSettingsData.settings.recharge_discount))
         }
-    }, [billingSettingsData?.settings.recharge_discount])
+        if (billingSettingsData?.settings.recharge_rebate_ratio !== undefined) {
+            setRebateRatioInput(String(billingSettingsData.settings.recharge_rebate_ratio))
+        }
+    }, [billingSettingsData?.settings.recharge_discount, billingSettingsData?.settings.recharge_rebate_ratio])
 
     const chartOption: EChartsOption = useMemo(() => {
         const series = stats?.time_series || []
@@ -250,11 +255,17 @@ export function AppRechargeOverview() {
         if (!Number.isFinite(discount) || discount <= 0 || discount > 1) {
             return
         }
+        const rebateRatio = Number(rebateRatioInput)
+        if (!Number.isFinite(rebateRatio) || rebateRatio < 0 || rebateRatio > 1) {
+            return
+        }
 
         await updateBillingSettingsMutation.mutateAsync({
             recharge_discount: discount,
+            recharge_rebate_ratio: rebateRatio,
         })
         setDiscountInput(String(discount))
+        setRebateRatioInput(String(rebateRatio))
     }
 
     return (
@@ -459,7 +470,7 @@ export function AppRechargeOverview() {
             </Card>
 
             <Card className="overflow-hidden rounded-md border-border bg-background shadow-none">
-                <div className="grid gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+                <div className="grid gap-5 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_520px] xl:items-end">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium text-primary">
                             <Percent className="h-4 w-4 shrink-0" />
@@ -475,38 +486,63 @@ export function AppRechargeOverview() {
                                 })
                             )}
                         </div>
+                        <div className="mt-1 text-sm font-medium text-muted-foreground">
+                            {t('appUser.rechargeStats.currentRebateRatio', {
+                                ratio: rechargeRebateRatio,
+                                percent: Math.round(rechargeRebateRatio * 10000) / 100,
+                            })}
+                        </div>
                         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
                             {t('appUser.rechargeStats.discountDescription')}
                         </p>
                     </div>
 
-                    <div className="grid gap-2">
-                        <label htmlFor="recharge-discount" className="text-xs font-medium text-muted-foreground">
-                            {t('appUser.rechargeStats.discountInput')}
-                        </label>
-                        <div className="flex gap-2">
-                            <Input
-                                id="recharge-discount"
-                                type="number"
-                                min="0.01"
-                                max="1"
-                                step="0.01"
-                                value={discountInput}
-                                onChange={(event) => setDiscountInput(event.target.value)}
-                                className="h-10 rounded-md border-border bg-background font-mono shadow-none"
-                            />
+                    <div className="grid gap-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="grid gap-2">
+                                <label htmlFor="recharge-discount" className="text-xs font-medium text-muted-foreground">
+                                    {t('appUser.rechargeStats.discountInput')}
+                                </label>
+                                <Input
+                                    id="recharge-discount"
+                                    type="number"
+                                    min="0.01"
+                                    max="1"
+                                    step="0.01"
+                                    value={discountInput}
+                                    onChange={(event) => setDiscountInput(event.target.value)}
+                                    className="h-10 rounded-md border-border bg-background font-mono shadow-none"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <label htmlFor="recharge-rebate-ratio" className="text-xs font-medium text-muted-foreground">
+                                    {t('appUser.rechargeStats.rebateRatioInput')}
+                                </label>
+                                <Input
+                                    id="recharge-rebate-ratio"
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value={rebateRatioInput}
+                                    onChange={(event) => setRebateRatioInput(event.target.value)}
+                                    className="h-10 rounded-md border-border bg-background font-mono shadow-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="text-xs text-muted-foreground">
+                                {t('appUser.rechargeStats.discountHint')}
+                            </div>
                             <Button
                                 onClick={submitDiscount}
                                 disabled={isBillingSettingsLoading || updateBillingSettingsMutation.isPending}
-                                className="h-10 rounded-md px-4"
+                                className="h-10 rounded-md px-4 sm:min-w-[120px]"
                             >
                                 {updateBillingSettingsMutation.isPending
                                     ? t('appUser.rechargeStats.savingDiscount')
                                     : t('appUser.rechargeStats.saveDiscount')}
                             </Button>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                            {t('appUser.rechargeStats.discountHint')}
                         </div>
                     </div>
                 </div>
