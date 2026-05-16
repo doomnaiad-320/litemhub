@@ -27,15 +27,21 @@ func (t *TokenResponse) MarshalJSON() ([]byte, error) {
 	if !t.AccessedAt.IsZero() {
 		accessedAt = t.AccessedAt.UnixMilli()
 	}
+	expiredAt := int64(0)
+	if !t.ExpiredAt.IsZero() {
+		expiredAt = t.ExpiredAt.UnixMilli()
+	}
 
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt            int64 `json:"created_at"`
+		ExpiredAt            int64 `json:"expired_at"`
 		PeriodLastUpdateTime int64 `json:"period_last_update_time"`
 		AccessedAt           int64 `json:"accessed_at"`
 	}{
 		Alias:                (*Alias)(t),
 		CreatedAt:            t.CreatedAt.UnixMilli(),
+		ExpiredAt:            expiredAt,
 		PeriodLastUpdateTime: t.PeriodLastUpdateTime.UnixMilli(),
 		AccessedAt:           accessedAt,
 	})
@@ -50,6 +56,7 @@ type (
 		PeriodQuota          float64  `json:"period_quota"`
 		PeriodType           string   `json:"period_type"`
 		PeriodLastUpdateTime int64    `json:"period_last_update_time"`
+		ExpiredAt            int64    `json:"expired_at"`
 	}
 
 	UpdateTokenStatusRequest struct {
@@ -73,6 +80,9 @@ func (at *AddTokenRequest) ToToken() *model.Token {
 
 	if at.PeriodLastUpdateTime > 0 {
 		token.PeriodLastUpdateTime = time.UnixMilli(at.PeriodLastUpdateTime)
+	}
+	if at.ExpiredAt > 0 {
+		token.ExpiredAt = time.UnixMilli(at.ExpiredAt)
 	}
 
 	return token

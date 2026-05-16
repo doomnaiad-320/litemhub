@@ -2,10 +2,18 @@ package model
 
 import (
 	"errors"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm/clause"
 )
+
+type UpdateAppUserTokenRequest struct {
+	GroupID   string
+	Models    *[]string
+	Quota     *float64
+	ExpiredAt *int64
+}
 
 func GetAppUserTokens(
 	userID int,
@@ -113,6 +121,10 @@ func DeleteAppUserTokenByID(userID, id int) (err error) {
 }
 
 func UpdateAppUserTokenGroupByID(userID, id int, groupID string) (token *Token, err error) {
+	return UpdateAppUserTokenByID(userID, id, UpdateAppUserTokenRequest{GroupID: groupID})
+}
+
+func UpdateAppUserTokenByID(userID, id int, update UpdateAppUserTokenRequest) (token *Token, err error) {
 	if userID == 0 {
 		return nil, errors.New("user id is empty")
 	}
@@ -121,12 +133,18 @@ func UpdateAppUserTokenGroupByID(userID, id int, groupID string) (token *Token, 
 		return nil, errors.New("id is empty")
 	}
 
-	if groupID == "" {
+	if update.GroupID == "" {
 		return nil, errors.New("group is empty")
 	}
 
-	if _, err := EnsureGroupEnabled(groupID); err != nil {
+	if _, err := EnsureGroupEnabled(update.GroupID); err != nil {
 		return nil, err
+	}
+	if update.Quota != nil && *update.Quota < 0 {
+		return nil, errors.New("quota must be greater than or equal to 0")
+	}
+	if update.ExpiredAt != nil && *update.ExpiredAt < 0 {
+		return nil, errors.New("expired_at is invalid")
 	}
 
 	token = &Token{ID: id}
@@ -138,10 +156,27 @@ func UpdateAppUserTokenGroupByID(userID, id int, groupID string) (token *Token, 
 		}
 	}()
 
+	updates := map[string]any{
+		"group_id": update.GroupID,
+	}
+	if update.Models != nil {
+		updates["models"] = *update.Models
+	}
+	if update.Quota != nil {
+		updates["quota"] = *update.Quota
+	}
+	if update.ExpiredAt != nil {
+		if *update.ExpiredAt > 0 {
+			updates["expired_at"] = time.UnixMilli(*update.ExpiredAt)
+		} else {
+			updates["expired_at"] = nil
+		}
+	}
+
 	result := appUserTokenQuery(userID).
 		Clauses(clause.Returning{}).
 		Where("id = ?", id).
-		Updates(&Token{GroupID: groupID})
+		Updates(updates)
 	if result.Error != nil {
 		return nil, result.Error
 	}

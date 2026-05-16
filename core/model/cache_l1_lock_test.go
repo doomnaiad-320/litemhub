@@ -274,6 +274,23 @@ func TestCacheUpdateTokenStatusUpdatesLocalCache(t *testing.T) {
 	})
 }
 
+func TestGetAndValidateTokenRejectsExpiredToken(t *testing.T) {
+	withTestModelCacheDB(t, func() {
+		token := &Token{
+			Key:       "123456789012345678901234567890123456789012345678",
+			Name:      EmptyNullString("expired-token"),
+			GroupID:   "expired-group",
+			Status:    TokenStatusEnabled,
+			ExpiredAt: time.Now().Add(-time.Minute),
+		}
+		require.NoError(t, DB.Create(token).Error)
+
+		_, err := GetAndValidateToken(token.Key)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "is expired")
+	})
+}
+
 func TestTokenCacheLoadsAppUserGroupPriceMultiplierOverride(t *testing.T) {
 	withTestModelCacheDB(t, func() {
 		require.NoError(t, DB.Create(&AppUser{

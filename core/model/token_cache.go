@@ -35,6 +35,7 @@ type TokenCache struct {
 	ID                      int              `json:"id"          redis:"i"`
 	Status                  int              `json:"status"      redis:"st"`
 	OwnerUserID             int              `json:"owner_user_id,omitempty" redis:"oui"`
+	ExpiredAt               redisTime        `json:"expired_at,omitempty"    redis:"ea"`
 	UsedAmount              float64          `json:"used_amount" redis:"u"`
 	PriceMultiplierOverride float64          `json:"price_multiplier_override,omitempty" redis:"pmo"`
 
@@ -162,6 +163,7 @@ func (t *Token) ToTokenCache() *TokenCache {
 		Subnets:     t.Subnets,
 		Status:      t.Status,
 		OwnerUserID: t.OwnerUserID,
+		ExpiredAt:   redisTime(t.ExpiredAt),
 		UsedAmount:  t.UsedAmount,
 
 		Quota:                  t.Quota,

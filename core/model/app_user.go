@@ -78,7 +78,7 @@ func (u *AppUser) BeforeSave(_ *gorm.DB) error {
 type AppUserDiscountCode struct {
 	ID        int       `json:"id"         gorm:"primaryKey"`
 	UserID    int       `json:"user_id"    gorm:"uniqueIndex;not null"`
-	Code      string    `json:"code"       gorm:"size:32;uniqueIndex;not null"`
+	Code      string    `json:"code"       gorm:"size:6;uniqueIndex;not null"`
 	Status    int       `json:"status"     gorm:"default:1;index"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

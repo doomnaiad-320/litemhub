@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -418,6 +419,21 @@ func TestMarkAppPaymentOrderPaidCreditsRebateToReferrer(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 0, total)
 		require.Empty(t, payerLogs)
+	})
+}
+
+func TestGetOrCreateAppUserDiscountCodeGeneratesShortAlphanumericCode(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		code, err := model.GetOrCreateAppUserDiscountCode(user.ID)
+		require.NoError(t, err)
+		require.Len(t, code.Code, 6)
+		require.True(t, model.IsAppUserDiscountCodeValid(code.Code))
+
+		lowercaseCode, err := model.GetAppUserDiscountCodeByCode(strings.ToLower(code.Code))
+		require.NoError(t, err)
+		require.Equal(t, code.ID, lowercaseCode.ID)
 	})
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/controller/utils"
@@ -15,14 +16,19 @@ import (
 )
 
 type CreateAppUserKeyRequest struct {
-	Group   string   `json:"group"`
-	Name    string   `json:"name"`
-	Subnets []string `json:"subnets"`
-	Models  []string `json:"models"`
+	Group     string   `json:"group"`
+	Name      string   `json:"name"`
+	Subnets   []string `json:"subnets"`
+	Models    []string `json:"models"`
+	Quota     float64  `json:"quota"`
+	ExpiredAt int64    `json:"expired_at"`
 }
 
 type UpdateAppUserKeyRequest struct {
-	Group string `json:"group"`
+	Group     string   `json:"group"`
+	Models    []string `json:"models"`
+	Quota     *float64 `json:"quota"`
+	ExpiredAt *int64   `json:"expired_at"`
 }
 
 type UserGroupModelDetailResponse struct {
@@ -284,6 +290,14 @@ func CreateCurrentUserKey(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "name is required")
 		return
 	}
+	if req.Quota < 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "quota must be greater than or equal to 0")
+		return
+	}
+	if req.ExpiredAt < 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "expired_at is invalid")
+		return
+	}
 
 	if err := validateSubnets(req.Subnets); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
@@ -318,7 +332,11 @@ func CreateCurrentUserKey(c *gin.Context) {
 		GroupID: req.Group,
 		Subnets: req.Subnets,
 		Models:  req.Models,
+		Quota:   req.Quota,
 		Status:  model.TokenStatusEnabled,
+	}
+	if req.ExpiredAt > 0 {
+		token.ExpiredAt = time.UnixMilli(req.ExpiredAt)
 	}
 
 	if err := model.CreateAppUserToken(user.ID, token); err != nil {
@@ -379,9 +397,16 @@ func UpdateCurrentUserKey(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
 		return
 	}
+	if req.Quota != nil && *req.Quota < 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "quota must be greater than or equal to 0")
+		return
+	}
+	if req.ExpiredAt != nil && *req.ExpiredAt < 0 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "expired_at is invalid")
+		return
+	}
 
-	currentToken, err := model.GetAppUserTokenByID(user.ID, id)
-	if err != nil {
+	if _, err := model.GetAppUserTokenByID(user.ID, id); err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
@@ -408,12 +433,18 @@ func UpdateCurrentUserKey(c *gin.Context) {
 		return
 	}
 
-	if _, err := normalizeRequestedGroupModels(currentToken.Models, groupOption.Models); err != nil {
+	req.Models, err = normalizeRequestedGroupModels(req.Models, groupOption.Models)
+	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	token, err := model.UpdateAppUserTokenGroupByID(user.ID, id, req.Group)
+	token, err := model.UpdateAppUserTokenByID(user.ID, id, model.UpdateAppUserTokenRequest{
+		GroupID:   req.Group,
+		Models:    &req.Models,
+		Quota:     req.Quota,
+		ExpiredAt: req.ExpiredAt,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrGroupUnavailable):

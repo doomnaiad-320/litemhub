@@ -41,6 +41,7 @@ type Token struct {
 	Status      int             `json:"status"     gorm:"default:1;index"`
 	ID          int             `json:"id"         gorm:"primaryKey"`
 	OwnerUserID int             `json:"owner_user_id,omitempty" gorm:"index"`
+	ExpiredAt   time.Time       `json:"expired_at,omitempty"    gorm:"index"`
 
 	UsedAmount   float64 `json:"used_amount"   gorm:"index"`
 	RequestCount int     `json:"request_count" gorm:"index"`
@@ -460,6 +461,9 @@ func GetAndValidateToken(key string) (token *TokenCache, err error) {
 
 	if token.Status == TokenStatusDisabled {
 		return nil, fmt.Errorf("token (%s[%d]) is disabled", token.Name, token.ID)
+	}
+	if !time.Time(token.ExpiredAt).IsZero() && time.Now().After(time.Time(token.ExpiredAt)) {
+		return nil, fmt.Errorf("token (%s[%d]) is expired", token.Name, token.ID)
 	}
 
 	// Convert TokenCache to Token for quota checking
