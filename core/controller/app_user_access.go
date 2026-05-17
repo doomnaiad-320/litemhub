@@ -36,6 +36,7 @@ type UserGroupModelDetailResponse struct {
 	Price              model.Price                   `json:"price,omitempty"`
 	ImagePrices        map[string]float64            `json:"image_prices,omitempty"`
 	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
+	Health             model.GroupModelHealthMetric  `json:"health,omitempty"`
 }
 
 type UserGroupOptionResponse struct {
@@ -102,6 +103,16 @@ func buildUserGroupModelDetails(groupCache *model.GroupCache, models []string) (
 		configByModel[strings.ToLower(config.Model)] = config
 	}
 
+	healthMetrics, err := model.GetGroupModelHealthMetrics(groupCache.ID, models)
+	if err != nil {
+		return nil, err
+	}
+
+	healthByModel := make(map[string]model.GroupModelHealthMetric, len(healthMetrics))
+	for _, metric := range healthMetrics {
+		healthByModel[strings.ToLower(metric.Model)] = metric
+	}
+
 	multiplier := groupCache.GetPriceMultiplier()
 	modelDetails := make([]*UserGroupModelDetailResponse, 0, len(models))
 	for _, modelName := range models {
@@ -119,6 +130,7 @@ func buildUserGroupModelDetails(groupCache *model.GroupCache, models []string) (
 			Price:              config.Price.ApplyMultiplier(multiplier),
 			ImagePrices:        applyPriceMultiplierToImagePrices(config.ImagePrices, multiplier),
 			ImageQualityPrices: applyPriceMultiplierToImageQualityPrices(config.ImageQualityPrices, multiplier),
+			Health:             healthByModel[strings.ToLower(modelName)],
 		})
 	}
 

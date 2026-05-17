@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/labring/aiproxy/core/model"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseSummaryFields_ServiceTierBreakdownFields(t *testing.T) {
@@ -1099,4 +1101,64 @@ func TestBuildSelectFieldsV2_WhitelistValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetGroupModelHealthMetricsAggregatesSummaryRows(t *testing.T) {
+	db, err := model.OpenSQLite(filepath.Join(t.TempDir(), "summary_health.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.GroupSummary{}))
+
+	prevLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = prevLogDB
+
+		sqlDB, err := db.DB()
+		require.NoError(t, err)
+		require.NoError(t, sqlDB.Close())
+	})
+
+	require.NoError(t, db.Create(&model.GroupSummary{
+		Unique: model.GroupSummaryUnique{
+			GroupID:       "g1",
+			TokenName:     "key-a",
+			Model:         "gpt-4.1",
+			HourTimestamp: time.Date(2026, 5, 17, 0, 0, 0, 0, time.UTC).Unix(),
+		},
+		Data: model.SummaryData{
+			SummaryDataSet: model.SummaryDataSet{
+				Count: model.Count{
+					RequestCount:   10,
+					Status2xxCount: 9,
+					ExceptionCount: 1,
+				},
+			},
+		},
+	}).Error)
+	require.NoError(t, db.Create(&model.GroupSummary{
+		Unique: model.GroupSummaryUnique{
+			GroupID:       "g1",
+			TokenName:     "key-b",
+			Model:         "gpt-4.1",
+			HourTimestamp: time.Date(2026, 5, 17, 1, 0, 0, 0, time.UTC).Unix(),
+		},
+		Data: model.SummaryData{
+			SummaryDataSet: model.SummaryDataSet{
+				Count: model.Count{
+					RequestCount:   10,
+					Status2xxCount: 6,
+					ExceptionCount: 4,
+				},
+			},
+		},
+	}).Error)
+
+	metrics, err := model.GetGroupModelHealthMetrics("g1", []string{"gpt-4.1"})
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, int64(20), metrics[0].RequestCount)
+	require.Equal(t, int64(15), metrics[0].SuccessCount)
+	require.Equal(t, int64(5), metrics[0].ErrorCount)
+	require.Equal(t, 0.75, metrics[0].SuccessRate)
+	require.Equal(t, 75, metrics[0].HealthPercent)
 }

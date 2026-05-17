@@ -151,9 +151,13 @@ const getModelRecency = (model: PublicModel) => model.updated_at || model.create
 const getModelPopularityScore = (model: PublicModel) =>
   (model.available_groups || []).length * 10 + (model.available_sets || []).length;
 
-const getModelHealthScore = () => 100;
+const getModelHealthScore = (model: PublicModel) => model.health?.health_percent;
 
-const getHealthToneClass = (score: number) => {
+const getHealthToneClass = (score?: number) => {
+  if (score == null) {
+    return "border-[#d8dce3] bg-[#f8fafc] text-[#6b7280] dark:border-white/10 dark:bg-white/5 dark:text-white/60";
+  }
+
   if (score >= 95) {
     return "border-[#24c37a]/25 bg-[#24c37a]/10 text-[#0f8f5f] dark:border-[#24c37a]/30 dark:bg-[#24c37a]/15 dark:text-[#6ee7ad]";
   }
@@ -573,7 +577,7 @@ export default function PublicModelsPage() {
                     </div>
                   ) : (
                     filteredModels.map((model) => {
-                      const healthScore = getModelHealthScore();
+                      const healthScore = getModelHealthScore(model);
 
                       return (
                         <article
@@ -628,7 +632,7 @@ export default function PublicModelsPage() {
                                 getHealthToneClass(healthScore),
                               )}
                             >
-                              {t("publicModels.health")} {healthScore}%
+                              {t("publicModels.health")} {healthScore == null ? "-" : `${healthScore}%`}
                             </span>
                             <span className="inline-flex min-w-0 items-center gap-1.5">
                               <span className="text-[#8e8e93]">{t("publicModels.table.input")}</span>

@@ -35,21 +35,23 @@ type PublicModelPriceResponse struct {
 }
 
 type PublicModelResponse struct {
-	Model                     string                        `json:"model"`
-	Provider                  string                        `json:"provider"`
-	Capabilities              []string                      `json:"capabilities"`
-	AvailableGroups           []string                      `json:"available_groups"`
-	AvailableGroupMultipliers map[string]float64            `json:"available_group_multipliers,omitempty"`
-	AvailableSets             []string                      `json:"available_sets"`
-	ContextLength             int                           `json:"context_length,omitempty"`
-	MaxInputTokens            int                           `json:"max_input_tokens,omitempty"`
-	MaxOutputTokens           int                           `json:"max_output_tokens,omitempty"`
-	CreatedAt                 int64                         `json:"created_at,omitempty"`
-	UpdatedAt                 int64                         `json:"updated_at,omitempty"`
-	Price                     PublicModelPriceResponse      `json:"price,omitempty"`
-	ImagePrices               map[string]float64            `json:"image_prices,omitempty"`
-	ImageQualityPrices        map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
-	Description               string                        `json:"description,omitempty"`
+	Model                     string                               `json:"model"`
+	Provider                  string                               `json:"provider"`
+	Capabilities              []string                             `json:"capabilities"`
+	AvailableGroups           []string                             `json:"available_groups"`
+	AvailableGroupMultipliers map[string]float64                   `json:"available_group_multipliers,omitempty"`
+	Health                    PublicModelHealthResponse            `json:"health,omitempty"`
+	GroupHealth               map[string]PublicModelHealthResponse `json:"group_health,omitempty"`
+	AvailableSets             []string                             `json:"available_sets"`
+	ContextLength             int                                  `json:"context_length,omitempty"`
+	MaxInputTokens            int                                  `json:"max_input_tokens,omitempty"`
+	MaxOutputTokens           int                                  `json:"max_output_tokens,omitempty"`
+	CreatedAt                 int64                                `json:"created_at,omitempty"`
+	UpdatedAt                 int64                                `json:"updated_at,omitempty"`
+	Price                     PublicModelPriceResponse             `json:"price,omitempty"`
+	ImagePrices               map[string]float64                   `json:"image_prices,omitempty"`
+	ImageQualityPrices        map[string]map[string]float64        `json:"image_quality_prices,omitempty"`
+	Description               string                               `json:"description,omitempty"`
 }
 
 func GetPublicModels(c *gin.Context) {
@@ -135,6 +137,9 @@ func buildPublicModels() ([]PublicModelResponse, error) {
 				item.AvailableGroupMultipliers = make(map[string]float64)
 			}
 			item.AvailableGroupMultipliers[group.ID] = group.PriceMultiplier
+			if detail := detailsByModel[key]; detail != nil {
+				item.addGroupHealth(group.ID, detail.Health)
+			}
 
 			for _, setName := range groupCache.GetAvailableSets() {
 				item.AvailableSets = appendUniqueString(item.AvailableSets, setName)
@@ -154,6 +159,44 @@ func buildPublicModels() ([]PublicModelResponse, error) {
 	})
 
 	return responses, nil
+}
+
+type PublicModelHealthResponse struct {
+	RequestCount  int64   `json:"request_count,omitempty"`
+	SuccessCount  int64   `json:"success_count,omitempty"`
+	ErrorCount    int64   `json:"error_count,omitempty"`
+	SuccessRate   float64 `json:"success_rate,omitempty"`
+	HealthPercent int     `json:"health_percent,omitempty"`
+}
+
+func (p *PublicModelResponse) addGroupHealth(groupID string, metric model.GroupModelHealthMetric) {
+	if groupID == "" || metric.RequestCount == 0 {
+		return
+	}
+
+	health := publicModelHealthFromMetric(metric)
+	if p.GroupHealth == nil {
+		p.GroupHealth = make(map[string]PublicModelHealthResponse)
+	}
+	p.GroupHealth[groupID] = health
+
+	p.Health.RequestCount += health.RequestCount
+	p.Health.SuccessCount += health.SuccessCount
+	p.Health.ErrorCount += health.ErrorCount
+	if p.Health.RequestCount > 0 {
+		p.Health.SuccessRate = float64(p.Health.SuccessCount) / float64(p.Health.RequestCount)
+		p.Health.HealthPercent = int(p.Health.SuccessRate*100 + 0.5)
+	}
+}
+
+func publicModelHealthFromMetric(metric model.GroupModelHealthMetric) PublicModelHealthResponse {
+	return PublicModelHealthResponse{
+		RequestCount:  metric.RequestCount,
+		SuccessCount:  metric.SuccessCount,
+		ErrorCount:    metric.ErrorCount,
+		SuccessRate:   metric.SuccessRate,
+		HealthPercent: metric.HealthPercent,
+	}
 }
 
 func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResponse) *PublicModelResponse {

@@ -121,6 +121,16 @@ type GroupConsumptionRankingItem struct {
 	TotalTokens  int64   `json:"total_tokens"  gorm:"column:total_tokens"`
 }
 
+type GroupModelHealthMetric struct {
+	GroupID       string  `json:"group_id"      gorm:"column:group_id"`
+	Model         string  `json:"model"         gorm:"column:model"`
+	RequestCount  int64   `json:"request_count" gorm:"column:request_count"`
+	SuccessCount  int64   `json:"success_count" gorm:"column:success_count"`
+	ErrorCount    int64   `json:"error_count"   gorm:"column:error_count"`
+	SuccessRate   float64 `json:"success_rate"  gorm:"-"`
+	HealthPercent int     `json:"health_percent" gorm:"-"`
+}
+
 func normalizeGroupConsumptionRankingOrder(order string) (normalized, clause string) {
 	switch strings.ToLower(strings.TrimSpace(order)) {
 	case "used_amount_asc":
@@ -200,4 +210,55 @@ func GetGroupConsumptionRanking(
 	}
 
 	return items, total, normalizedOrder, nil
+}
+
+func GetGroupModelHealthMetrics(groupID string, models []string) ([]GroupModelHealthMetric, error) {
+	if groupID == "" || len(models) == 0 {
+		return nil, nil
+	}
+
+	type rawMetric struct {
+		GroupID      string `gorm:"column:group_id"`
+		Model        string `gorm:"column:model"`
+		RequestCount int64  `gorm:"column:request_count"`
+		SuccessCount int64  `gorm:"column:success_count"`
+		ErrorCount   int64  `gorm:"column:error_count"`
+	}
+
+	var rawMetrics []rawMetric
+
+	err := LogDB.
+		Model(&GroupSummary{}).
+		Select(
+			"group_id, model, "+
+				"COALESCE(SUM(request_count), 0) as request_count, "+
+				"(COALESCE(SUM(request_count), 0) - COALESCE(SUM(exception_count), 0)) as success_count, "+
+				"COALESCE(SUM(exception_count), 0) as error_count",
+		).
+		Where("group_id = ?", groupID).
+		Where("model IN ?", models).
+		Group("group_id, model").
+		Find(&rawMetrics).Error
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := make([]GroupModelHealthMetric, 0, len(rawMetrics))
+	for _, item := range rawMetrics {
+		metric := GroupModelHealthMetric{
+			GroupID:      item.GroupID,
+			Model:        item.Model,
+			RequestCount: item.RequestCount,
+			SuccessCount: item.SuccessCount,
+			ErrorCount:   item.ErrorCount,
+		}
+		if metric.RequestCount > 0 {
+			metric.SuccessRate = float64(metric.SuccessCount) / float64(metric.RequestCount)
+			metric.HealthPercent = int(metric.SuccessRate*100 + 0.5)
+		}
+
+		metrics = append(metrics, metric)
+	}
+
+	return metrics, nil
 }

@@ -1,11 +1,21 @@
 import type { ModelPrice } from "@/types/model";
 
+export interface PublicModelHealth {
+  request_count?: number;
+  success_count?: number;
+  error_count?: number;
+  success_rate?: number;
+  health_percent?: number;
+}
+
 export interface PublicModel {
   model: string;
   provider: string;
   capabilities: string[];
   available_groups: string[];
   available_group_multipliers?: Record<string, number>;
+  health?: PublicModelHealth;
+  group_health?: Record<string, PublicModelHealth>;
   available_sets: string[];
   context_length?: number;
   max_input_tokens?: number;

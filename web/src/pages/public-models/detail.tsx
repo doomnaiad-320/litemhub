@@ -48,11 +48,6 @@ interface PriceRow {
 const uniqueTags = (values: string[]) =>
   Array.from(new Set(values.filter(Boolean)));
 
-const defaultProviderMetrics = {
-  requests: "1.2k",
-  successRate: 100,
-};
-
 const categoryColors = ["#9b5cff", "#2f8cff", "#6668ff", "#00a2ff", "#d8951b"];
 
 const capabilityLabels: Record<string, { en: string; zh: string }> = {
@@ -156,6 +151,30 @@ const formatCompactTokenCount = (value?: number) => {
   }
 
   return String(value);
+};
+
+const formatCompactCount = (value?: number) => {
+  if (!value) {
+    return "-";
+  }
+
+  if (value >= 1_000_000) {
+    return `${Number((value / 1_000_000).toFixed(1))}M`;
+  }
+
+  if (value >= 1000) {
+    return `${Number((value / 1000).toFixed(1))}K`;
+  }
+
+  return String(value);
+};
+
+const formatPercent = (value?: number) => {
+  if (value == null) {
+    return "-";
+  }
+
+  return `${Number(value.toFixed(1))}%`;
 };
 
 const buildPriceRows = (
@@ -1207,6 +1226,10 @@ function ProviderResultRow({
   const multiplierLabel = formatGroupMultiplier(
     model.available_group_multipliers?.[groupName],
   );
+  const health = groupName ? model.group_health?.[groupName] : model.health;
+  const healthPercent = health?.health_percent;
+  const successRatePercent =
+    health?.success_rate == null ? undefined : health.success_rate * 100;
 
   return (
     <article className="min-h-[138px] w-full min-w-0 px-[12px] pb-[14px] pt-[14px]">
@@ -1226,17 +1249,17 @@ function ProviderResultRow({
         <div className="mr-4 grid w-[238px] grid-cols-[68px_84px_74px] items-center gap-2 whitespace-nowrap text-right">
           <ProviderTopMetric
             label={metricLabels.latency}
-            value={defaultProviderMetrics.requests}
+            value={formatCompactCount(health?.request_count)}
           />
           <ProviderTopMetric
             label={metricLabels.throughput}
-            value={`${defaultProviderMetrics.successRate}%`}
+            value={formatPercent(successRatePercent)}
           />
           <div className="flex min-h-[35px] flex-col justify-center">
             <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
               {metricLabels.uptime}
             </div>
-            <HealthBars score={defaultProviderMetrics.successRate} />
+            <HealthBars score={healthPercent} />
           </div>
         </div>
       </div>
@@ -1321,8 +1344,8 @@ function ProviderTopMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function HealthBars({ score }: { score: number }) {
-  const normalizedScore = Math.max(0, Math.min(100, score));
+function HealthBars({ score }: { score?: number }) {
+  const normalizedScore = Math.max(0, Math.min(100, score ?? 0));
   const activeBars = normalizedScore > 0 ? Math.ceil(normalizedScore / 20) : 0;
 
   return (
