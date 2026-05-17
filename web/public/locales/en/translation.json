@@ -1704,6 +1704,7 @@
     "freePrice": "Free",
     "perRequestUnit": "request",
     "health": "Health",
+    "unmonitored": "Unmonitored",
     "stats": {
       "models": "Available models",
       "providers": "Providers",

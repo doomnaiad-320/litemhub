@@ -632,7 +632,10 @@ export default function PublicModelsPage() {
                                 getHealthToneClass(healthScore),
                               )}
                             >
-                              {t("publicModels.health")} {healthScore == null ? "-" : `${healthScore}%`}
+                              {t("publicModels.health")}{" "}
+                              {healthScore == null
+                                ? t("publicModels.unmonitored")
+                                : `${healthScore}%`}
                             </span>
                             <span className="inline-flex min-w-0 items-center gap-1.5">
                               <span className="text-[#8e8e93]">{t("publicModels.table.input")}</span>

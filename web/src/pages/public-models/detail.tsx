@@ -153,9 +153,9 @@ const formatCompactTokenCount = (value?: number) => {
   return String(value);
 };
 
-const formatCompactCount = (value?: number) => {
+const formatCompactCount = (value?: number, fallback = "-") => {
   if (!value) {
-    return "-";
+    return fallback;
   }
 
   if (value >= 1_000_000) {
@@ -169,9 +169,9 @@ const formatCompactCount = (value?: number) => {
   return String(value);
 };
 
-const formatPercent = (value?: number) => {
+const formatPercent = (value?: number, fallback = "-") => {
   if (value == null) {
-    return "-";
+    return fallback;
   }
 
   return `${Number(value.toFixed(1))}%`;
@@ -1210,6 +1210,7 @@ function ProviderResultRow({
         throughput: "成功率",
         uptime: "健康度",
         latency: "请求数",
+        unmonitored: "未监测",
       }
     : {
         cache: "Cache read",
@@ -1220,6 +1221,7 @@ function ProviderResultRow({
         throughput: "Success",
         uptime: "Health",
         latency: "Requests",
+        unmonitored: "Unmonitored",
   };
   const unit = isChinese ? "/M 代币" : "/M tokens";
   const displayGroupName = groupName ? `${groupName} 分组` : "";
@@ -1249,17 +1251,23 @@ function ProviderResultRow({
         <div className="mr-4 grid w-[238px] grid-cols-[68px_84px_74px] items-center gap-2 whitespace-nowrap text-right">
           <ProviderTopMetric
             label={metricLabels.latency}
-            value={formatCompactCount(health?.request_count)}
+            value={formatCompactCount(
+              health?.request_count,
+              metricLabels.unmonitored,
+            )}
           />
           <ProviderTopMetric
             label={metricLabels.throughput}
-            value={formatPercent(successRatePercent)}
+            value={formatPercent(successRatePercent, metricLabels.unmonitored)}
           />
           <div className="flex min-h-[35px] flex-col justify-center">
             <div className="text-[14px] font-semibold leading-none text-[#7b8492] dark:text-[#5e6370]">
               {metricLabels.uptime}
             </div>
-            <HealthBars score={healthPercent} />
+            <HealthBars
+              fallback={metricLabels.unmonitored}
+              score={healthPercent}
+            />
           </div>
         </div>
       </div>
@@ -1344,7 +1352,24 @@ function ProviderTopMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function HealthBars({ score }: { score?: number }) {
+function HealthBars({
+  fallback = "-",
+  score,
+}: {
+  fallback?: string;
+  score?: number;
+}) {
+  if (score == null) {
+    return (
+      <div
+        className="mt-[7px] text-[12px] font-semibold leading-none text-[#8e8e93] dark:text-[#626773]"
+        aria-label={fallback}
+      >
+        {fallback}
+      </div>
+    );
+  }
+
   const normalizedScore = Math.max(0, Math.min(100, score ?? 0));
   const activeBars = normalizedScore > 0 ? Math.ceil(normalizedScore / 20) : 0;
 

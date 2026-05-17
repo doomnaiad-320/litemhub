@@ -1692,6 +1692,7 @@
     "freePrice": "Free",
     "perRequestUnit": "次",
     "health": "健康度",
+    "unmonitored": "未监测",
     "stats": {
       "models": "可用模型",
       "providers": "供应商",

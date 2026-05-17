@@ -40,7 +40,7 @@ type PublicModelResponse struct {
 	Capabilities              []string                             `json:"capabilities"`
 	AvailableGroups           []string                             `json:"available_groups"`
 	AvailableGroupMultipliers map[string]float64                   `json:"available_group_multipliers,omitempty"`
-	Health                    PublicModelHealthResponse            `json:"health,omitempty"`
+	Health                    *PublicModelHealthResponse           `json:"health,omitempty"`
 	GroupHealth               map[string]PublicModelHealthResponse `json:"group_health,omitempty"`
 	AvailableSets             []string                             `json:"available_sets"`
 	ContextLength             int                                  `json:"context_length,omitempty"`
@@ -162,11 +162,11 @@ func buildPublicModels() ([]PublicModelResponse, error) {
 }
 
 type PublicModelHealthResponse struct {
-	RequestCount  int64   `json:"request_count,omitempty"`
-	SuccessCount  int64   `json:"success_count,omitempty"`
-	ErrorCount    int64   `json:"error_count,omitempty"`
-	SuccessRate   float64 `json:"success_rate,omitempty"`
-	HealthPercent int     `json:"health_percent,omitempty"`
+	RequestCount  int64   `json:"request_count"`
+	SuccessCount  int64   `json:"success_count"`
+	ErrorCount    int64   `json:"error_count"`
+	SuccessRate   float64 `json:"success_rate"`
+	HealthPercent int     `json:"health_percent"`
 }
 
 func (p *PublicModelResponse) addGroupHealth(groupID string, metric model.GroupModelHealthMetric) {
@@ -180,6 +180,9 @@ func (p *PublicModelResponse) addGroupHealth(groupID string, metric model.GroupM
 	}
 	p.GroupHealth[groupID] = health
 
+	if p.Health == nil {
+		p.Health = &PublicModelHealthResponse{}
+	}
 	p.Health.RequestCount += health.RequestCount
 	p.Health.SuccessCount += health.SuccessCount
 	p.Health.ErrorCount += health.ErrorCount
