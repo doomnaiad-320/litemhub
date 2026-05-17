@@ -17,17 +17,18 @@ interface PublicSiteHeaderProps {
   variant?: PublicSiteHeaderVariant;
 }
 
+interface PublicSiteMenuProps {
+  activeItem?: PublicSiteHeaderItem;
+  className?: string;
+  variant?: PublicSiteHeaderVariant;
+}
+
 export function PublicSiteHeader({
   activeItem,
   className,
   variant = "light",
 }: PublicSiteHeaderProps) {
-  const { t: rawT, i18n } = useTranslation();
-  const t = rawT as (key: string, options?: Record<string, unknown>) => string;
-  const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
-  const isChinese = (i18n.resolvedLanguage || i18n.language || "").startsWith("zh");
   const isDark = variant === "dark";
-  const primaryTarget = isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_LOGIN;
 
   return (
     <header
@@ -61,76 +62,93 @@ export function PublicSiteHeader({
           </span>
         </Link>
 
-        <div className="ml-auto flex min-w-0 items-center gap-[5px]">
-          <nav className="hidden min-w-0 items-center gap-[5px] overflow-x-auto md:flex">
-            <PublicHeaderLink active={activeItem === "home"} isDark={isDark} to="/">
-              {isChinese ? "首页" : "Home"}
-            </PublicHeaderLink>
-            <PublicHeaderLink
-              active={activeItem === "models"}
-              isDark={isDark}
-              to={ROUTES.PUBLIC_MODELS}
-            >
-              {t("publicModels.nav.models")}
-            </PublicHeaderLink>
-            <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_API_DOCS}>
-              {t("publicModels.nav.apiDocs")}
-            </PublicHeaderLink>
-            <PublicHeaderLink
-              active={activeItem === "updates"}
-              isDark={isDark}
-              to={ROUTES.PUBLIC_API_UPDATES}
-            >
-              {t("publicModels.nav.apiUpdates")}
-            </PublicHeaderLink>
-            <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_BLOG}>
-              {t("publicModels.nav.blog")}
-            </PublicHeaderLink>
-            <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_GITHUB}>
-              {t("publicModels.nav.github")}
-            </PublicHeaderLink>
-          </nav>
-
-          <div
-            className={cn(
-              "hidden items-center gap-[5px] border-l pl-[5px] sm:flex",
-              isDark ? "dark border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
-            )}
-          >
-            <LanguageSelector
-              className={
-                isDark
-                  ? "border-[#2b2e36] bg-[#15171d] text-[#e4e6ed] hover:bg-[#1b1e25] dark:border-[#2b2e36] dark:bg-[#15171d] dark:hover:bg-[#1b1e25]"
-                  : undefined
-              }
-              variant="minimal"
-            />
-          </div>
-
-          <div
-            className={cn(
-              "flex items-center gap-[5px] border-l pl-[5px]",
-              isDark ? "border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
-            )}
-          >
-            <Button
-              asChild
-              className={cn(
-                "h-[32px] rounded-[6px] px-3 text-[14px] font-semibold shadow-none",
-                isDark
-                  ? "bg-[#e7e8ee] text-[#111217] hover:bg-white"
-                  : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90",
-              )}
-            >
-              <Link to={primaryTarget}>
-                {isAuthenticated ? t("publicModels.nav.console") : t("publicModels.nav.start")}
-                <ArrowRight className="h-[13px] w-[13px]" strokeWidth={2} />
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <PublicSiteMenu activeItem={activeItem} variant={variant} />
       </div>
     </header>
+  );
+}
+
+export function PublicSiteMenu({
+  activeItem,
+  className,
+  variant = "light",
+}: PublicSiteMenuProps) {
+  const { t: rawT, i18n } = useTranslation();
+  const t = rawT as (key: string, options?: Record<string, unknown>) => string;
+  const isAuthenticated = useUserPortalAuthStore((state) => state.isAuthenticated);
+  const isChinese = (i18n.resolvedLanguage || i18n.language || "").startsWith("zh");
+  const isDark = variant === "dark";
+  const primaryTarget = isAuthenticated ? ROUTES.USER_DASHBOARD : ROUTES.USER_LOGIN;
+
+  return (
+    <div className={cn("ml-auto flex min-w-0 items-center gap-[5px]", className)}>
+      <nav className="hidden min-w-0 items-center gap-[5px] overflow-x-auto md:flex">
+        <PublicHeaderLink active={activeItem === "home"} isDark={isDark} to="/">
+          {isChinese ? "首页" : "Home"}
+        </PublicHeaderLink>
+        <PublicHeaderLink
+          active={activeItem === "models"}
+          isDark={isDark}
+          to={ROUTES.PUBLIC_MODELS}
+        >
+          {t("publicModels.nav.models")}
+        </PublicHeaderLink>
+        <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_API_DOCS}>
+          {t("publicModels.nav.apiDocs")}
+        </PublicHeaderLink>
+        <PublicHeaderLink
+          active={activeItem === "updates"}
+          isDark={isDark}
+          to={ROUTES.PUBLIC_API_UPDATES}
+        >
+          {t("publicModels.nav.apiUpdates")}
+        </PublicHeaderLink>
+        <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_BLOG}>
+          {t("publicModels.nav.blog")}
+        </PublicHeaderLink>
+        <PublicHeaderLink isDark={isDark} to={ROUTES.PUBLIC_GITHUB}>
+          {t("publicModels.nav.github")}
+        </PublicHeaderLink>
+      </nav>
+
+      <div
+        className={cn(
+          "hidden items-center gap-[5px] border-l pl-[5px] sm:flex",
+          isDark ? "dark border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
+        )}
+      >
+        <LanguageSelector
+          className={
+            isDark
+              ? "border-[#2b2e36] bg-[#15171d] text-[#e4e6ed] hover:bg-[#1b1e25] dark:border-[#2b2e36] dark:bg-[#15171d] dark:hover:bg-[#1b1e25]"
+              : undefined
+          }
+          variant="minimal"
+        />
+      </div>
+
+      <div
+        className={cn(
+          "flex items-center gap-[5px] border-l pl-[5px]",
+          isDark ? "border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
+        )}
+      >
+        <Button
+          asChild
+          className={cn(
+            "h-[32px] rounded-[6px] px-3 text-[14px] font-semibold shadow-none",
+            isDark
+              ? "bg-[#e7e8ee] text-[#111217] hover:bg-white"
+              : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90",
+          )}
+        >
+          <Link to={primaryTarget}>
+            {isAuthenticated ? t("publicModels.nav.console") : t("publicModels.nav.start")}
+            <ArrowRight className="h-[13px] w-[13px]" strokeWidth={2} />
+          </Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 

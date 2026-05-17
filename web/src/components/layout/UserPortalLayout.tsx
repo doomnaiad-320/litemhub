@@ -2,7 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import {
-    Blocks,
+    // Blocks,
     ChevronLeft,
     ChevronRight,
     Home,
@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
+import { PublicSiteMenu } from '@/components/common/PublicSiteHeader'
 import { useUserPortalAuthStore } from '@/store/user-portal-auth'
 import { ROUTES } from '@/routes/constants'
 import { UserPortalAnnouncementBanner } from '@/feature/user-portal/components/UserPortalAnnouncementBanner'
@@ -40,7 +41,7 @@ export function UserPortalLayout() {
     const user = useUserPortalAuthStore((state) => state.user)
     const portalNavItems: PortalNavItem[] = [
         { label: t('portal.nav.home'), href: ROUTES.HOME, icon: Home },
-        { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
+        // { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
@@ -229,6 +230,11 @@ export function UserPortalLayout() {
             </aside>
 
             <main className="flex-1 flex flex-col overflow-hidden bg-background">
+                <header className="sticky top-0 z-30 hidden border-b border-border bg-background/95 px-4 py-3 backdrop-blur-xl lg:flex lg:items-center lg:justify-end lg:px-6">
+                    <PublicSiteMenu
+                        className="ml-0 max-w-full"
+                    />
+                </header>
                 <header className="sticky top-0 z-30 border-b border-border bg-background px-4 py-3 lg:hidden">
                     <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0 flex items-center gap-3">
