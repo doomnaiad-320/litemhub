@@ -1425,6 +1425,7 @@
       "wallet": "Wallet",
       "keys": "Keys",
       "logs": "Logs",
+      "referrals": "Referrals",
       "profile": "Profile",
       "resources": "Resources & Updates",
       "currentAccount": "Current Account",
@@ -1535,6 +1536,11 @@
       "passwordMin": "Password must be at least 6 characters",
       "passwordNotMatch": "New passwords do not match",
       "passwordSame": "New password must be different from current password"
+    },
+    "referrals": {
+      "title": "Referrals",
+      "description": "Generate your personal discount code and review recharge rebates and wallet transactions.",
+      "copyCode": "Copy"
     },
     "models": {
       "badge": "Model Catalog",

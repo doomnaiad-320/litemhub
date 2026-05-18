@@ -1413,6 +1413,7 @@
       "wallet": "钱包",
       "keys": "Key",
       "logs": "日志",
+      "referrals": "邀请返利",
       "profile": "个人中心",
       "resources": "资源与更新",
       "currentAccount": "当前账号",
@@ -1523,6 +1524,11 @@
       "passwordMin": "密码至少 6 位",
       "passwordNotMatch": "两次输入的新密码不一致",
       "passwordSame": "新密码不能和当前密码相同"
+    },
+    "referrals": {
+      "title": "邀请返利",
+      "description": "生成你的专属折扣码，并查看充值返利与钱包交易历史。",
+      "copyCode": "复制"
     },
     "models": {
       "badge": "模型目录",

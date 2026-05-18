@@ -9,6 +9,7 @@ import {
     Code2,
     FileText,
     Github,
+    Gift,
     KeyRound,
     LogOut,
     Menu,
@@ -49,6 +50,7 @@ export function UserPortalLayout() {
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
+        { label: t('portal.nav.referrals'), href: ROUTES.USER_REFERRALS, icon: Gift },
         { label: t('portal.nav.profile'), href: ROUTES.USER_PROFILE, icon: UserRound },
     ]
     const publicResourceItems: PortalNavItem[] = [

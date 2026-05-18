@@ -47,6 +47,7 @@ const UserPortalDashboardPage = lazy(() => import("@/pages/user-portal/dashboard
 const UserPortalGroupsPage = lazy(() => import("@/pages/user-portal/groups"))
 const UserPortalKeysPage = lazy(() => import("@/pages/user-portal/keys"))
 const UserPortalLogsPage = lazy(() => import("@/pages/user-portal/logs"))
+const UserPortalReferralsPage = lazy(() => import("@/pages/user-portal/referrals"))
 const UserPortalProfilePage = lazy(() => import("@/pages/user-portal/profile"))
 
 // lazy load component wrapper
@@ -156,6 +157,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.USER_LOGS,
                     element: lazyLoad(UserPortalLogsPage),
+                },
+                {
+                    path: ROUTES.USER_REFERRALS,
+                    element: lazyLoad(UserPortalReferralsPage),
                 },
                 {
                     path: ROUTES.USER_PROFILE,
