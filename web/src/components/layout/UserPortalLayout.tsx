@@ -4,8 +4,11 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import {
     Blocks,
     ChevronLeft,
+    ChevronDown,
     ChevronRight,
-    Home,
+    Code2,
+    FileText,
+    Github,
     KeyRound,
     LogOut,
     Menu,
@@ -15,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -34,6 +38,7 @@ interface PortalNavItem {
 export function UserPortalLayout() {
     const [collapsed, setCollapsed] = useState(false)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [mobileResourcesOpen, setMobileResourcesOpen] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
     const { t: rawT } = useTranslation()
@@ -41,12 +46,17 @@ export function UserPortalLayout() {
     const logout = useUserPortalAuthStore((state) => state.logout)
     const user = useUserPortalAuthStore((state) => state.user)
     const portalNavItems: PortalNavItem[] = [
-        { label: t('portal.nav.home'), href: ROUTES.HOME, icon: Home },
-        { label: t('portal.nav.models'), href: ROUTES.PUBLIC_MODELS, icon: Blocks },
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
         { label: t('portal.nav.profile'), href: ROUTES.USER_PROFILE, icon: UserRound },
+    ]
+    const publicResourceItems: PortalNavItem[] = [
+        { label: t('publicModels.nav.models'), href: ROUTES.PUBLIC_MODELS, icon: Blocks },
+        { label: t('publicModels.nav.apiDocs'), href: ROUTES.PUBLIC_API_DOCS, icon: Code2 },
+        { label: t('publicModels.nav.apiUpdates'), href: ROUTES.PUBLIC_API_UPDATES, icon: ScrollText },
+        { label: t('publicModels.nav.blog'), href: ROUTES.PUBLIC_BLOG, icon: FileText },
+        { label: t('publicModels.nav.github'), href: ROUTES.PUBLIC_GITHUB, icon: Github },
     ]
 
     const currentPath = location.pathname
@@ -96,6 +106,49 @@ export function UserPortalLayout() {
                     >
                         {item.label}
                     </span>
+                </Link>
+            )
+        })
+    )
+
+    const renderMobileResourceLinks = (onNavigate?: () => void) => (
+        publicResourceItems.map((item) => {
+            const isActive = currentPath === item.href
+            const isExternal = /^https?:\/\//.test(item.href)
+            const isDocumentRoute = item.href.startsWith('/swagger')
+            const className = cn(
+                'group mx-2 my-1 flex items-center rounded-md px-4 py-2.5 text-sm transition-colors',
+                isActive
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+            )
+            const content = (
+                <>
+                    <div className="flex h-5 w-5 items-center justify-center">
+                        <item.icon className={cn('h-4 w-4 transition-colors', isActive ? 'text-foreground' : 'text-muted-foreground')} />
+                    </div>
+                    <span className="ml-3 whitespace-nowrap font-medium">{item.label}</span>
+                </>
+            )
+
+            if (isExternal || isDocumentRoute) {
+                return (
+                    <a
+                        key={item.href}
+                        href={item.href}
+                        className={className}
+                        rel={isExternal ? 'noreferrer' : undefined}
+                        target={isExternal ? '_blank' : undefined}
+                        onClick={onNavigate}
+                    >
+                        {content}
+                    </a>
+                )
+            }
+
+            return (
+                <Link key={item.href} to={item.href} className={className} onClick={onNavigate}>
+                    {content}
                 </Link>
             )
         })
@@ -275,7 +328,35 @@ export function UserPortalLayout() {
                                     </div>
                                 </SheetHeader>
                                 <div className="relative z-10 flex-1 overflow-y-auto py-3">
+                                    <div className="px-6 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                        {t('portal.nav.console')}
+                                    </div>
                                     {renderNavigationLinks(true, () => setMobileMenuOpen(false))}
+
+                                    <Collapsible
+                                        open={mobileResourcesOpen}
+                                        onOpenChange={setMobileResourcesOpen}
+                                        className="mt-3 border-t border-border pt-3"
+                                    >
+                                        <CollapsibleTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                className="mx-2 flex h-10 w-[calc(100%-1rem)] items-center justify-between rounded-md px-4 text-sm font-semibold text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                                            >
+                                                <span>{t('portal.nav.resources')}</span>
+                                                <ChevronDown
+                                                    className={cn(
+                                                        'h-4 w-4 transition-transform duration-200',
+                                                        mobileResourcesOpen ? 'rotate-180' : '',
+                                                    )}
+                                                />
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent className="pt-1">
+                                            {renderMobileResourceLinks(() => setMobileMenuOpen(false))}
+                                        </CollapsibleContent>
+                                    </Collapsible>
                                 </div>
                                 <div className="relative z-10 space-y-3 border-t border-border p-4">
                                     <div className="rounded-md border border-border bg-background px-4 py-3">
