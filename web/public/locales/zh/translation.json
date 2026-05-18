@@ -1413,6 +1413,7 @@
       "wallet": "钱包",
       "keys": "Key",
       "logs": "日志",
+      "profile": "个人中心",
       "currentAccount": "当前账号",
       "logout": "退出"
     },
@@ -1497,6 +1498,30 @@
       "groupHint": "查看分组倍率和可用模型",
       "keyHint": "创建并复制用户自己的 Key",
       "logHint": "查看模型请求日志"
+    },
+    "profile": {
+      "badge": "账户设置",
+      "title": "个人中心",
+      "description": "查看当前登录账号，并管理用于登录控制台的密码。",
+      "accountTitle": "账号信息",
+      "userId": "用户 ID：{{id}}",
+      "email": "邮箱",
+      "createdAt": "注册时间",
+      "passwordTitle": "修改密码",
+      "passwordDescription": "修改后请使用新密码登录，当前会话保持有效。",
+      "currentPassword": "当前密码",
+      "currentPasswordPlaceholder": "输入当前密码",
+      "newPassword": "新密码",
+      "newPasswordPlaceholder": "至少 6 位字符",
+      "confirmNewPassword": "确认新密码",
+      "confirmNewPasswordPlaceholder": "再次输入新密码",
+      "passwordHelp": "为了账号安全，新密码不能和当前密码相同。",
+      "updatePassword": "更新密码",
+      "updatingPassword": "更新中...",
+      "currentPasswordRequired": "请输入当前密码",
+      "passwordMin": "密码至少 6 位",
+      "passwordNotMatch": "两次输入的新密码不一致",
+      "passwordSame": "新密码不能和当前密码相同"
     },
     "models": {
       "badge": "模型目录",

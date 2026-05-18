@@ -385,23 +385,23 @@ export default function PublicModelsPage() {
 
       <main>
         <section className="relative overflow-hidden border-b border-[#f2f3f5] dark:border-white/10">
-          <div className="pointer-events-none absolute right-[-9rem] top-[-12rem] h-[28rem] w-[28rem] rounded-full bg-[#1456f0]/10 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-[-10rem] left-[-8rem] h-[24rem] w-[24rem] rounded-full bg-[#ea5ec1]/10 blur-3xl" />
-          <div className="relative mx-auto grid w-full max-w-[1504px] gap-10 px-4 py-14 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
-            <div className="space-y-7">
-              <Badge className="rounded-full border-[#e5e7eb] bg-white px-3 py-1 text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] dark:border-white/10 dark:bg-white/5 dark:text-white/70" variant="outline">
+          <div className="pointer-events-none absolute right-[-9rem] top-[-12rem] hidden h-[28rem] w-[28rem] rounded-full bg-[#1456f0]/10 blur-3xl sm:block" />
+          <div className="pointer-events-none absolute bottom-[-10rem] left-[-8rem] hidden h-[24rem] w-[24rem] rounded-full bg-[#ea5ec1]/10 blur-3xl sm:block" />
+          <div className="relative mx-auto grid w-full max-w-[1504px] gap-4 px-4 py-5 sm:gap-10 sm:py-14 lg:grid-cols-[0.96fr_1.04fr] lg:items-end lg:py-20">
+            <div className="space-y-3 sm:space-y-7">
+              <Badge className="hidden rounded-full border-[#e5e7eb] bg-white px-3 py-1 text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] dark:border-white/10 dark:bg-white/5 dark:text-white/70 sm:inline-flex" variant="outline">
                 <Sparkles className="h-3.5 w-3.5 text-[#1456f0]" />
                 {t("publicModels.badge")}
               </Badge>
-              <div className="space-y-4">
-                <h1 className="max-w-4xl font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-5xl font-medium leading-[1.1] tracking-tight text-[#222222] dark:text-white sm:text-6xl lg:text-[80px]">
+              <div className="space-y-2 sm:space-y-4">
+                <h1 className="max-w-4xl font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[28px] font-medium leading-[1.12] tracking-tight text-[#222222] dark:text-white sm:text-6xl sm:leading-[1.1] lg:text-[80px]">
                   {t("publicModels.title")}
                 </h1>
-                <p className="max-w-2xl text-lg font-normal leading-[1.5] text-[#45515e] dark:text-white/70 md:text-xl">
+                <p className="line-clamp-2 max-w-2xl text-sm font-normal leading-[1.45] text-[#45515e] dark:text-white/70 sm:text-lg sm:leading-[1.5] md:text-xl">
                   {t("publicModels.description")}
                 </p>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="hidden flex-col gap-3 sm:flex sm:flex-row">
                 <a href="#model-catalog">
                   <Button size="lg" className="h-12 rounded-lg bg-[#181e25] px-6 text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] hover:bg-[#111827]">
                     {t("publicModels.searchModels")}
@@ -417,7 +417,7 @@ export default function PublicModelsPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-4 gap-1.5 rounded-[16px] border border-[#f2f3f5] bg-[#fbfbfc] p-2 dark:border-white/10 dark:bg-white/[0.03] sm:grid-cols-2 sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0 sm:dark:bg-transparent">
               {([
                 { key: "models", value: stats.models, icon: Database },
                 { key: "providers", value: stats.providers, icon: Layers3 },
@@ -426,17 +426,17 @@ export default function PublicModelsPage() {
               ] satisfies StatItem[]).map(({ key, value, icon: Icon }) => (
                 <div
                   key={key}
-                  className="flex items-center justify-between gap-4 rounded-[20px] bg-white p-6 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10"
+                  className="flex min-w-0 flex-col rounded-[10px] bg-white px-2 py-2 ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:ring-white/10 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-[20px] sm:p-6 sm:shadow-[rgba(0,0,0,0.08)_0px_4px_6px]"
                 >
-                  <div>
-                    <div className="text-sm font-medium text-[#8e8e93]">
+                  <div className="min-w-0">
+                    <div className="truncate text-[11px] font-medium leading-none text-[#8e8e93] sm:text-sm sm:leading-normal">
                       {t(`publicModels.stats.${key}`)}
                     </div>
-                    <div className="mt-2 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-3xl font-semibold tabular-nums text-[#18181b] dark:text-white">
+                    <div className="mt-1 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold leading-none tabular-nums text-[#18181b] dark:text-white sm:mt-2 sm:text-3xl sm:leading-normal">
                       {isLoading ? "-" : value}
                     </div>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-[#f0f0f0] text-[#1456f0] dark:bg-white/10">
+                  <div className="hidden h-11 w-11 items-center justify-center rounded-[13px] bg-[#f0f0f0] text-[#1456f0] dark:bg-white/10 sm:flex">
                     <Icon className="h-5 w-5" />
                   </div>
                 </div>
@@ -445,17 +445,17 @@ export default function PublicModelsPage() {
           </div>
         </section>
 
-        <section id="model-catalog" className="mx-auto w-full max-w-[1504px] px-4 py-14 lg:py-20">
-          <div className="-mx-4 mb-8 overflow-hidden rounded-[20px] bg-white shadow-[rgba(15,23,42,0.04)_0px_12px_24px] dark:bg-[#0b0f18] dark:shadow-none">
-            <div className="border-b border-[#f2f3f5] px-4 py-3 dark:border-white/10">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex gap-1 overflow-x-auto">
+        <section id="model-catalog" className="mx-auto w-full max-w-[1504px] px-4 py-3 sm:py-14 lg:py-20">
+          <div className="-mx-4 mb-4 overflow-hidden bg-white shadow-none dark:bg-[#0b0f18] sm:mb-8 sm:rounded-[20px] sm:shadow-[rgba(15,23,42,0.04)_0px_12px_24px] dark:shadow-none">
+            <div className="border-b border-[#f2f3f5] px-3 py-2 dark:border-white/10 sm:px-4 sm:py-3">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {modelTypeOptions.map(({ type, count }) => (
                     <button
                       key={type}
                       type="button"
                       className={cn(
-                        "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition active:scale-[0.98]",
+                        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] sm:h-9 sm:gap-2 sm:px-4 sm:text-sm",
                         modelTypeFilter === type
                           ? "bg-[#181e25] text-white dark:bg-white dark:text-[#181e25]"
                           : "bg-transparent text-[#45515e] hover:bg-black/[0.05] dark:text-white/60 dark:hover:bg-white/10",
@@ -481,7 +481,7 @@ export default function PublicModelsPage() {
                   ))}
                 </div>
 
-                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:justify-end">
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_112px] gap-2 sm:flex sm:flex-row sm:items-center lg:w-auto lg:justify-end">
                   <div className="relative w-full sm:min-w-[260px] lg:w-[320px]">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
                     <Input
@@ -500,7 +500,7 @@ export default function PublicModelsPage() {
                   >
                     <SelectTrigger
                       aria-label={t("publicModels.sort.label")}
-                      className="h-10 w-full rounded-full border-[#e5e7eb] bg-white px-4 text-[#222222] shadow-none dark:border-white/10 dark:bg-white/5 dark:text-white sm:w-[176px]"
+                      className="h-10 w-full rounded-full border-[#e5e7eb] bg-white px-3 text-[#222222] shadow-none dark:border-white/10 dark:bg-white/5 dark:text-white sm:w-[176px] sm:px-4"
                     >
                       <SelectValue placeholder={t("publicModels.sort.label")} />
                     </SelectTrigger>
@@ -516,8 +516,8 @@ export default function PublicModelsPage() {
               </div>
             </div>
 
-            <div className="grid gap-5 p-4 lg:grid-cols-[224px_minmax(0,1fr)] lg:p-5">
-              <aside className="space-y-5 lg:pr-5">
+            <div className="grid gap-3 p-3 lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-5 lg:p-5">
+              <aside className="space-y-3 lg:space-y-5 lg:pr-5">
                 <FilterPillGroup
                   label={t("publicModels.provider")}
                   options={[
@@ -546,15 +546,15 @@ export default function PublicModelsPage() {
               </aside>
 
               <div className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="rounded-[16px] border border-[#f2f3f5] bg-[#fbfbfc] px-4 py-3 text-sm text-[#8e8e93] dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45" aria-live="polite">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="rounded-full border border-[#f2f3f5] bg-[#fbfbfc] px-3 py-2 text-xs text-[#8e8e93] dark:border-white/10 dark:bg-white/[0.03] dark:text-white/45 sm:rounded-[16px] sm:px-4 sm:py-3 sm:text-sm" aria-live="polite">
                     {t("publicModels.results", { count: filteredModels.length })}
                   </div>
 
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 rounded-lg border-0 bg-[#f0f0f0] px-5 text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white sm:w-auto"
+                    className="h-9 shrink-0 rounded-lg border-0 bg-[#f0f0f0] px-3 text-xs text-[#333333] shadow-none hover:bg-[#e8e8e8] dark:bg-white/10 dark:text-white sm:h-11 sm:px-5 sm:text-sm sm:w-auto"
                     onClick={clearFilters}
                     disabled={!hasActiveFilters}
                   >
@@ -562,10 +562,10 @@ export default function PublicModelsPage() {
                   </Button>
                 </div>
 
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
                   {isLoading ? (
                     Array.from({ length: 6 }).map((_, index) => (
-                      <Skeleton key={index} className="h-[286px] rounded-[20px]" />
+                      <Skeleton key={index} className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
                     ))
                   ) : isError ? (
                     <div className="rounded-[20px] bg-white p-8 text-center text-sm text-[#45515e] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] dark:bg-white/5 dark:text-white/70 dark:ring-white/10 md:col-span-2 xl:col-span-3">
@@ -586,7 +586,7 @@ export default function PublicModelsPage() {
                           role="link"
                           tabIndex={0}
                           aria-label={`${t("publicModels.viewDetails")}: ${model.model}`}
-                          className="group flex cursor-pointer flex-col rounded-[20px] bg-white p-[10px] shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-white/5 dark:ring-white/10"
+                          className="group flex cursor-pointer flex-col rounded-[16px] bg-white p-3 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-white/5 dark:ring-white/10 sm:rounded-[20px] sm:p-[10px]"
                           onClick={() => navigate(getPublicModelDetailPath(model.model))}
                           onKeyDown={(event) => {
                             if (event.currentTarget !== event.target) {
@@ -620,7 +620,7 @@ export default function PublicModelsPage() {
 
                           <Link
                             to={getPublicModelDetailPath(model.model)}
-                            className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[18px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white"
+                            className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {model.model}
@@ -653,11 +653,11 @@ export default function PublicModelsPage() {
                               </span>
                             </span>
                           </div>
-                          <p className="mt-3 line-clamp-2 text-sm leading-[1.7] text-[#45515e] dark:text-white/70">
+                          <p className="mt-2 line-clamp-1 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-3 sm:line-clamp-2 sm:leading-[1.7]">
                             {model.description || t("publicModels.defaultDescription")}
                           </p>
 
-                          <div className="mt-5 flex flex-wrap gap-1.5">
+                          <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-5">
                             <Badge className="rounded-full border-[#1456f0]/20 bg-[#1456f0] px-2.5 py-1 text-xs font-semibold text-white shadow-[rgba(20,86,240,0.18)_0px_4px_10px] hover:bg-[#1456f0] dark:border-[#60a5fa]/30 dark:bg-[#2563eb] dark:text-white">
                               {t("publicModels.table.context")} {formatContextLength(model.context_length)}
                             </Badge>
@@ -745,17 +745,17 @@ function FilterPillGroup({
   value: string;
 }) {
   return (
-    <div className="space-y-2">
-      <div className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[#8e8e93] dark:text-white/45">
+    <div className="space-y-1.5 sm:space-y-2">
+      <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8e8e93] dark:text-white/45 sm:text-xs">
         {label}
       </div>
-      <div className="space-y-1">
+      <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:block lg:space-y-1 [&::-webkit-scrollbar]:hidden">
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
             className={cn(
-              "flex h-8 w-full min-w-0 items-center gap-2 rounded-[6px] px-1.5 text-left text-sm font-medium transition active:scale-[0.98]",
+              "flex h-8 min-w-0 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-left text-xs font-medium transition active:scale-[0.98] lg:w-full lg:shrink lg:gap-2 lg:rounded-[6px] lg:px-1.5 lg:text-sm",
               value === option.value
                 ? "text-[#18181b] dark:text-white"
                 : "text-[#45515e] hover:bg-black/[0.04] dark:text-white/70 dark:hover:bg-white/[0.06]",
@@ -764,15 +764,15 @@ function FilterPillGroup({
           >
             <span
               className={cn(
-                "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition",
+                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border transition lg:h-4 lg:w-4 lg:rounded-[4px]",
                 value === option.value
                   ? "border-[#181e25] bg-[#181e25] text-white dark:border-white dark:bg-white dark:text-[#181e25]"
                   : "border-[#d8dce3] bg-white dark:border-white/15 dark:bg-white/5",
               )}
             >
-              {value === option.value && <CheckCircle2 className="h-3 w-3" strokeWidth={3} />}
+              {value === option.value && <CheckCircle2 className="h-2.5 w-2.5 lg:h-3 lg:w-3" strokeWidth={3} />}
             </span>
-            <span className="truncate">{option.label}</span>
+            <span className="max-w-[116px] truncate lg:max-w-none">{option.label}</span>
           </button>
         ))}
       </div>

@@ -143,6 +143,12 @@ export interface UserPortalLoginRequest {
     accepted_terms: true
 }
 
+export interface UserPortalUpdatePasswordRequest {
+    current_password: string
+    new_password: string
+    confirm_new_password: string
+}
+
 export interface UserPortalEmailCodeRequest {
     email: string
 }

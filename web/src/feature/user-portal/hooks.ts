@@ -9,6 +9,7 @@ import type {
     UserPortalPlaygroundChatRequest,
     UserPortalRechargeRequest,
     UserPortalRegisterRequest,
+    UserPortalUpdatePasswordRequest,
     UserPortalUpdateKeyRequest,
 } from '@/types/user-portal'
 import { userPortalApi } from '@/api/user-portal'
@@ -89,6 +90,24 @@ export const useUserPortalMe = (enabled = true) => {
         staleTime: 60 * 1000,
         meta: {
             onError: () => logout(),
+        },
+    })
+}
+
+export const useUserPortalUpdatePassword = () => {
+    const queryClient = useQueryClient()
+    const setUser = useUserPortalAuthStore((state) => state.setUser)
+
+    return useMutation({
+        mutationFn: (data: UserPortalUpdatePasswordRequest) => userPortalApi.updatePassword(data),
+        onSuccess: (response) => {
+            setUser(response.user)
+            queryClient.invalidateQueries({ queryKey: ['userPortalMe'] })
+            toast.success('密码已更新')
+        },
+        onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : '更新密码失败'
+            toast.error(message)
         },
     })
 }

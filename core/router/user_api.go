@@ -25,6 +25,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 	{
 		authPrivateRouter := protectedUserAPI.Group("/auth")
 		authPrivateRouter.GET("/me", controller.GetCurrentAppUser)
+		authPrivateRouter.PUT("/password", controller.UpdateCurrentAppUserPassword)
 
 		protectedUserAPI.GET("/groups", controller.GetCurrentUserGroups)
 

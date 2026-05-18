@@ -2,7 +2,7 @@ import type React from 'react'
 import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import {
-    // Blocks,
+    Blocks,
     ChevronLeft,
     ChevronRight,
     Home,
@@ -10,6 +10,7 @@ import {
     LogOut,
     Menu,
     ScrollText,
+    UserRound,
     Wallet,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -41,14 +42,16 @@ export function UserPortalLayout() {
     const user = useUserPortalAuthStore((state) => state.user)
     const portalNavItems: PortalNavItem[] = [
         { label: t('portal.nav.home'), href: ROUTES.HOME, icon: Home },
-        // { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
+        { label: t('portal.nav.models'), href: ROUTES.PUBLIC_MODELS, icon: Blocks },
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
+        { label: t('portal.nav.profile'), href: ROUTES.USER_PROFILE, icon: UserRound },
     ]
 
     const currentPath = location.pathname
-    const account = user?.email || `#${user?.id ?? ''}`
+    const account = user?.username || user?.email || `#${user?.id ?? ''}`
+    const accountInitial = (user?.username || user?.email || 'U').trim().charAt(0).toUpperCase() || 'U'
     const activeNavItem = portalNavItems.find((item) => item.href === currentPath)
         || portalNavItems.find((item) => item.href === ROUTES.USER_DASHBOARD)
         || portalNavItems[0]
@@ -184,20 +187,28 @@ export function UserPortalLayout() {
                     </TooltipProvider>
                 </div>
 
-                <div className="relative z-10 space-y-3 border-t border-border p-4">
+                <div className="relative z-10 border-t border-border p-3">
                     {!collapsed && (
-                        <>
-                            <div className="rounded-md border border-border bg-background px-4 py-3">
-                                <div className="text-xs text-muted-foreground">{t('portal.nav.currentAccount')}</div>
-                                <div className="truncate text-sm font-medium">{account}</div>
+                        <div className="rounded-lg border border-border bg-muted/25 p-3 shadow-[rgba(15,23,42,0.03)_0px_8px_18px] dark:bg-white/[0.03]">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-foreground text-[13px] font-semibold text-background">
+                                    {accountInitial}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+                                        {t('portal.nav.currentAccount')}
+                                    </div>
+                                    <div className="truncate text-sm font-semibold text-foreground">{account}</div>
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="rounded-md border border-border bg-background px-3 py-2">
+
+                            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                                <div className="flex min-w-0 items-center justify-center rounded-md border border-border bg-background px-2 py-2">
                                     <ThemeToggle />
                                 </div>
-                                <LanguageSelector variant="minimal" />
+                                <LanguageSelector className="h-9 w-[58px] rounded-md bg-background" variant="minimal" />
                             </div>
-                        </>
+                        </div>
                     )}
 
                     <Tooltip>
@@ -206,9 +217,9 @@ export function UserPortalLayout() {
                                 variant="secondary"
                                 onClick={handleLogout}
                                 className={cn(
-                                    'group flex w-full items-center rounded-md px-4 py-3 transition-colors',
-                                    'border border-border bg-background text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-                                    collapsed ? 'justify-center' : 'justify-start',
+                                    'group flex w-full items-center rounded-md border border-transparent bg-transparent shadow-none transition-colors',
+                                    'text-muted-foreground hover:border-border hover:bg-muted/70 hover:text-foreground',
+                                    collapsed ? 'h-10 justify-center p-0' : 'mt-3 h-10 justify-start px-3',
                                 )}
                             >
                                 <div className="flex items-center justify-center w-5 h-5">
@@ -233,6 +244,7 @@ export function UserPortalLayout() {
                 <header className="sticky top-0 z-30 hidden border-b border-border bg-background/95 px-4 py-3 backdrop-blur-xl lg:flex lg:items-center lg:justify-end lg:px-6">
                     <PublicSiteMenu
                         className="ml-0 max-w-full"
+                        showPrimaryAction={false}
                     />
                 </header>
                 <header className="sticky top-0 z-30 border-b border-border bg-background px-4 py-3 lg:hidden">

@@ -18,6 +18,7 @@ import type {
     UserPortalRechargeLogsResponse,
     UserPortalRechargeResponse,
     UserPortalRegisterRequest,
+    UserPortalUpdatePasswordRequest,
     UserPortalUpdateKeyRequest,
     UserPortalUser,
     UserPortalWalletLogsResponse,
@@ -119,6 +120,10 @@ export const userPortalApi = {
 
     me: async () => {
         return get<{ user: UserPortalUser }>('auth/me')
+    },
+
+    updatePassword: async (data: UserPortalUpdatePasswordRequest) => {
+        return put<{ user: UserPortalUser }>('auth/password', data)
     },
 
     getWallet: async () => {

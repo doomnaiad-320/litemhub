@@ -17,6 +17,7 @@ export const ROUTES = {
     USER_GROUPS: "/dashboard/groups",
     USER_KEYS: "/dashboard/keys",
     USER_LOGS: "/dashboard/logs",
+    USER_PROFILE: "/dashboard/profile",
     PUBLIC_MODELS: "/models",
     PUBLIC_MODEL_DETAIL: "/models/*",
     PUBLIC_API_DOCS: "/swagger/index.html",

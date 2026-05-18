@@ -20,6 +20,7 @@ interface PublicSiteHeaderProps {
 interface PublicSiteMenuProps {
   activeItem?: PublicSiteHeaderItem;
   className?: string;
+  showPrimaryAction?: boolean;
   variant?: PublicSiteHeaderVariant;
 }
 
@@ -40,8 +41,8 @@ export function PublicSiteHeader({
         className,
       )}
     >
-      <div className="flex h-[58px] w-full items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-3">
+      <div className="flex h-[58px] w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex shrink-0 items-center gap-3">
           <span
             className={cn(
               "inline-flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border text-[13px] font-semibold",
@@ -71,6 +72,7 @@ export function PublicSiteHeader({
 export function PublicSiteMenu({
   activeItem,
   className,
+  showPrimaryAction = true,
   variant = "light",
 }: PublicSiteMenuProps) {
   const { t: rawT, i18n } = useTranslation();
@@ -82,7 +84,7 @@ export function PublicSiteMenu({
 
   return (
     <div className={cn("ml-auto flex min-w-0 items-center gap-[5px]", className)}>
-      <nav className="hidden min-w-0 items-center gap-[5px] overflow-x-auto md:flex">
+      <nav className="flex min-w-0 items-center gap-[3px] overflow-x-auto [scrollbar-width:none] md:gap-[5px] [&::-webkit-scrollbar]:hidden">
         <PublicHeaderLink active={activeItem === "home"} isDark={isDark} to="/">
           {isChinese ? "首页" : "Home"}
         </PublicHeaderLink>
@@ -127,27 +129,29 @@ export function PublicSiteMenu({
         />
       </div>
 
-      <div
-        className={cn(
-          "flex items-center gap-[5px] border-l pl-[5px]",
-          isDark ? "border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
-        )}
-      >
-        <Button
-          asChild
+      {showPrimaryAction && (
+        <div
           className={cn(
-            "h-[32px] rounded-[6px] px-3 text-[14px] font-semibold shadow-none",
-            isDark
-              ? "bg-[#e7e8ee] text-[#111217] hover:bg-white"
-              : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90",
+            "flex items-center gap-[5px] border-l pl-[5px]",
+            isDark ? "border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
           )}
         >
-          <Link to={primaryTarget}>
-            {isAuthenticated ? t("publicModels.nav.console") : t("publicModels.nav.start")}
-            <ArrowRight className="h-[13px] w-[13px]" strokeWidth={2} />
-          </Link>
-        </Button>
-      </div>
+          <Button
+            asChild
+            className={cn(
+              "h-[32px] rounded-[6px] px-3 text-[14px] font-semibold shadow-none",
+              isDark
+                ? "bg-[#e7e8ee] text-[#111217] hover:bg-white"
+                : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90",
+            )}
+          >
+            <Link to={primaryTarget}>
+              {isAuthenticated ? t("publicModels.nav.console") : t("publicModels.nav.start")}
+              <ArrowRight className="h-[13px] w-[13px]" strokeWidth={2} />
+            </Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -166,7 +170,7 @@ function PublicHeaderLink({
   const isExternal = /^https?:\/\//.test(to);
   const isDocumentRoute = to.startsWith("/swagger");
   const className = cn(
-    "whitespace-nowrap rounded-[6px] px-3 py-[7px] text-[14px] font-semibold leading-none transition",
+    "whitespace-nowrap rounded-[6px] px-2 py-[7px] text-[13px] font-semibold leading-none transition sm:px-3 sm:text-[14px]",
     isDark
       ? "text-[#818793] hover:bg-[#15171d] hover:text-[#e4e6ed]"
       : "text-[#45515e] hover:bg-black/[0.05] hover:text-[#18181b] dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white",

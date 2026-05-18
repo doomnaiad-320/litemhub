@@ -37,6 +37,12 @@ type UserAuthEmailCodeResponse struct {
 	CooldownSeconds int64 `json:"cooldown_seconds"`
 }
 
+type UserAuthUpdatePasswordRequest struct {
+	CurrentPassword    string `json:"current_password"`
+	NewPassword        string `json:"new_password"`
+	ConfirmNewPassword string `json:"confirm_new_password"`
+}
+
 type AppUserResponse struct {
 	ID        int    `json:"id"`
 	Username  string `json:"username,omitempty"`
@@ -128,6 +134,26 @@ func validateUserPortalLoginRequest(account, password string) string {
 
 	if strings.TrimSpace(password) == "" {
 		return "password is required"
+	}
+
+	return ""
+}
+
+func validateUserPortalUpdatePasswordRequest(currentPassword, newPassword, confirmNewPassword string) string {
+	if strings.TrimSpace(currentPassword) == "" {
+		return "current password is required"
+	}
+
+	if message := validateUserPassword(newPassword); message != "" {
+		return message
+	}
+
+	if newPassword != confirmNewPassword {
+		return "new passwords do not match"
+	}
+
+	if currentPassword == newPassword {
+		return "new password must be different from current password"
 	}
 
 	return ""
@@ -304,5 +330,53 @@ func GetCurrentAppUser(c *gin.Context) {
 
 	middleware.SuccessResponse(c, gin.H{
 		"user": buildAppUserResponse(user),
+	})
+}
+
+func UpdateCurrentAppUserPassword(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+
+	req := UserAuthUpdatePasswordRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
+		return
+	}
+
+	if message := validateUserPortalUpdatePasswordRequest(
+		req.CurrentPassword,
+		req.NewPassword,
+		req.ConfirmNewPassword,
+	); message != "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, message)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		middleware.ErrorResponse(c, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "failed to hash password")
+		return
+	}
+
+	updatedUser, err := model.UpdateAppUserPasswordHash(user.ID, string(passwordHash))
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			middleware.ErrorResponse(c, http.StatusNotFound, "user not found")
+		case errors.Is(err, model.ErrAppUserPasswordHashEmpty):
+			middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		default:
+			middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
+
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"user": buildAppUserResponse(updatedUser),
 	})
 }

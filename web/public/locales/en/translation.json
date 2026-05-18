@@ -1425,6 +1425,7 @@
       "wallet": "Wallet",
       "keys": "Keys",
       "logs": "Logs",
+      "profile": "Profile",
       "currentAccount": "Current Account",
       "logout": "Logout"
     },
@@ -1509,6 +1510,30 @@
       "groupHint": "Check group multipliers and available models",
       "keyHint": "Create and copy your own keys",
       "logHint": "Review model request logs"
+    },
+    "profile": {
+      "badge": "Account Settings",
+      "title": "Profile",
+      "description": "Review the signed-in account and manage the password used to access the console.",
+      "accountTitle": "Account Information",
+      "userId": "User ID: {{id}}",
+      "email": "Email",
+      "createdAt": "Created At",
+      "passwordTitle": "Change Password",
+      "passwordDescription": "Use the new password next time you sign in. The current session remains active.",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "At least 6 characters",
+      "confirmNewPassword": "Confirm New Password",
+      "confirmNewPasswordPlaceholder": "Re-enter new password",
+      "passwordHelp": "For account security, the new password must be different from the current password.",
+      "updatePassword": "Update Password",
+      "updatingPassword": "Updating...",
+      "currentPasswordRequired": "Enter your current password",
+      "passwordMin": "Password must be at least 6 characters",
+      "passwordNotMatch": "New passwords do not match",
+      "passwordSame": "New password must be different from current password"
     },
     "models": {
       "badge": "Model Catalog",
