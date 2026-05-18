@@ -1,8 +1,6 @@
 import {
     BadgePercent,
     Bell,
-    ChevronDown,
-    CircleHelp,
     CreditCard,
     ExternalLink,
     QrCode,
@@ -22,6 +20,7 @@ import {
     useUserPortalDuluPayRecharge,
     useUserPortalWallet,
 } from '@/feature/user-portal/hooks'
+import { UserPortalWalletLogHistory } from '@/feature/user-portal/components/UserPortalWalletLogHistory'
 
 const presetAmounts = [10, 50, 100, 500, 1000, 5000]
 const normalizeDiscountCodeInput = (value: string) => value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
@@ -118,7 +117,7 @@ export default function UserPortalDashboardPage() {
     ]
 
     return (
-        <div className="w-full max-w-[1120px] space-y-6 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
+        <div className="mx-auto w-full max-w-[1120px] space-y-6 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
             <header>
                 <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[28px] font-semibold leading-tight tracking-tight text-[#18181b] dark:text-white">
                     {t('portal.dashboard.billingTitle')}
@@ -174,7 +173,7 @@ export default function UserPortalDashboardPage() {
                 )}
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_292px]">
+            <div className="space-y-5">
                 <div className="space-y-5">
                     <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10 sm:p-6">
                         <div>
@@ -323,6 +322,7 @@ export default function UserPortalDashboardPage() {
                     </section>
                 </div>
 
+                {/*
                 <aside className="space-y-5">
                     <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10">
                         <div className="flex items-center gap-2">
@@ -350,7 +350,10 @@ export default function UserPortalDashboardPage() {
                         </div>
                     </section>
                 </aside>
+                */}
             </div>
+
+            <UserPortalWalletLogHistory />
         </div>
     )
 }

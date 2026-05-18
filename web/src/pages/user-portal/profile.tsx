@@ -71,7 +71,7 @@ export default function UserPortalProfilePage() {
     }
 
     return (
-        <div className="w-full max-w-[560px] space-y-4 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
+        <div className="mx-auto w-full max-w-[560px] space-y-4 font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] dark:text-white">
             <header className="space-y-2">
                 <div className="text-sm font-medium text-primary">{t('portal.profile.badge')}</div>
                 <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-2xl font-semibold tracking-tight text-[#18181b] dark:text-white">
