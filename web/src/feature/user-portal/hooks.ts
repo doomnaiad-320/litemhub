@@ -21,6 +21,7 @@ const invalidatePortalQueries = (queryClient: ReturnType<typeof useQueryClient>)
     queryClient.invalidateQueries({ queryKey: ['userPortalWallet'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalWalletLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalRechargeLogs'] })
+    queryClient.invalidateQueries({ queryKey: ['userPortalReferralRecords'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalModelLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalGroups'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalKeys'] })
@@ -140,6 +141,14 @@ export const useUserPortalDiscountCode = (enabled = true) => {
     return useQuery({
         queryKey: ['userPortalDiscountCode'],
         queryFn: () => userPortalApi.getDiscountCode(),
+        enabled,
+    })
+}
+
+export const useUserPortalReferralRecords = (page: number, perPage: number, enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalReferralRecords', page, perPage],
+        queryFn: () => userPortalApi.getReferralRecords(page, perPage),
         enabled,
     })
 }

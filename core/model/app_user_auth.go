@@ -17,6 +17,7 @@ var (
 	ErrAppUserStatusInvalid     = errors.New("invalid app user status")
 	ErrAppUserAccountInvalid    = errors.New("username, email or phone is required")
 	ErrAppUserPasswordHashEmpty = errors.New("password hash is empty")
+	ErrAppUserReferralNotFound  = errors.New("app user referral not found")
 )
 
 func normalizeAppUserUsername(username string) string {
@@ -58,6 +59,10 @@ func normalizeAppUserPhone(phone string) string {
 }
 
 func CreateAppUserWithWallet(user *AppUser) error {
+	return CreateAppUserWithWalletAndReferral(user, "")
+}
+
+func CreateAppUserWithWalletAndReferral(user *AppUser, inviteCode string) error {
 	if user == nil {
 		return errors.New("user is nil")
 	}
@@ -65,6 +70,7 @@ func CreateAppUserWithWallet(user *AppUser) error {
 	user.Username = EmptyNullString(normalizeAppUserUsername(string(user.Username)))
 	user.Email = EmptyNullString(normalizeAppUserEmail(string(user.Email)))
 	user.Phone = EmptyNullString(normalizeAppUserPhone(string(user.Phone)))
+	inviteCode = NormalizeAppUserDiscountCode(inviteCode)
 
 	if user.Status == 0 {
 		user.Status = AppUserStatusEnabled
@@ -87,8 +93,44 @@ func CreateAppUserWithWallet(user *AppUser) error {
 			return err
 		}
 
+		if inviteCode != "" {
+			discountCode, err := GetAppUserDiscountCodeByCode(inviteCode)
+			if err != nil {
+				return err
+			}
+			if discountCode.UserID == user.ID {
+				return errors.New("invite code is invalid")
+			}
+
+			referral := &AppUserReferral{
+				InviterUserID: discountCode.UserID,
+				InvitedUserID: user.ID,
+				DiscountCode:  EmptyNullString(inviteCode),
+			}
+			if err := tx.Create(referral).Error; err != nil {
+				if errors.Is(err, gorm.ErrDuplicatedKey) {
+					return ErrAppUserAlreadyExists
+				}
+				return err
+			}
+		}
+
 		return nil
 	})
+}
+
+func GetAppUserReferralByInvitedUserID(invitedUserID int) (*AppUserReferral, error) {
+	if invitedUserID == 0 {
+		return nil, errors.New("invited user id is empty")
+	}
+
+	referral := &AppUserReferral{}
+	err := DB.Where("invited_user_id = ?", invitedUserID).First(referral).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAppUserReferralNotFound
+	}
+
+	return referral, err
 }
 
 func BackfillAppUserUsernames() error {

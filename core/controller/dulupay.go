@@ -61,6 +61,8 @@ type DuluPayRechargeResponse struct {
 	PayInfo    string  `json:"pay_info"`
 }
 
+var requestDuluPayCreateFunc = requestDuluPayCreate
+
 func CreateDuluPayRecharge(c *gin.Context) {
 	user := middleware.GetWalletUser(c)
 
@@ -82,12 +84,11 @@ func CreateDuluPayRecharge(c *gin.Context) {
 	}
 	discount := normalizeRechargeDiscount(config.GetDuluPayRechargeDiscount())
 	payAmount := calculateRechargePayAmount(amount, discount)
-	discountCode, rebateUserID, rebateRatio, ok := resolveRechargeRebate(c, req.DiscountCode, user.ID)
-	if !ok {
+	rebateResolution, err := resolveRechargeRebate(c, req.DiscountCode, user.ID)
+	if err != nil {
 		return
 	}
 
-	outTradeNo := model.NewAppPaymentOutTradeNo(user.ID)
 	payType := strings.TrimSpace(req.Type)
 	if payType == "" {
 		payType = config.DuluPayType
@@ -102,7 +103,23 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		device = config.DuluPayDevice
 	}
 
-	createResp, err := requestDuluPayCreate(duluPayCreateRequest{
+	outTradeNo := model.NewAppPaymentOutTradeNo(user.ID)
+	order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+		UserID:       user.ID,
+		Amount:       amount,
+		PayAmount:    payAmount,
+		Channel:      duluPayChannel,
+		OutTradeNo:   outTradeNo,
+		DiscountCode: rebateResolution.DiscountCode,
+		RebateUserID: rebateResolution.RebateUserID,
+		RebateRatio:  rebateResolution.RebateRatio,
+	})
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	createResp, err := requestDuluPayCreateFunc(duluPayCreateRequest{
 		OutTradeNo: outTradeNo,
 		Amount:     payAmount,
 		ClientIP:   c.ClientIP(),
@@ -110,27 +127,20 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		Device:     device,
 	})
 	if err != nil {
+		if _, markErr := model.MarkAppPaymentOrderFailed(outTradeNo); markErr != nil {
+			middleware.ErrorResponse(c, http.StatusInternalServerError, markErr.Error())
+			return
+		}
 		middleware.ErrorResponse(c, http.StatusBadGateway, err.Error())
 		return
 	}
 
-	order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
-		UserID:       user.ID,
-		Amount:       amount,
-		PayAmount:    payAmount,
-		Channel:      duluPayChannel,
-		OutTradeNo:   outTradeNo,
-		TradeNo:      createResp.TradeNo,
-		PayType:      createResp.PayType,
-		PayInfo:      createResp.PayInfo,
-		DiscountCode: discountCode,
-		RebateUserID: rebateUserID,
-		RebateRatio:  rebateRatio,
-	})
+	updatedOrder, err := model.UpdateAppPaymentOrderDuluPayInfo(outTradeNo, createResp.TradeNo, createResp.PayType, createResp.PayInfo)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	order = updatedOrder
 
 	middleware.SuccessResponse(c, gin.H{
 		"payment": DuluPayRechargeResponse{
@@ -150,30 +160,28 @@ func resolveRechargeRebate(
 	c *gin.Context,
 	code string,
 	currentUserID int,
-) (discountCode string, rebateUserID int, rebateRatio float64, ok bool) {
-	discountCode = model.NormalizeAppUserDiscountCode(code)
-	if discountCode == "" {
-		return "", 0, 0, true
-	}
-
-	referrerCode, err := model.GetAppUserDiscountCodeByCode(discountCode)
+) (*model.AppRechargeRebateResolution, error) {
+	resolution, err := model.ResolveAppRechargeRebate(
+		currentUserID,
+		code,
+		config.GetDuluPayRechargeRebateRatio(),
+	)
 	if err != nil {
 		if errors.Is(err, model.ErrAppUserDiscountCodeNotFound) ||
 			errors.Is(err, model.ErrAppUserDiscountCodeInvalid) {
 			middleware.ErrorResponse(c, http.StatusBadRequest, "invalid discount code")
-			return "", 0, 0, false
+			return nil, err
+		}
+		if errors.Is(err, model.ErrAppRechargeSelfDiscountCode) {
+			middleware.ErrorResponse(c, http.StatusBadRequest, "cannot use your own discount code")
+			return nil, err
 		}
 
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return "", 0, 0, false
+		return nil, err
 	}
 
-	if referrerCode.UserID == currentUserID {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "cannot use your own discount code")
-		return "", 0, 0, false
-	}
-
-	return discountCode, referrerCode.UserID, config.GetDuluPayRechargeRebateRatio(), true
+	return resolution, nil
 }
 
 func DuluPayNotify(c *gin.Context) {

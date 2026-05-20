@@ -18,6 +18,7 @@ type UserAuthRegisterRequest struct {
 	Email         string `json:"email"`
 	Code          string `json:"code"`
 	Password      string `json:"password"`
+	InviteCode    string `json:"invite_code"`
 	AcceptedTerms bool   `json:"accepted_terms"`
 }
 
@@ -216,6 +217,7 @@ func RegisterAppUser(c *gin.Context) {
 
 	req.Email = normalizeUserPortalEmail(req.Email)
 	req.Username = normalizeUserPortalUsername(req.Username)
+	req.InviteCode = model.NormalizeAppUserDiscountCode(req.InviteCode)
 
 	if message := validateUserPortalAcceptedTerms(req.AcceptedTerms); message != "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, message)
@@ -254,9 +256,13 @@ func RegisterAppUser(c *gin.Context) {
 		Status:       model.AppUserStatusEnabled,
 	}
 
-	if err := model.CreateAppUserWithWallet(user); err != nil {
+	if err := model.CreateAppUserWithWalletAndReferral(user, req.InviteCode); err != nil {
 		if errors.Is(err, model.ErrAppUserAlreadyExists) {
 			middleware.ErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, model.ErrAppUserDiscountCodeNotFound) || errors.Is(err, model.ErrAppUserDiscountCodeInvalid) {
+			middleware.ErrorResponse(c, http.StatusBadRequest, "invite code is invalid")
 			return
 		}
 

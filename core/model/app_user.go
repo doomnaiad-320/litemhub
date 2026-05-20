@@ -100,6 +100,35 @@ func (c *AppUserDiscountCode) BeforeSave(_ *gorm.DB) error {
 	return nil
 }
 
+type AppUserReferral struct {
+	ID            int             `json:"id"                gorm:"primaryKey"`
+	InviterUserID int             `json:"inviter_user_id"   gorm:"index;not null"`
+	InvitedUserID int             `json:"invited_user_id"   gorm:"uniqueIndex;not null"`
+	DiscountCode  EmptyNullString `json:"discount_code"     gorm:"size:32;index"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+}
+
+func (*AppUserReferral) TableName() string {
+	return "app_user_referral"
+}
+
+func (r *AppUserReferral) BeforeSave(_ *gorm.DB) error {
+	if r.InviterUserID == 0 {
+		return errors.New("inviter user id is required")
+	}
+
+	if r.InvitedUserID == 0 {
+		return errors.New("invited user id is required")
+	}
+
+	if r.InviterUserID == r.InvitedUserID {
+		return errors.New("inviter user id cannot equal invited user id")
+	}
+
+	return nil
+}
+
 type AppUserWallet struct {
 	ID               int       `json:"id"                gorm:"primaryKey"`
 	UserID           int       `json:"user_id"           gorm:"uniqueIndex;not null"`

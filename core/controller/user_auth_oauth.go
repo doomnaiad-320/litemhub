@@ -38,6 +38,7 @@ var (
 type userOAuthState struct {
 	State          string `json:"state"`
 	FrontendOrigin string `json:"frontend_origin"`
+	InviteCode     string `json:"invite_code,omitempty"`
 }
 
 type userOAuthLoginPayload struct {
@@ -101,7 +102,7 @@ func StartUserOAuthLogin(c *gin.Context) {
 		return
 	}
 
-	if err := setUserOAuthStateCookie(c, provider, state, frontendOrigin); err != nil {
+	if err := setUserOAuthStateCookie(c, provider, state, frontendOrigin, model.NormalizeAppUserDiscountCode(c.Query("invite_code"))); err != nil {
 		redirectUserOAuthError(c, frontendOrigin, "第三方登录暂时不可用")
 		return
 	}
@@ -177,7 +178,7 @@ func HandleUserOAuthCallback(c *gin.Context) {
 		return
 	}
 
-	user, err := getOrCreateUserByEmailForOAuth(email)
+	user, err := getOrCreateUserByEmailForOAuth(email, statePayload.InviteCode)
 	if err != nil {
 		redirectUserOAuthError(c, statePayload.FrontendOrigin, "账号登录失败，请重试")
 		return
@@ -361,7 +362,7 @@ func userOAuthStateCookiePath(provider string) string {
 	return userOAuthCallbackPrefix + provider
 }
 
-func setUserOAuthStateCookie(c *gin.Context, provider, state, frontendOrigin string) error {
+func setUserOAuthStateCookie(c *gin.Context, provider, state, frontendOrigin, inviteCode string) error {
 	if c == nil {
 		return errors.New("gin context is nil")
 	}
@@ -369,6 +370,7 @@ func setUserOAuthStateCookie(c *gin.Context, provider, state, frontendOrigin str
 	payload, err := json.Marshal(userOAuthState{
 		State:          state,
 		FrontendOrigin: frontendOrigin,
+		InviteCode:     inviteCode,
 	})
 	if err != nil {
 		return err
@@ -457,7 +459,7 @@ func redirectUserOAuthError(c *gin.Context, frontendOrigin, message string) {
 	c.Redirect(http.StatusFound, redirectURL)
 }
 
-func getOrCreateUserByEmailForOAuth(email string) (*model.AppUser, error) {
+func getOrCreateUserByEmailForOAuth(email, inviteCode string) (*model.AppUser, error) {
 	email = normalizeUserPortalEmail(email)
 	if email == "" {
 		return nil, errors.New("email is empty")
@@ -489,7 +491,7 @@ func getOrCreateUserByEmailForOAuth(email string) (*model.AppUser, error) {
 		Status:       model.AppUserStatusEnabled,
 	}
 
-	if err := model.CreateAppUserWithWallet(user); err != nil {
+	if err := model.CreateAppUserWithWalletAndReferral(user, inviteCode); err != nil {
 		if errors.Is(err, model.ErrAppUserAlreadyExists) {
 			return model.GetAppUserByEmail(email)
 		}

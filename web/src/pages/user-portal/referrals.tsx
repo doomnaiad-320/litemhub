@@ -3,6 +3,7 @@ import {
     BadgePercent,
     Copy,
     Gift,
+    Link2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -10,22 +11,38 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
     useGenerateUserPortalDiscountCode,
     useUserPortalDiscountCode,
+    useUserPortalReferralRecords,
 } from '@/feature/user-portal/hooks'
-import { UserPortalWalletLogHistory } from '@/feature/user-portal/components/UserPortalWalletLogHistory'
+import { UserPortalReferralRecordHistory } from '@/feature/user-portal/components/UserPortalReferralRecordHistory'
+
+const formatMoney = (amount?: number) => `$${(amount || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+})}`
 
 export default function UserPortalReferralsPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string, options?: Record<string, unknown>) => string
     const { data: discountCodeData, isLoading: isDiscountCodeLoading } = useUserPortalDiscountCode(true)
+    const { data: referralData, isLoading: isReferralLoading } = useUserPortalReferralRecords(1, 20, true)
     const generateDiscountCodeMutation = useGenerateUserPortalDiscountCode()
 
     const myDiscountCode = discountCodeData?.discount_code?.code
+    const inviteLink = myDiscountCode ? `${window.location.origin}/r/${myDiscountCode}` : ''
+    const referralStats = referralData?.stats
 
     const copyMyDiscountCode = async () => {
         if (!myDiscountCode) return
 
         await navigator.clipboard.writeText(myDiscountCode)
         toast.success(t('portal.dashboard.myDiscountCodeCopied'))
+    }
+
+    const copyInviteLink = async () => {
+        if (!inviteLink) return
+
+        await navigator.clipboard.writeText(inviteLink)
+        toast.success(t('portal.referrals.inviteLinkCopied'))
     }
 
     return (
@@ -39,7 +56,35 @@ export default function UserPortalReferralsPage() {
                 </p>
             </header>
 
-            <section className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10 sm:p-6">
+            <section className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {isReferralLoading ? (
+                        Array.from({ length: 2 }).map((_, index) => (
+                            <Skeleton key={index} className="h-[92px] rounded-lg" />
+                        ))
+                    ) : (
+                        <>
+                            <div className="rounded-lg border border-[#e5e7eb] bg-background p-4 shadow-none dark:border-white/10">
+                                <div className="text-xs font-medium text-[#8e8e93]">
+                                    {t('portal.referrals.summaryInvitedUsers')}
+                                </div>
+                                <div className="mt-3 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[28px] font-semibold leading-none text-[#18181b] dark:text-white">
+                                    {referralStats?.invited_user_count || 0}
+                                </div>
+                            </div>
+                            <div className="rounded-lg border border-[#e5e7eb] bg-background p-4 shadow-none dark:border-white/10">
+                                <div className="text-xs font-medium text-[#8e8e93]">
+                                    {t('portal.referrals.summaryTotalRebate')}
+                                </div>
+                                <div className="mt-3 font-mono text-[28px] font-semibold leading-none text-[#18181b] dark:text-white">
+                                    {formatMoney(referralStats?.total_rebate_amount)}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="rounded-lg border border-[#e5e7eb] bg-background p-5 shadow-none dark:border-white/10 sm:p-6">
                 <div className="flex items-start gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#eef6f3] text-[#6f9d8d] dark:bg-[#6f9d8d]/15 dark:text-[#9bc3b5]">
                         <Gift className="h-5 w-5" />
@@ -85,11 +130,44 @@ export default function UserPortalReferralsPage() {
                             )}
                         </div>
                         <p className="mt-3 text-xs leading-[1.6] text-[#8e8e93]">{t('portal.dashboard.myDiscountCodeHelp')}</p>
+
+                        {myDiscountCode && (
+                            <div className="mt-4 max-w-xl rounded-md border border-[#e5e7eb] bg-[#fafafa] p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                                <div className="flex items-center gap-2 text-xs font-medium text-[#8e8e93]">
+                                    <Link2 className="h-3.5 w-3.5" />
+                                    {t('portal.referrals.inviteLink')}
+                                </div>
+                                <div className="mt-2 break-all font-mono text-sm text-[#18181b] dark:text-white">
+                                    {inviteLink}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={copyInviteLink}
+                                    className="mt-3 h-10 rounded-md border-[#e5e7eb] bg-background px-4 shadow-none hover:border-[#18181b] hover:bg-background dark:border-white/10"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                    {t('portal.referrals.copyInviteLink')}
+                                </Button>
+                            </div>
+                        )}
                     </div>
+                </div>
                 </div>
             </section>
 
-            <UserPortalWalletLogHistory />
+            <section>
+                <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                    <div>
+                        <h2 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg font-semibold text-[#18181b] dark:text-white">
+                            {t('portal.referrals.logsTitle')}
+                        </h2>
+                        <p className="mt-1 text-sm text-[#8e8e93]">{t('portal.referrals.logsDescription')}</p>
+                    </div>
+                </div>
+
+                <UserPortalReferralRecordHistory />
+            </section>
         </div>
     )
 }

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+const INVITE_CODE_STORAGE_KEY = 'userPortalInviteCode'
+
 const userPortalOAuthProviders = [
     {
         id: 'github',
@@ -61,7 +63,18 @@ export function UserPortalOAuthButtons({
                                 onClick={(event) => {
                                     if (onBeforeStart?.() === false) {
                                         event.preventDefault()
+                                        return
                                     }
+
+                                    const inviteCode = window.localStorage.getItem(INVITE_CODE_STORAGE_KEY)
+                                    if (!inviteCode) {
+                                        return
+                                    }
+
+                                    event.preventDefault()
+                                    const nextURL = new URL(provider.href, window.location.origin)
+                                    nextURL.searchParams.set('invite_code', inviteCode)
+                                    window.location.href = nextURL.toString()
                                 }}
                             >
                                 <Icon />

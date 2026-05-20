@@ -26,6 +26,8 @@ import { UserPortalOAuthButtons } from '@/feature/user-portal/components/UserPor
 import { UserPortalAgreementConsent } from '@/feature/user-portal/components/UserPortalAgreementConsent'
 import { ROUTES } from '@/routes/constants'
 
+const INVITE_CODE_STORAGE_KEY = 'userPortalInviteCode'
+
 interface UserPortalRegisterForm {
     username: string
     email: string
@@ -47,6 +49,7 @@ export default function UserPortalRegisterPage() {
     const [codeEmail, setCodeEmail] = useState('')
     const [agreementAccepted, setAgreementAccepted] = useState(false)
     const [agreementError, setAgreementError] = useState(false)
+    const [inviteCode, setInviteCode] = useState('')
 
     const schema = useMemo(() => z.object({
         username: z.string().trim().min(3, t('portalAuth.usernameMin')).max(32, t('portalAuth.usernameMax')).regex(/^[a-zA-Z0-9_-]+$/, t('portalAuth.usernameInvalid')),
@@ -75,6 +78,10 @@ export default function UserPortalRegisterPage() {
         name: 'email',
     })
     const normalizedEmail = useMemo(() => (watchedEmail || '').trim().toLowerCase(), [watchedEmail])
+
+    useEffect(() => {
+        setInviteCode(window.localStorage.getItem(INVITE_CODE_STORAGE_KEY) || '')
+    }, [])
 
     useEffect(() => {
         if (!codeEmail) {
@@ -178,10 +185,12 @@ export default function UserPortalRegisterPage() {
                 username: values.username.trim().toLowerCase(),
                 code: values.code.trim(),
                 password: values.password.trim(),
+                invite_code: inviteCode || undefined,
                 accepted_terms: true,
             },
             {
                 onSuccess: () => {
+                    window.localStorage.removeItem(INVITE_CODE_STORAGE_KEY)
                     navigate(ROUTES.USER_LOGIN, { replace: true })
                 },
             },

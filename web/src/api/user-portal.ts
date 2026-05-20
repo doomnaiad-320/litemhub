@@ -14,6 +14,7 @@ import type {
     UserPortalModelLogsResponse,
     UserPortalPlaygroundChatRequest,
     UserPortalPlaygroundChatResponse,
+    UserPortalReferralRecordsResponse,
     UserPortalRechargeRequest,
     UserPortalRechargeLogsResponse,
     UserPortalRechargeResponse,
@@ -139,6 +140,13 @@ export const userPortalApi = {
 
     getRechargeLogs: async (page: number, perPage: number) => {
         return get<UserPortalRechargeLogsResponse>('wallet/recharge/logs', {
+            p: page,
+            per_page: perPage,
+        })
+    },
+
+    getReferralRecords: async (page: number, perPage: number) => {
+        return get<UserPortalReferralRecordsResponse>('wallet/referrals', {
             p: page,
             per_page: perPage,
         })

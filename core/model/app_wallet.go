@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +17,11 @@ import (
 const (
 	ErrAppUserWalletNotFound        = "app_user_wallet"
 	ErrAppWalletReservationNotFound = "app_wallet_reservation"
+)
+
+const (
+	AppReferralStatusInvited   = "invited"
+	AppReferralStatusRecharged = "recharged"
 )
 
 var (
@@ -65,6 +71,27 @@ type AppPaymentOrderWithUser struct {
 	AdminStatus    string          `json:"admin_status"`
 	AdminTradeNo   string          `json:"admin_trade_no"`
 	AdminCreatedAt time.Time       `json:"admin_created_at"`
+}
+
+type AppReferralRecord struct {
+	ID               int             `json:"id"`
+	InvitedUserID    int             `json:"invited_user_id"`
+	InvitedUserEmail EmptyNullString `json:"invited_user_email"`
+	InvitedUserPhone EmptyNullString `json:"invited_user_phone"`
+	DiscountCode     EmptyNullString `json:"discount_code"`
+	OrderCount       int             `json:"order_count"`
+	OrderNo          string          `json:"order_no"`
+	Amount           float64         `json:"amount"`
+	PayAmount        float64         `json:"pay_amount"`
+	RebateAmount     float64         `json:"rebate_amount"`
+	Status           string          `json:"status"`
+	CreatedAt        time.Time       `json:"created_at"`
+	PaidAt           *time.Time      `json:"paid_at"`
+}
+
+type AppReferralStats struct {
+	InvitedUserCount  int     `json:"invited_user_count"`
+	TotalRebateAmount float64 `json:"total_rebate_amount"`
 }
 
 type AppRechargeStatsPoint struct {
@@ -164,6 +191,25 @@ func getAppPaymentOrderOrder(order string) string {
 	}
 }
 
+func getAppReferralRecordOrder(order string) string {
+	switch strings.ToLower(strings.TrimSpace(order)) {
+	case "id-asc":
+		return "app_user.id asc"
+	case "amount-desc":
+		return "amount desc, app_user.id desc"
+	case "amount-asc":
+		return "amount asc, app_user.id asc"
+	case "rebate-desc":
+		return "rebate_amount desc, app_user.id desc"
+	case "rebate-asc":
+		return "rebate_amount asc, app_user.id asc"
+	case "created_at-asc":
+		return "created_at asc, app_user.id asc"
+	default:
+		return "COALESCE(paid_at, created_at) desc, app_user.id desc"
+	}
+}
+
 func GetAppUsers(keyword string, page, perPage int, order string, status int) (
 	users []*AppUser,
 	total int64,
@@ -232,6 +278,238 @@ func GetAppPaymentOrders(
 		Find(&orders).Error
 
 	return orders, total, err
+}
+
+func GetAppReferralRecordsByRebateUserID(
+	rebateUserID int,
+	page int,
+	perPage int,
+	order string,
+) (records []*AppReferralRecord, total int64, err error) {
+	if rebateUserID == 0 {
+		return nil, 0, errors.New("rebate user id is empty")
+	}
+
+	type appReferralUserRow struct {
+		ID               int
+		InvitedUserID    int
+		InvitedUserEmail EmptyNullString
+		InvitedUserPhone EmptyNullString
+		DiscountCode     EmptyNullString
+		CreatedAt        time.Time
+	}
+
+	referralRows := make([]*appReferralUserRow, 0)
+	if err = DB.
+		Model(&AppUserReferral{}).
+		Select(
+			"app_user_referral.id, app_user_referral.invited_user_id, "+
+				"app_user.email AS invited_user_email, app_user.phone AS invited_user_phone, "+
+				"app_user_referral.discount_code, app_user_referral.created_at",
+		).
+		Joins("LEFT JOIN app_user ON app_user.id = app_user_referral.invited_user_id").
+		Where("app_user_referral.inviter_user_id = ?", rebateUserID).
+		Find(&referralRows).Error; err != nil {
+		return nil, 0, err
+	}
+
+	paymentUserIDs := make([]int, 0)
+	if err = DB.
+		Model(&AppPaymentOrder{}).
+		Distinct("user_id").
+		Where("rebate_user_id = ?", rebateUserID).
+		Where("status = ?", AppPaymentStatusPaid).
+		Pluck("user_id", &paymentUserIDs).Error; err != nil {
+		return nil, 0, err
+	}
+
+	userIDSet := make(map[int]struct{}, len(referralRows)+len(paymentUserIDs))
+	for _, row := range referralRows {
+		if row != nil && row.InvitedUserID > 0 {
+			userIDSet[row.InvitedUserID] = struct{}{}
+		}
+	}
+	for _, userID := range paymentUserIDs {
+		if userID > 0 {
+			userIDSet[userID] = struct{}{}
+		}
+	}
+
+	total = int64(len(userIDSet))
+	if total <= 0 {
+		return nil, 0, nil
+	}
+
+	userIDs := make([]int, 0, len(userIDSet))
+	for userID := range userIDSet {
+		userIDs = append(userIDs, userID)
+	}
+
+	users := make([]*AppUser, 0, len(userIDs))
+	if err = DB.Where("id IN ?", userIDs).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+	userMap := make(map[int]*AppUser, len(users))
+	for _, user := range users {
+		userMap[user.ID] = user
+	}
+
+	referralMap := make(map[int]*appReferralUserRow, len(referralRows))
+	for _, row := range referralRows {
+		if row != nil {
+			referralMap[row.InvitedUserID] = row
+		}
+	}
+
+	records = make([]*AppReferralRecord, 0, len(userIDs))
+	for _, userID := range userIDs {
+		user := userMap[userID]
+		if user == nil {
+			continue
+		}
+
+		record := &AppReferralRecord{
+			ID:               user.ID,
+			InvitedUserID:    user.ID,
+			InvitedUserEmail: user.Email,
+			InvitedUserPhone: user.Phone,
+			Status:           AppReferralStatusInvited,
+			CreatedAt:        user.CreatedAt,
+		}
+		if referral := referralMap[userID]; referral != nil {
+			record.ID = referral.ID
+			record.DiscountCode = referral.DiscountCode
+			record.CreatedAt = referral.CreatedAt
+		}
+
+		orders := make([]*AppPaymentOrder, 0)
+		if err = DB.
+			Where("rebate_user_id = ?", rebateUserID).
+			Where("user_id = ?", userID).
+			Where("status = ?", AppPaymentStatusPaid).
+			Order("COALESCE(paid_at, created_at) desc, id desc").
+			Find(&orders).Error; err != nil {
+			return nil, 0, err
+		}
+		if len(orders) > 0 {
+			record.Status = AppReferralStatusRecharged
+			record.OrderCount = len(orders)
+			record.OrderNo = orders[0].OutTradeNo
+			record.PaidAt = orders[0].PaidAt
+			if record.PaidAt == nil {
+				record.PaidAt = &orders[0].CreatedAt
+			}
+			if record.CreatedAt.IsZero() {
+				record.CreatedAt = orders[len(orders)-1].CreatedAt
+			}
+			if record.DiscountCode == "" {
+				record.DiscountCode = orders[0].DiscountCode
+			}
+			for _, order := range orders {
+				record.Amount += order.Amount
+				record.PayAmount += order.ExpectedPayAmount()
+				record.RebateAmount += order.RebateAmount
+			}
+			record.Amount = normalizeMoney(record.Amount)
+			record.PayAmount = normalizeMoney(record.PayAmount)
+			record.RebateAmount = normalizeMoney(record.RebateAmount)
+		}
+
+		records = append(records, record)
+	}
+
+	sortAppReferralRecords(records, order)
+
+	limit, offset := toLimitOffset(page, perPage)
+	if offset >= len(records) {
+		return []*AppReferralRecord{}, total, nil
+	}
+	end := min(offset+limit, len(records))
+
+	return records[offset:end], total, nil
+}
+
+func sortAppReferralRecords(records []*AppReferralRecord, order string) {
+	sort.SliceStable(records, func(i, j int) bool {
+		left := records[i]
+		right := records[j]
+		switch strings.ToLower(strings.TrimSpace(order)) {
+		case "id-asc":
+			return left.ID < right.ID
+		case "amount-desc":
+			return left.Amount > right.Amount || (left.Amount == right.Amount && left.ID > right.ID)
+		case "amount-asc":
+			return left.Amount < right.Amount || (left.Amount == right.Amount && left.ID < right.ID)
+		case "rebate-desc":
+			return left.RebateAmount > right.RebateAmount || (left.RebateAmount == right.RebateAmount && left.ID > right.ID)
+		case "rebate-asc":
+			return left.RebateAmount < right.RebateAmount || (left.RebateAmount == right.RebateAmount && left.ID < right.ID)
+		case "created_at-asc":
+			return left.CreatedAt.Before(right.CreatedAt) || (left.CreatedAt.Equal(right.CreatedAt) && left.ID < right.ID)
+		default:
+			leftTime := left.CreatedAt
+			if left.PaidAt != nil {
+				leftTime = *left.PaidAt
+			}
+			rightTime := right.CreatedAt
+			if right.PaidAt != nil {
+				rightTime = *right.PaidAt
+			}
+
+			return leftTime.After(rightTime) || (leftTime.Equal(rightTime) && left.ID > right.ID)
+		}
+	})
+}
+
+func GetAppReferralStatsByRebateUserID(rebateUserID int) (*AppReferralStats, error) {
+	if rebateUserID == 0 {
+		return nil, errors.New("rebate user id is empty")
+	}
+
+	referralUserIDs := make([]int, 0)
+	if err := DB.
+		Model(&AppUserReferral{}).
+		Select("invited_user_id").
+		Where("inviter_user_id = ?", rebateUserID).
+		Pluck("invited_user_id", &referralUserIDs).Error; err != nil {
+		return nil, err
+	}
+
+	rebateUserIDs := make([]int, 0)
+	if err := DB.
+		Model(&AppPaymentOrder{}).
+		Distinct("user_id").
+		Where("rebate_user_id = ?", rebateUserID).
+		Where("status = ?", AppPaymentStatusPaid).
+		Pluck("user_id", &rebateUserIDs).Error; err != nil {
+		return nil, err
+	}
+
+	userIDSet := make(map[int]struct{}, len(referralUserIDs)+len(rebateUserIDs))
+	for _, userID := range referralUserIDs {
+		if userID > 0 {
+			userIDSet[userID] = struct{}{}
+		}
+	}
+	for _, userID := range rebateUserIDs {
+		if userID > 0 {
+			userIDSet[userID] = struct{}{}
+		}
+	}
+
+	stats := &AppReferralStats{}
+	stats.InvitedUserCount = len(userIDSet)
+	err := DB.
+		Model(&AppPaymentOrder{}).
+		Select("COALESCE(SUM(rebate_amount), 0)").
+		Where("rebate_user_id = ?", rebateUserID).
+		Where("status = ?", AppPaymentStatusPaid).
+		Scan(&stats.TotalRebateAmount).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }
 
 func appPaymentOrderSelectSQL() string {

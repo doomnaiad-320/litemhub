@@ -99,6 +99,33 @@ export interface UserPortalDiscountCodeResponse {
     discount_code: UserPortalDiscountCode | null
 }
 
+export interface UserPortalReferralRecord {
+    id: number
+    invited_user_id: number
+    invited_user_email?: string
+    invited_user_phone?: string
+    discount_code?: string
+    order_count: number
+    order_no: string
+    amount: number
+    pay_amount: number
+    rebate_amount: number
+    status: string
+    created_at: number
+    paid_at?: number
+}
+
+export interface UserPortalReferralStats {
+    invited_user_count: number
+    total_rebate_amount: number
+}
+
+export interface UserPortalReferralRecordsResponse {
+    referral_records: UserPortalReferralRecord[]
+    stats: UserPortalReferralStats
+    total: number
+}
+
 export interface UserPortalModelLogsResponse {
     logs: LogRecord[]
     total: number
@@ -134,6 +161,7 @@ export interface UserPortalRegisterRequest {
     email: string
     code: string
     password: string
+    invite_code?: string
     accepted_terms: true
 }
 

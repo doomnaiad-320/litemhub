@@ -12,6 +12,7 @@ export const ROUTES = {
     ANNOUNCEMENTS: "/announcements",
     USER_LOGIN: "/login",
     USER_REGISTER: "/register",
+    USER_INVITE: "/r/:code",
     USER_DASHBOARD: "/dashboard",
     USER_MODELS: "/dashboard/models",
     USER_GROUPS: "/dashboard/groups",

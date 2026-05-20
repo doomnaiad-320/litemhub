@@ -27,6 +27,7 @@ var (
 	ErrAppPaymentOrderNotFound       = errors.New("app payment order not found")
 	ErrAppPaymentOrderAlreadyHandled = errors.New("app payment order already handled")
 	ErrAppPaymentOrderAmountMismatch = errors.New("app payment order amount mismatch")
+	ErrAppRechargeSelfDiscountCode   = errors.New("cannot use your own discount code")
 )
 
 type AppPaymentCreateParams struct {
@@ -43,6 +44,12 @@ type AppPaymentCreateParams struct {
 	RebateRatio  float64
 }
 
+type AppRechargeRebateResolution struct {
+	DiscountCode string
+	RebateUserID int
+	RebateRatio  float64
+}
+
 type AppPaymentPaidParams struct {
 	OutTradeNo    string
 	TradeNo       string
@@ -52,6 +59,53 @@ type AppPaymentPaidParams struct {
 
 func NewAppPaymentOutTradeNo(userID int) string {
 	return fmt.Sprintf("UP%d%s", userID, common.ShortUUID()[:24])
+}
+
+func ResolveAppRechargeRebate(
+	userID int,
+	discountCode string,
+	rebateRatio float64,
+) (*AppRechargeRebateResolution, error) {
+	if userID == 0 {
+		return nil, errors.New("user id is empty")
+	}
+
+	normalizedCode := NormalizeAppUserDiscountCode(discountCode)
+	if normalizedCode != "" {
+		code, err := GetAppUserDiscountCodeByCode(normalizedCode)
+		if err != nil {
+			return nil, err
+		}
+
+		if code.UserID == userID {
+			return nil, ErrAppRechargeSelfDiscountCode
+		}
+
+		return &AppRechargeRebateResolution{
+			DiscountCode: normalizedCode,
+			RebateUserID: code.UserID,
+			RebateRatio:  rebateRatio,
+		}, nil
+	}
+
+	referral, err := GetAppUserReferralByInvitedUserID(userID)
+	if err != nil {
+		if errors.Is(err, ErrAppUserReferralNotFound) {
+			return &AppRechargeRebateResolution{}, nil
+		}
+
+		return nil, err
+	}
+
+	if referral.InviterUserID == 0 || referral.InviterUserID == userID {
+		return &AppRechargeRebateResolution{}, nil
+	}
+
+	return &AppRechargeRebateResolution{
+		DiscountCode: NormalizeAppUserDiscountCode(string(referral.DiscountCode)),
+		RebateUserID: referral.InviterUserID,
+		RebateRatio:  rebateRatio,
+	}, nil
 }
 
 func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, error) {
@@ -94,6 +148,100 @@ func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, err
 	}
 
 	if err := DB.Create(order).Error; err != nil {
+		return nil, err
+	}
+
+	return order, nil
+}
+
+func UpdateAppPaymentOrderDuluPayInfo(outTradeNo, tradeNo, payType, payInfo string) (*AppPaymentOrder, error) {
+	outTradeNo = strings.TrimSpace(outTradeNo)
+	tradeNo = strings.TrimSpace(tradeNo)
+	payType = strings.TrimSpace(payType)
+	payInfo = strings.TrimSpace(payInfo)
+	if outTradeNo == "" {
+		return nil, errors.New("out trade no is empty")
+	}
+
+	order := &AppPaymentOrder{}
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("out_trade_no = ?", outTradeNo).First(order).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrAppPaymentOrderNotFound
+			}
+
+			return err
+		}
+
+		if order.Status == AppPaymentStatusPaid {
+			return ErrAppPaymentOrderAlreadyHandled
+		}
+
+		updates := map[string]any{}
+		if tradeNo != "" {
+			updates["trade_no"] = EmptyNullString(tradeNo)
+		}
+		if payType != "" {
+			updates["pay_type"] = EmptyNullString(payType)
+		}
+		if payInfo != "" {
+			updates["pay_info"] = payInfo
+		}
+
+		if len(updates) == 0 {
+			return nil
+		}
+
+		result := tx.Model(order).Where("id = ?", order.ID).Updates(updates)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrAppPaymentOrderAlreadyHandled
+		}
+
+		return tx.Where("id = ?", order.ID).First(order).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return order, nil
+}
+
+func MarkAppPaymentOrderFailed(outTradeNo string) (*AppPaymentOrder, error) {
+	outTradeNo = strings.TrimSpace(outTradeNo)
+	if outTradeNo == "" {
+		return nil, errors.New("out trade no is empty")
+	}
+
+	order := &AppPaymentOrder{}
+	err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("out_trade_no = ?", outTradeNo).First(order).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrAppPaymentOrderNotFound
+			}
+
+			return err
+		}
+
+		if order.Status == AppPaymentStatusPaid {
+			return ErrAppPaymentOrderAlreadyHandled
+		}
+
+		result := tx.Model(order).
+			Where("id = ?", order.ID).
+			Update("status", AppPaymentStatusFailed)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrAppPaymentOrderAlreadyHandled
+		}
+
+		return tx.Where("id = ?", order.ID).First(order).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -151,7 +299,7 @@ func MarkAppPaymentOrderPaid(params AppPaymentPaidParams) (
 
 		now := time.Now()
 		result := tx.Model(order).
-			Where("id = ? AND status = ?", order.ID, AppPaymentStatusPending).
+			Where("id = ? AND status IN ?", order.ID, []string{AppPaymentStatusPending, AppPaymentStatusFailed}).
 			Updates(map[string]any{
 				"status":         AppPaymentStatusPaid,
 				"trade_no":       EmptyNullString(params.TradeNo),

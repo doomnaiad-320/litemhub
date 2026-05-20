@@ -32,6 +32,7 @@ const PublicAgreementPage = lazy(() => import("@/pages/public-agreements/page"))
 const LoginPage = lazy(() => import("@/pages/auth/login"))
 const UserPortalLoginPage = lazy(() => import("@/pages/user-portal/login"))
 const UserPortalRegisterPage = lazy(() => import("@/pages/user-portal/register"))
+const UserPortalInvitePage = lazy(() => import("@/pages/user-portal/invite"))
 const MonitorPage = lazy(() => import("@/pages/monitor/page"))
 const GroupPage = lazy(() => import("@/pages/group/page"))
 const ConsumptionRankingPage = lazy(() => import("@/pages/consumption-ranking/page"))
@@ -73,6 +74,7 @@ export function useRoutes(): RouteObject[] {
         { path: ROUTES.ADMIN_LOGIN, element: lazyLoad(LoginPage) },
         { path: ROUTES.USER_LOGIN, element: lazyLoad(UserPortalLoginPage) },
         { path: ROUTES.USER_REGISTER, element: lazyLoad(UserPortalRegisterPage) },
+        { path: ROUTES.USER_INVITE, element: lazyLoad(UserPortalInvitePage) },
     ]
 
     // app routes

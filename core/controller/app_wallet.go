@@ -65,6 +65,27 @@ type AppRechargeLogResponse struct {
 	UpdatedAt  int64   `json:"updated_at"`
 }
 
+type UserReferralRecordResponse struct {
+	ID               int     `json:"id"`
+	InvitedUserID    int     `json:"invited_user_id"`
+	InvitedUserEmail string  `json:"invited_user_email,omitempty"`
+	InvitedUserPhone string  `json:"invited_user_phone,omitempty"`
+	DiscountCode     string  `json:"discount_code,omitempty"`
+	OrderCount       int     `json:"order_count"`
+	OrderNo          string  `json:"order_no"`
+	Amount           float64 `json:"amount"`
+	PayAmount        float64 `json:"pay_amount"`
+	RebateAmount     float64 `json:"rebate_amount"`
+	Status           string  `json:"status"`
+	CreatedAt        int64   `json:"created_at"`
+	PaidAt           int64   `json:"paid_at,omitempty"`
+}
+
+type UserReferralStatsResponse struct {
+	InvitedUserCount  int     `json:"invited_user_count"`
+	TotalRebateAmount float64 `json:"total_rebate_amount"`
+}
+
 type AppBillingSettingsResponse struct {
 	RechargeDiscount    float64 `json:"recharge_discount"`
 	RechargeRebateRatio float64 `json:"recharge_rebate_ratio"`
@@ -201,6 +222,17 @@ func buildAppRechargeLogResponses(logs []*model.AppRechargeLogWithUser) []*AppRe
 	return responses
 }
 
+func buildUserReferralStatsResponse(stats *model.AppReferralStats) *UserReferralStatsResponse {
+	if stats == nil {
+		return &UserReferralStatsResponse{}
+	}
+
+	return &UserReferralStatsResponse{
+		InvitedUserCount:  stats.InvitedUserCount,
+		TotalRebateAmount: stats.TotalRebateAmount,
+	}
+}
+
 func buildAppPaymentOrderResponse(order *model.AppPaymentOrderWithUser) *AppRechargeLogResponse {
 	return &AppRechargeLogResponse{
 		ID:         order.ID,
@@ -223,6 +255,37 @@ func buildAppPaymentOrderResponses(orders []*model.AppPaymentOrderWithUser) []*A
 	responses := make([]*AppRechargeLogResponse, len(orders))
 	for i, order := range orders {
 		responses[i] = buildAppPaymentOrderResponse(order)
+	}
+
+	return responses
+}
+
+func buildUserReferralRecordResponse(record *model.AppReferralRecord) *UserReferralRecordResponse {
+	response := &UserReferralRecordResponse{
+		ID:               record.ID,
+		InvitedUserID:    record.InvitedUserID,
+		InvitedUserEmail: string(record.InvitedUserEmail),
+		InvitedUserPhone: string(record.InvitedUserPhone),
+		DiscountCode:     string(record.DiscountCode),
+		OrderCount:       record.OrderCount,
+		OrderNo:          record.OrderNo,
+		Amount:           record.Amount,
+		PayAmount:        record.PayAmount,
+		RebateAmount:     record.RebateAmount,
+		Status:           record.Status,
+		CreatedAt:        record.CreatedAt.UnixMilli(),
+	}
+	if record.PaidAt != nil {
+		response.PaidAt = record.PaidAt.UnixMilli()
+	}
+
+	return response
+}
+
+func buildUserReferralRecordResponses(records []*model.AppReferralRecord) []*UserReferralRecordResponse {
+	responses := make([]*UserReferralRecordResponse, len(records))
+	for i, record := range records {
+		responses[i] = buildUserReferralRecordResponse(record)
 	}
 
 	return responses
@@ -344,6 +407,30 @@ func GetCurrentUserRechargeLogs(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"recharge_logs": buildAppPaymentOrderResponses(orders),
 		"total":         total,
+	})
+}
+
+func GetCurrentUserReferralRecords(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	page, perPage := utils.ParsePageParams(c)
+	order := c.DefaultQuery("order", "")
+
+	records, total, err := model.GetAppReferralRecordsByRebateUserID(user.ID, page, perPage, order)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	stats, err := model.GetAppReferralStatsByRebateUserID(user.ID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"referral_records": buildUserReferralRecordResponses(records),
+		"stats":            buildUserReferralStatsResponse(stats),
+		"total":            total,
 	})
 }
 

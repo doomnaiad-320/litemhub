@@ -1527,8 +1527,24 @@
     },
     "referrals": {
       "title": "邀请返利",
-      "description": "生成你的专属折扣码，并查看充值返利与钱包交易历史。",
-      "copyCode": "复制"
+      "description": "生成你的专属折扣码，并查看邀请用户与对应返利记录。",
+      "copyCode": "复制",
+      "inviteLink": "邀请链接",
+      "copyInviteLink": "复制邀请链接",
+      "inviteLinkCopied": "邀请链接已复制",
+      "logsTitle": "返利日志",
+      "logsDescription": "查看使用你邀请码的用户，以及对应订单返利金额。",
+      "summaryInvitedUsers": "已邀请用户",
+      "summaryTotalRebate": "累计返利",
+      "invitedUser": "邀请用户",
+      "recordStatus": "状态",
+      "invitedAt": "邀请时间",
+      "lastRechargedAt": "最近充值时间",
+      "rechargeAmount": "充值金额",
+      "rebateAmount": "返利金额",
+      "rechargeCount": "充值次数",
+      "statusInvited": "已邀请",
+      "statusRecharged": "已充值"
     },
     "models": {
       "badge": "模型目录",

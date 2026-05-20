@@ -358,6 +358,86 @@ func TestMarkAppPaymentOrderPaidRejectsAmountDifferentFromPayAmount(t *testing.T
 	})
 }
 
+func TestMarkAppPaymentOrderFailedMarksPendingOrderAsFailed(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  90,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-failed-order",
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.AppPaymentStatusPending, order.Status)
+
+		updatedOrder, err := model.MarkAppPaymentOrderFailed("UP-failed-order")
+		require.NoError(t, err)
+		require.Equal(t, model.AppPaymentStatusFailed, updatedOrder.Status)
+
+		storedOrder, err := model.GetAppPaymentOrderByOutTradeNo("UP-failed-order")
+		require.NoError(t, err)
+		require.Equal(t, model.AppPaymentStatusFailed, storedOrder.Status)
+	})
+}
+
+func TestMarkAppPaymentOrderPaidAllowsFailedOrderRecovery(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		_, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  90,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-failed-recovery",
+		})
+		require.NoError(t, err)
+
+		_, err = model.MarkAppPaymentOrderFailed("UP-failed-recovery")
+		require.NoError(t, err)
+
+		order, wallet, rechargeLog, err := model.MarkAppPaymentOrderPaid(model.AppPaymentPaidParams{
+			OutTradeNo:    "UP-failed-recovery",
+			TradeNo:       "dulupay-recovered",
+			Amount:        90,
+			NotifyPayload: `{"money":"90.00"}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.AppPaymentStatusPaid, order.Status)
+		require.Equal(t, 100.0, wallet.AvailableBalance)
+		require.Equal(t, 100.0, rechargeLog.Amount)
+	})
+}
+
+func TestUpdateAppPaymentOrderDuluPayInfoUpdatesPendingOrder(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  90,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-pending-info",
+		})
+		require.NoError(t, err)
+		require.Empty(t, string(order.TradeNo))
+
+		updatedOrder, err := model.UpdateAppPaymentOrderDuluPayInfo(
+			"UP-pending-info",
+			"dulupay-trade",
+			"alipay",
+			"pay-info-payload",
+		)
+		require.NoError(t, err)
+		require.Equal(t, "dulupay-trade", string(updatedOrder.TradeNo))
+		require.Equal(t, "alipay", string(updatedOrder.PayType))
+		require.Equal(t, "pay-info-payload", updatedOrder.PayInfo)
+	})
+}
+
 func TestMarkAppPaymentOrderPaidCreditsRebateToReferrer(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		referrer := createTestAppUserWithEmail(t, "referrer@example.com")
@@ -419,6 +499,83 @@ func TestMarkAppPaymentOrderPaidCreditsRebateToReferrer(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 0, total)
 		require.Empty(t, payerLogs)
+	})
+}
+
+func TestResolveAppRechargeRebateFallsBackToDirectReferral(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		referrer := createTestAppUserWithEmail(t, "fallback-referrer@example.com")
+		payer := createTestAppUserWithEmail(t, "fallback-payer@example.com")
+		code, err := model.GetOrCreateAppUserDiscountCode(referrer.ID)
+		require.NoError(t, err)
+		require.NoError(t, model.DB.Create(&model.AppUserReferral{
+			InviterUserID: referrer.ID,
+			InvitedUserID: payer.ID,
+			DiscountCode:  model.EmptyNullString(code.Code),
+		}).Error)
+
+		resolution, err := model.ResolveAppRechargeRebate(payer.ID, "", 0.1)
+		require.NoError(t, err)
+		require.Equal(t, code.Code, resolution.DiscountCode)
+		require.Equal(t, referrer.ID, resolution.RebateUserID)
+		require.Equal(t, 0.1, resolution.RebateRatio)
+	})
+}
+
+func TestResolveAppRechargeRebateExplicitDiscountCodeOverridesDirectReferral(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		registeredReferrer := createTestAppUserWithEmail(t, "registered-referrer@example.com")
+		explicitReferrer := createTestAppUserWithEmail(t, "explicit-referrer@example.com")
+		payer := createTestAppUserWithEmail(t, "explicit-payer@example.com")
+		registeredCode, err := model.GetOrCreateAppUserDiscountCode(registeredReferrer.ID)
+		require.NoError(t, err)
+		explicitCode, err := model.GetOrCreateAppUserDiscountCode(explicitReferrer.ID)
+		require.NoError(t, err)
+		require.NoError(t, model.DB.Create(&model.AppUserReferral{
+			InviterUserID: registeredReferrer.ID,
+			InvitedUserID: payer.ID,
+			DiscountCode:  model.EmptyNullString(registeredCode.Code),
+		}).Error)
+
+		resolution, err := model.ResolveAppRechargeRebate(payer.ID, explicitCode.Code, 0.1)
+		require.NoError(t, err)
+		require.Equal(t, explicitCode.Code, resolution.DiscountCode)
+		require.Equal(t, explicitReferrer.ID, resolution.RebateUserID)
+		require.Equal(t, 0.1, resolution.RebateRatio)
+	})
+}
+
+func TestGetAppReferralRecordsIncludesExplicitDiscountCodeRebates(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		referrer := createTestAppUserWithEmail(t, "explicit-record-referrer@example.com")
+		payer := createTestAppUserWithEmail(t, "explicit-record-payer@example.com")
+		code, err := model.GetOrCreateAppUserDiscountCode(referrer.ID)
+		require.NoError(t, err)
+		paidAt := time.Date(2026, 5, 19, 12, 0, 0, 0, time.Local)
+		require.NoError(t, model.DB.Create(&model.AppPaymentOrder{
+			UserID:       payer.ID,
+			Amount:       100,
+			PayAmount:    90,
+			Channel:      "dulupay",
+			OutTradeNo:   "UP-explicit-record",
+			Status:       model.AppPaymentStatusPaid,
+			DiscountCode: model.EmptyNullString(code.Code),
+			RebateUserID: referrer.ID,
+			RebateRatio:  0.1,
+			RebateAmount: 9,
+			CreatedAt:    paidAt,
+			PaidAt:       &paidAt,
+		}).Error)
+
+		records, total, err := model.GetAppReferralRecordsByRebateUserID(referrer.ID, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 1, total)
+		require.Len(t, records, 1)
+		require.Equal(t, payer.ID, records[0].InvitedUserID)
+		require.Equal(t, code.Code, string(records[0].DiscountCode))
+		require.Equal(t, 1, records[0].OrderCount)
+		require.Equal(t, 9.0, records[0].RebateAmount)
+		require.Equal(t, model.AppReferralStatusRecharged, records[0].Status)
 	})
 }
 
@@ -680,6 +837,7 @@ func withTestAppWalletDB(t *testing.T, fn func()) {
 	require.NoError(t, db.AutoMigrate(
 		&model.AppUser{},
 		&model.AppUserDiscountCode{},
+		&model.AppUserReferral{},
 		&model.AppUserWallet{},
 		&model.AppRechargeLog{},
 		&model.AppPaymentOrder{},
