@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,14 +12,73 @@ import (
 	"github.com/bytedance/sonic/ast"
 )
 
-type requestBodyKey struct{}
+type reusableRequestBody struct {
+	*bytes.Reader
+	body []byte
+}
+
+func newReusableRequestBody(body []byte) *reusableRequestBody {
+	return &reusableRequestBody{
+		Reader: bytes.NewReader(body),
+		body:   body,
+	}
+}
+
+func (b *reusableRequestBody) Close() error {
+	return nil
+}
+
+func (b *reusableRequestBody) Bytes() []byte {
+	return b.body
+}
 
 const (
-	MaxRequestBodySize  = 1024 * 1024 * 50 // 50MB
-	MaxResponseBodySize = 1024 * 1024 * 50 // 50MB
+	MaxRequestBodySize  = 1024 * 1024 * 50  // 50MB
+	MaxResponseBodySize = 1024 * 1024 * 200 // 200MB
+
+	multipartFormMemoryLimit = 4 * 1024 * 1024
 )
 
 func LimitReader(r io.Reader, n int64) io.Reader { return &LimitedReader{r, n} }
+
+func ParseMultipartFormWithLimit(req *http.Request) error {
+	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
+		return fmt.Errorf(
+			"request body too large: %d, max: %d",
+			req.ContentLength,
+			MaxRequestBodySize,
+		)
+	}
+
+	originalBody := req.Body
+
+	req.Body = http.MaxBytesReader(nil, req.Body, MaxRequestBodySize)
+	defer func() {
+		req.Body = originalBody
+	}()
+
+	// #nosec G120 -- ContentLength is checked above and Body is capped by MaxBytesReader.
+	return req.ParseMultipartForm(multipartFormMemoryLimit)
+}
+
+func ParseFormWithLimit(req *http.Request) error {
+	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
+		return fmt.Errorf(
+			"request body too large: %d, max: %d",
+			req.ContentLength,
+			MaxRequestBodySize,
+		)
+	}
+
+	originalBody := req.Body
+
+	req.Body = http.MaxBytesReader(nil, req.Body, MaxRequestBodySize)
+	defer func() {
+		req.Body = originalBody
+	}()
+
+	return req.ParseForm()
+}
 
 type LimitedReader struct {
 	R io.Reader
@@ -83,25 +141,21 @@ func GetRequestBody(req *http.Request) ([]byte, error) {
 }
 
 func SetRequestBody(req *http.Request, body []byte) {
-	ctx := req.Context()
-	bufCtx := context.WithValue(ctx, requestBodyKey{}, body)
-	*req = *req.WithContext(bufCtx)
 	req.ContentLength = int64(len(body))
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body)), nil
-	}
-	req.Body = io.NopCloser(bytes.NewReader(body))
+	req.GetBody = nil
+	req.Body = newReusableRequestBody(body)
 }
 
 func GetCachedRequestBody(req *http.Request) ([]byte, bool) {
-	requestBody := req.Context().Value(requestBodyKey{})
-	if requestBody == nil {
+	if req == nil {
 		return nil, false
 	}
 
-	body, ok := requestBody.([]byte)
+	if body, ok := req.Body.(*reusableRequestBody); ok {
+		return body.Bytes(), true
+	}
 
-	return body, ok
+	return nil, false
 }
 
 func IsJSONContentType(ct string) bool {
@@ -125,11 +179,10 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		err error
 	)
 
+	originalBody := req.Body
 	defer func() {
-		req.Body.Close()
-
-		if err == nil {
-			req.Body = io.NopCloser(bytes.NewBuffer(buf))
+		if originalBody != nil {
+			_ = originalBody.Close()
 		}
 	}()
 
@@ -178,11 +231,37 @@ func UnmarshalRequest2NodeReusable(req *http.Request, path ...any) (ast.Node, er
 		return ast.Node{}, err
 	}
 
-	return sonic.Get(requestBody, path...)
+	return sonic.GetWithOptions(requestBody, ast.SearchOptions{}, path...)
 }
 
 func GetResponseBodyLimit(resp *http.Response, n int64) ([]byte, error) {
-	return GetBodyLimit(resp.Body, resp.ContentLength, n)
+	var (
+		buf []byte
+		err error
+	)
+
+	if resp.ContentLength <= 0 {
+		buf, err = io.ReadAll(LimitReader(resp.Body, n))
+		if err != nil {
+			if errors.Is(err, ErrLimitedReaderExceeded) {
+				return nil, errors.New("response body too large")
+			}
+			return nil, fmt.Errorf("response body read failed: %w", err)
+		}
+	} else {
+		if resp.ContentLength > n {
+			return nil, errors.New("response body too large")
+		}
+
+		buf = make([]byte, resp.ContentLength)
+		_, err = io.ReadFull(resp.Body, buf)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("response body read failed: %w", err)
+	}
+
+	return buf, nil
 }
 
 func GetResponseBody(resp *http.Response) ([]byte, error) {
@@ -204,5 +283,5 @@ func UnmarshalResponse2Node(resp *http.Response, path ...any) (ast.Node, error) 
 		return ast.Node{}, err
 	}
 
-	return sonic.Get(responseBody, path...)
+	return sonic.GetWithOptions(responseBody, ast.SearchOptions{}, path...)
 }

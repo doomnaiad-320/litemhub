@@ -513,6 +513,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		return
 	}
 
+	clearRequestBodyNode(c)
 	c.Next()
 }
 
@@ -600,7 +601,7 @@ func NewMetaByContext(c *gin.Context,
 }
 
 func getRequestBodyNode(c *gin.Context) (*ast.Node, error) {
-	if cached, ok := c.Get(RequestBodyNode); ok {
+	if cached, ok := c.Get(requestBodyNode); ok {
 		node, ok := cached.(*ast.Node)
 		if !ok {
 			return nil, fmt.Errorf("request body node type error: %T", cached)
@@ -614,9 +615,17 @@ func getRequestBodyNode(c *gin.Context) (*ast.Node, error) {
 		return nil, err
 	}
 
-	c.Set(RequestBodyNode, &node)
+	c.Set(requestBodyNode, &node)
 
 	return &node, nil
+}
+
+func clearRequestBodyNode(c *gin.Context) {
+	if c == nil {
+		return
+	}
+
+	delete(c.Keys, requestBodyNode)
 }
 
 func getStringFieldFromNode(node *ast.Node, key, errMessage string) (string, error) {

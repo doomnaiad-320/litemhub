@@ -12,7 +12,6 @@ const (
 	RequestMetadata    = "request_metadata"
 	PromptCacheKey     = "prompt_cache_key"
 	RequestServiceTier = "request_service_tier"
-	RequestBodyNode    = "request_body_node"
 	RequestAt          = "request_at"
 	RequestID          = "request_id"
 	ModelCaches        = "model_caches"
@@ -21,4 +20,6 @@ const (
 	JobID              = "job_id"
 	GenerationID       = "generation_id"
 	ResponseID         = "response_id"
+
+	requestBodyNode = "request_body_node"
 )

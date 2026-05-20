@@ -46,11 +46,13 @@ type (
 	RelayHandler    func(*gin.Context, *meta.Meta) *controller.HandleResult
 	GetRequestUsage func(*gin.Context, model.ModelConfig) (model.Usage, error)
 	GetRequestPrice func(*gin.Context, model.ModelConfig) (model.Price, error)
+	ValidateRequest func(*gin.Context, model.ModelConfig) error
 )
 
 type RelayController struct {
 	GetRequestUsage GetRequestUsage
 	GetRequestPrice GetRequestPrice
+	ValidateRequest ValidateRequest
 	Handler         RelayHandler
 }
 
@@ -170,9 +172,11 @@ func relayController(m mode.Mode) RelayController {
 
 	switch m {
 	case mode.ImagesGenerations:
+		c.ValidateRequest = controller.ValidateImagesRequest
 		c.GetRequestPrice = controller.GetImagesRequestPrice
 		c.GetRequestUsage = controller.GetImagesRequestUsage
 	case mode.ImagesEdits:
+		c.ValidateRequest = controller.ValidateImagesEditsRequest
 		c.GetRequestPrice = controller.GetImagesEditsRequestPrice
 		c.GetRequestUsage = controller.GetImagesEditsRequestUsage
 	case mode.AudioSpeech:
@@ -236,6 +240,24 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	mc := middleware.GetModelConfig(c)
 	group := middleware.GetGroup(c)
 	token := middleware.GetToken(c)
+
+	if relayController.ValidateRequest != nil {
+		if err := relayController.ValidateRequest(c, mc); err != nil {
+			statusCode := http.StatusInternalServerError
+
+			var requestParamErr *controller.RequestParamError
+			if errors.As(err, &requestParamErr) {
+				statusCode = requestParamErr.StatusCode
+			}
+
+			middleware.AbortLogWithMessageWithMode(mode, c,
+				statusCode,
+				err.Error(),
+			)
+
+			return
+		}
+	}
 
 	// Get initial channel
 	initialChannel, err := getInitialChannel(c, requestModel, mode)

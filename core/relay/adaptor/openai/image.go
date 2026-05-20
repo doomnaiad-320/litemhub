@@ -78,7 +78,7 @@ func ConvertImagesEditsRequest(
 	request *http.Request,
 	includeModel bool,
 ) (adaptor.ConvertResult, error) {
-	err := request.ParseMultipartForm(1024 * 1024 * 4)
+	err := common.ParseMultipartFormWithLimit(request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -332,7 +332,7 @@ func ImagesStreamHandler(
 
 		data := render.ExtractSSEData(line)
 
-		node, err := sonic.Get(data)
+		node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 		if err != nil {
 			log.Error("error unmarshalling image stream response: " + err.Error())
 			render.OpenaiBytesData(c, data)

@@ -28,7 +28,7 @@ func ConvertSTTRequest(
 	meta *meta.Meta,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
-	if err := request.ParseMultipartForm(1024 * 1024 * 4); err != nil {
+	if err := common.ParseMultipartFormWithLimit(request); err != nil {
 		return adaptor.ConvertResult{}, fmt.Errorf("parse multipart form: %w", err)
 	}
 
@@ -373,7 +373,7 @@ func injectUsageIntoJSON(node *ast.Node, usage *relaymodel.SttUsage) ([]byte, er
 
 // injectUsageIntoSSE injects usage into SSE response data
 func injectUsageIntoSSE(data []byte, usage *relaymodel.SttUsage) []byte {
-	node, err := sonic.Get(data)
+	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 	if err != nil {
 		return nil
 	}

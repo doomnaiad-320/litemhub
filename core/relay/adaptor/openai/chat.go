@@ -460,7 +460,7 @@ func StreamHandler(
 			break
 		}
 
-		node, err := sonic.Get(data)
+		node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
@@ -1007,7 +1007,11 @@ func ConvertChatCompletionToResponsesRequest(
 		responsesReq.User = &chatReq.User
 	}
 
-	utils.ApplyReasoningToResponsesRequest(&responsesReq, utils.ParseOpenAIReasoning(&chatReq))
+	applyReasoningToResponsesRequestForModel(
+		meta,
+		&responsesReq,
+		utils.ParseOpenAIReasoning(&chatReq),
+	)
 
 	// Map metadata
 	if chatReq.Metadata != nil {

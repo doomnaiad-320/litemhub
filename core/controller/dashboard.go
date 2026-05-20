@@ -184,7 +184,7 @@ func fillGaps(
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
@@ -245,7 +245,7 @@ func GetDashboard(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
@@ -319,6 +319,8 @@ type GroupModel struct {
 	ImagePrices    map[string]float64 `json:"image_prices,omitempty"`
 	Price          model.Price        `json:"price,omitempty"`
 	EnabledPlugins []string           `json:"enabled_plugins,omitempty"`
+
+	MaxImageGenerationCount int `json:"max_image_generation_count,omitempty"`
 }
 
 func getEnabledPlugins(plugin map[string]map[string]any) []string {
@@ -350,6 +352,8 @@ func NewGroupModel(mc model.ModelConfig) GroupModel {
 		ImagePrices:        mc.ImagePrices,
 		Price:              mc.Price,
 		EnabledPlugins:     getEnabledPlugins(mc.Plugin),
+
+		MaxImageGenerationCount: mc.MaxImageGenerationCount,
 	}
 	if !mc.CreatedAt.IsZero() {
 		gm.CreatedAt = mc.CreatedAt.Unix()
@@ -434,7 +438,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
@@ -475,7 +479,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/{group} [get]
 func GetGroupTimeSeriesModelData(c *gin.Context) {
@@ -522,7 +526,7 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardV3Response}
 //	@Router			/api/dashboardv3/ [get]
 func GetTimeSeriesModelDataV3(c *gin.Context) {
@@ -573,7 +577,7 @@ func GetTimeSeriesModelDataV3(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
-//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
+//	@Param			fields			query		string	false	"Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardV3Response}
 //	@Router			/api/dashboardv3/{group} [get]
 func GetGroupTimeSeriesModelDataV3(c *gin.Context) {
