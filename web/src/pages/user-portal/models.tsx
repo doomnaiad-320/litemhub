@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -614,111 +621,148 @@ export default function UserPortalModelsPage() {
             </div>
           </div>
 
-          <FilterSection
-            icon={Building2}
-            label={t("portal.models.providerFilter")}
-          >
-            <FilterChip
-              active={providerFilter === "__all__"}
-              onClick={() => setProviderFilter("__all__")}
+          <div className="flex items-center gap-2 sm:hidden">
+            <div className="min-w-0 flex-1">
+              <Select value={providerFilter} onValueChange={setProviderFilter}>
+                <SelectTrigger className="h-10 rounded-md border-border bg-background text-sm shadow-none">
+                  <SelectValue placeholder={t("portal.models.providerFilter")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">{t("common.all")}</SelectItem>
+                  {providerOptions.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-0 flex-1">
+              <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <SelectTrigger className="h-10 rounded-md border-border bg-background text-sm shadow-none">
+                  <SelectValue
+                    placeholder={t("portal.models.groupFilterLabel")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">{t("common.all")}</SelectItem>
+                  {groupItems.map((group) => (
+                    <SelectItem key={group.group} value={group.group}>
+                      {group.group}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="hidden space-y-5 sm:block">
+            <FilterSection
+              icon={Building2}
+              label={t("portal.models.providerFilter")}
             >
-              {t("common.all")}
-            </FilterChip>
-            {providerOptions.map((provider) => (
               <FilterChip
-                key={provider}
-                active={providerFilter === provider}
-                onClick={() => setProviderFilter(provider)}
+                active={providerFilter === "__all__"}
+                onClick={() => setProviderFilter("__all__")}
               >
-                {provider}
+                {t("common.all")}
               </FilterChip>
-            ))}
-          </FilterSection>
+              {providerOptions.map((provider) => (
+                <FilterChip
+                  key={provider}
+                  active={providerFilter === provider}
+                  onClick={() => setProviderFilter(provider)}
+                >
+                  {provider}
+                </FilterChip>
+              ))}
+            </FilterSection>
 
-          <FilterSection
-            icon={Sparkles}
-            label={t("portal.models.capabilities")}
-          >
-            <FilterChip
-              active={capabilityFilter === "__all__"}
-              onClick={() => setCapabilityFilter("__all__")}
+            <FilterSection
+              icon={Sparkles}
+              label={t("portal.models.capabilities")}
             >
-              {t("common.all")}
-            </FilterChip>
-            {capabilityOptions.map((capability) => (
               <FilterChip
-                key={capability}
-                active={capabilityFilter === capability}
-                onClick={() => setCapabilityFilter(capability)}
+                active={capabilityFilter === "__all__"}
+                onClick={() => setCapabilityFilter("__all__")}
               >
-                {t(`portal.models.capability.${capability}`)}
+                {t("common.all")}
               </FilterChip>
-            ))}
-          </FilterSection>
+              {capabilityOptions.map((capability) => (
+                <FilterChip
+                  key={capability}
+                  active={capabilityFilter === capability}
+                  onClick={() => setCapabilityFilter(capability)}
+                >
+                  {t(`portal.models.capability.${capability}`)}
+                </FilterChip>
+              ))}
+            </FilterSection>
 
-          <FilterSection
-            icon={Layers3}
-            label={t("portal.models.groupFilterLabel")}
-          >
-            <FilterChip
-              active={groupFilter === "__all__"}
-              onClick={() => setGroupFilter("__all__")}
+            <FilterSection
+              icon={Layers3}
+              label={t("portal.models.groupFilterLabel")}
             >
-              {t("common.all")}
-            </FilterChip>
-            <TooltipProvider delayDuration={200}>
-              {groupItems.map((group) => {
-                const description = group.description?.trim();
-                const chip = (
-                  <FilterChip
-                    active={groupFilter === group.group}
-                    className="h-10 px-3"
-                    onClick={() => setGroupFilter(group.group)}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>{group.group}</span>
-                      <span
-                        className={cn(
-                          "rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground",
-                          groupFilter === group.group &&
-                            "bg-primary/15 text-primary",
-                        )}
-                      >
-                        {group.models.length}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
-                          groupFilter === group.group &&
-                            "bg-primary/15 text-primary",
-                        )}
-                      >
-                        x{group.price_multiplier.toFixed(2)}
-                      </span>
-                    </span>
-                  </FilterChip>
-                );
-
-                if (!description) {
-                  return <span key={group.group}>{chip}</span>;
-                }
-
-                return (
-                  <Tooltip key={group.group}>
-                    <TooltipTrigger asChild>
-                      <span>{chip}</span>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="max-w-72 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white dark:bg-slate-100 dark:text-slate-950"
+              <FilterChip
+                active={groupFilter === "__all__"}
+                onClick={() => setGroupFilter("__all__")}
+              >
+                {t("common.all")}
+              </FilterChip>
+              <TooltipProvider delayDuration={200}>
+                {groupItems.map((group) => {
+                  const description = group.description?.trim();
+                  const chip = (
+                    <FilterChip
+                      active={groupFilter === group.group}
+                      className="h-10 px-3"
+                      onClick={() => setGroupFilter(group.group)}
                     >
-                      {description}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </TooltipProvider>
-          </FilterSection>
+                      <span className="flex items-center gap-2">
+                        <span>{group.group}</span>
+                        <span
+                          className={cn(
+                            "rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground",
+                            groupFilter === group.group &&
+                              "bg-primary/15 text-primary",
+                          )}
+                        >
+                          {group.models.length}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+                            groupFilter === group.group &&
+                              "bg-primary/15 text-primary",
+                          )}
+                        >
+                          x{group.price_multiplier.toFixed(2)}
+                        </span>
+                      </span>
+                    </FilterChip>
+                  );
+
+                  if (!description) {
+                    return <span key={group.group}>{chip}</span>;
+                  }
+
+                  return (
+                    <Tooltip key={group.group}>
+                      <TooltipTrigger asChild>
+                        <span>{chip}</span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-72 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-white dark:bg-slate-100 dark:text-slate-950"
+                      >
+                        {description}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </TooltipProvider>
+            </FilterSection>
+          </div>
         </CardContent>
       </Card>
 
