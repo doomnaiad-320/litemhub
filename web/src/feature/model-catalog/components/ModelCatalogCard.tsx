@@ -135,15 +135,6 @@ export function ModelCatalogCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
-        <span
-          className={cn(
-            "inline-flex h-6 items-center rounded-full border px-2.5 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-semibold tabular-nums",
-            getHealthToneClass(model.healthScore),
-          )}
-        >
-          {healthLabel}{" "}
-          {model.healthScore == null ? unmonitoredLabel : `${model.healthScore}%`}
-        </span>
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className="text-[#8e8e93]">{inputLabel}</span>
           <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
@@ -175,6 +166,15 @@ export function ModelCatalogCard({
             {capabilityLabel(capability)}
           </Badge>
         ))}
+        <span
+          className={cn(
+            "ml-auto inline-flex h-6 items-center rounded-full border px-2.5 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-[10px] font-semibold tabular-nums",
+            getHealthToneClass(model.healthScore),
+          )}
+        >
+          {healthLabel}{" "}
+          {model.healthScore == null ? unmonitoredLabel : `${model.healthScore}%`}
+        </span>
       </div>
     </article>
   );
