@@ -113,7 +113,7 @@ export function ModelCatalogCard({
       <div className="flex min-w-0 items-start gap-1.5">
         <button
           type="button"
-          className="min-w-0 break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
+          className="min-w-0 flex-1 break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
@@ -162,15 +162,15 @@ export function ModelCatalogCard({
         {model.description || defaultDescription}
       </p>
 
-      <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-5">
-        <Badge className="rounded-full border-[#1456f0]/20 bg-[#1456f0] px-2.5 py-1 text-xs font-semibold text-white shadow-[rgba(20,86,240,0.18)_0px_4px_10px] hover:bg-[#1456f0] dark:border-[#60a5fa]/30 dark:bg-[#2563eb] dark:text-white">
+      <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] sm:mt-5">
+        <Badge className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] shadow-none hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white/70">
           {contextLabel} {formatContextLength(model.contextLength)}
         </Badge>
         {(model.capabilities || []).slice(0, 5).map((capability) => (
           <Badge
             key={capability}
             variant="outline"
-            className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+            className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
           >
             {capabilityLabel(capability)}
           </Badge>
