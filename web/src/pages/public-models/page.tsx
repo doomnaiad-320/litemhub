@@ -570,15 +570,6 @@ export default function PublicModelsPage() {
                           ),
                           provider: model.provider,
                         }}
-                        modelTitle={
-                          <Link
-                            to={getPublicModelDetailPath(model.model)}
-                            className="break-words font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {model.model}
-                          </Link>
-                        }
                         onCopy={copyModelId}
                         onOpen={() => navigate(getPublicModelDetailPath(model.model))}
                         outputLabel={t("publicModels.table.output")}

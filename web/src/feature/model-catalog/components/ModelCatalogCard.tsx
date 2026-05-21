@@ -1,7 +1,6 @@
 import { Copy } from "lucide-react";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface ModelCatalogCardData {
@@ -25,7 +24,6 @@ interface ModelCatalogCardProps {
   healthLabel: string;
   inputLabel: string;
   model: ModelCatalogCardData;
-  modelTitle?: ReactNode;
   onCopy: (model: string) => void;
   onOpen: () => void;
   outputLabel: string;
@@ -76,7 +74,6 @@ export function ModelCatalogCard({
   healthLabel,
   inputLabel,
   model,
-  modelTitle,
   onCopy,
   onOpen,
   outputLabel,
@@ -105,29 +102,18 @@ export function ModelCatalogCard({
       onClick={onOpen}
       onKeyDown={handleKeyDown}
     >
-      <div className="mb-[5px] flex items-start justify-between gap-3">
-        <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
+      {/*
+      <div className="mb-[5px] flex items-start gap-3">
+        <Badge className="inline-flex items-center justify-center border text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-primary/90 rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
           {model.provider}
         </Badge>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
-          aria-label={copyAriaLabel}
-          onClick={(event) => {
-            event.stopPropagation();
-            onCopy(model.model);
-          }}
-        >
-          <Copy className="h-4 w-4" />
-        </Button>
       </div>
+      */}
 
-      {modelTitle || (
+      <div className="flex min-w-0 items-start gap-1.5">
         <button
           type="button"
-          className="break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
+          className="min-w-0 break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
@@ -135,7 +121,18 @@ export function ModelCatalogCard({
         >
           {model.model}
         </button>
-      )}
+        <button
+          type="button"
+          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#8e8e93] transition hover:bg-[#f0f0f0] hover:text-[#18181b] active:scale-[0.96] dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+          aria-label={copyAriaLabel}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCopy(model.model);
+          }}
+        >
+          <Copy className="h-3 w-3" strokeWidth={1.9} />
+        </button>
+      </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
         <span
