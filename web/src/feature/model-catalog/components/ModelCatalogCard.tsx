@@ -134,7 +134,7 @@ export function ModelCatalogCard({
         </button>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
+      <div className="mt-[13px] flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className="text-[#8e8e93]">{inputLabel}</span>
           <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
@@ -149,11 +149,11 @@ export function ModelCatalogCard({
         </span>
       </div>
 
-      <p className="mt-2 line-clamp-2 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-3 sm:leading-[1.7]">
+      <p className="mt-[13px] line-clamp-2 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-[17px] sm:leading-[1.7]">
         {model.description || defaultDescription}
       </p>
 
-      <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] sm:mt-5">
+      <div className="mt-[17px] flex flex-wrap gap-1.5 text-[10px] sm:mt-[25px]">
         <Badge className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] shadow-none hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white/70">
           {contextLabel} {formatContextLength(model.contextLength)}
         </Badge>

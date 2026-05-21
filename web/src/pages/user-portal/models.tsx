@@ -6,12 +6,25 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { type ComponentType, type ReactNode, useMemo, useState } from "react";
+import {
+  type ComponentType,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -216,6 +229,34 @@ function FilterSection({ children, icon: Icon, label }: FilterSectionProps) {
   );
 }
 
+function useMediaQuery(query: string) {
+  const getMatches = () => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia(query).matches;
+  };
+
+  const [matches, setMatches] = useState(getMatches);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = () => setMatches(mediaQuery.matches);
+
+    handleChange();
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return matches;
+}
+
 export default function UserPortalModelsPage() {
   const { t: rawT } = useTranslation();
   const t = rawT as (key: string, options?: Record<string, unknown>) => string;
@@ -227,6 +268,7 @@ export default function UserPortalModelsPage() {
     null,
   );
   const [selectedPricingGroup, setSelectedPricingGroup] = useState("");
+  const isMobileDetailDialog = useMediaQuery("(max-width: 639px)");
   const { data, isLoading } = useUserPortalGroups(true);
   const { data: publicModelsData } = usePublicModels();
   const groups = data?.groups || [];
@@ -580,45 +622,209 @@ export default function UserPortalModelsPage() {
     setSelectedPricingGroup("");
   };
 
+  const renderModelDetails = (model: ModelCardItem) => (
+    <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <span>{t("portal.models.infoSection")}</span>
+        </div>
+        <div className="divide-y divide-border/50 overflow-hidden rounded-md bg-muted/20 dark:bg-white/[0.02]">
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
+            <div className="text-sm text-muted-foreground">
+              {t("portal.models.providerFilter")}
+            </div>
+            <div className="min-w-0 text-right text-sm font-medium text-foreground sm:text-left">
+              {model.provider}
+            </div>
+          </div>
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
+            <div className="text-sm text-muted-foreground">
+              {t("portal.models.billingType")}
+            </div>
+            <div className="flex min-w-0 justify-end sm:justify-start">
+              <Badge className="rounded-md px-2.5 py-1">
+                {t("portal.models.usageBilling")}
+              </Badge>
+            </div>
+          </div>
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
+            <div className="text-sm text-muted-foreground">
+              {t("portal.models.accessGroups")}
+            </div>
+            <div className="text-right text-sm font-medium text-foreground tabular-nums sm:text-left">
+              {model.accessGroups.length}
+            </div>
+          </div>
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
+            <div className="pt-0.5 text-sm text-muted-foreground">
+              {t("portal.models.capabilities")}
+            </div>
+            <div className="flex min-w-0 flex-wrap justify-end gap-1.5 sm:justify-start">
+              {model.capabilities.map((capability) => (
+                <Badge
+                  key={`${model.model}-sheet-${capability}`}
+                  variant="outline"
+                  className="rounded-md bg-background px-2 py-0.5"
+                >
+                  {t(`portal.models.capability.${capability}`)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="text-base font-semibold">
+          {t("portal.models.groupPricing")}
+        </div>
+        <Tabs
+          value={selectedPricingGroup || model.accessGroups[0]?.group}
+          onValueChange={setSelectedPricingGroup}
+          className="overflow-hidden rounded-md border border-border bg-background"
+        >
+          <div className="bg-muted/10">
+            <TabsList className="min-h-8 min-w-0 flex-1 justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-1.5 py-[5px]">
+              {model.accessGroups.map((group) => (
+                <TabsTrigger
+                  key={`${model.model}-tab-${group.group}`}
+                  value={group.group}
+                  className="h-8 shrink-0 rounded-md bg-transparent px-2.5 text-[16px] font-normal shadow-none data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-amber-700 data-[state=active]:shadow-none dark:data-[state=active]:text-amber-300"
+                >
+                  {group.group}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {model.accessGroups.map((group) => {
+            const pricing = getGroupPricingTableData(group);
+            const primaryPriceItems = [
+              {
+                label: t("portal.models.priceMultiplier"),
+                value: `x ${group.priceMultiplier.toFixed(2)}`,
+              },
+              {
+                label: t("portal.models.inputColumn"),
+                value: pricing.input,
+              },
+              {
+                label: t("portal.models.outputColumn"),
+                value: pricing.output,
+              },
+            ].filter(
+              (entry) =>
+                entry.value && entry.value !== t("portal.models.noPrice"),
+            );
+            const secondaryPriceItems = [
+              {
+                label: t("portal.models.requestColumn"),
+                value: pricing.request,
+              },
+              ...pricing.extras.map((entry) => ({
+                label: entry.label,
+                value: entry.value,
+              })),
+            ].filter(
+              (entry) =>
+                entry.value && entry.value !== t("portal.models.noPrice"),
+            );
+
+            return (
+              <TabsContent
+                key={`${model.model}-content-${group.group}`}
+                value={group.group}
+                className="m-0 space-y-2 px-3 py-3"
+              >
+                <div className="space-y-1 overflow-hidden rounded-lg bg-background/70 px-3 py-2">
+                  <div className="pb-1 text-xs leading-4 text-muted-foreground">
+                    {group.description?.trim() || group.group}
+                  </div>
+                  {primaryPriceItems.length > 0 ? (
+                    primaryPriceItems.map((entry) => (
+                      <div
+                        key={`${model.model}-${group.group}-${entry.label}`}
+                        className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 py-1.5 sm:grid-cols-[120px_minmax(0,1fr)]"
+                      >
+                        <div className="text-xs text-muted-foreground">
+                          {entry.label}
+                        </div>
+                        <div className="min-w-0 text-right font-mono text-sm font-normal text-foreground tabular-nums">
+                          {entry.value}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2.5 text-center text-sm text-muted-foreground">
+                      {t("portal.models.noPrice")}
+                    </div>
+                  )}
+                </div>
+
+                {secondaryPriceItems.length > 0 && (
+                  <div className="space-y-1 rounded-lg bg-background/70 px-3 py-2">
+                    {secondaryPriceItems.map((entry) => (
+                      <div
+                        key={`${model.model}-${group.group}-${entry.label}`}
+                        className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 py-1.5 sm:grid-cols-[120px_minmax(0,1fr)]"
+                      >
+                        <span className="text-xs text-muted-foreground">
+                          {entry.label}
+                        </span>
+                        <span className="min-w-0 text-right font-mono text-sm font-normal text-foreground tabular-nums">
+                          {entry.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </section>
+    </div>
+  );
+
   return (
     <div className="w-full space-y-4 sm:space-y-6">
-      <Card className="gap-0 overflow-hidden rounded-md border-border bg-background shadow-none">
-        <CardContent className="space-y-5 px-4 py-4 sm:space-y-7 sm:px-6 sm:py-6">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div className="relative w-full sm:max-w-[320px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder={t("portal.models.searchPlaceholder")}
-                className="h-11 rounded-md border-border bg-background pl-10 shadow-none"
-              />
-            </div>
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:self-end xl:self-auto">
-              <Badge
+      <Card className="gap-0 overflow-hidden border-0 bg-muted/25 shadow-none dark:bg-white/[0.03]">
+        <CardContent className="space-y-3 px-3 py-3 sm:space-y-4 sm:px-4 sm:py-4">
+          <div className="flex w-full flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className="rounded-md px-3 py-1 text-xs"
+            >
+              {t("portal.models.results", { count: filteredModels.length })}
+            </Badge>
+            <Badge
+              variant="outline"
+              className="rounded-md px-3 py-1 text-xs"
+            >
+              {t("portal.models.totalModels")}: {modelCards.length}
+            </Badge>
+            {hasActiveFilters && (
+              <Button
                 variant="outline"
-                className="rounded-md px-3 py-1 text-xs"
+                size="sm"
+                className="h-9 rounded-md border-border px-3 sm:h-10 sm:px-4"
+                onClick={resetFilters}
               >
-                {t("portal.models.results", { count: filteredModels.length })}
-              </Badge>
-              <Badge
-                variant="outline"
-                className="rounded-md px-3 py-1 text-xs"
-              >
-                {t("portal.models.totalModels")}: {modelCards.length}
-              </Badge>
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 rounded-md border-border px-3 sm:h-10 sm:px-4"
-                  onClick={resetFilters}
-                >
-                  <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                  {t("portal.models.resetFilters")}
-                </Button>
-              )}
-            </div>
+                <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                {t("portal.models.resetFilters")}
+              </Button>
+            )}
+          </div>
+
+          <div className="relative w-full sm:max-w-[320px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder={t("portal.models.searchPlaceholder")}
+              className="h-11 rounded-md border-border bg-background pl-10 shadow-none"
+            />
           </div>
 
           <div className="flex items-center gap-2 sm:hidden">
@@ -819,211 +1025,48 @@ export default function UserPortalModelsPage() {
         )}
       </section>
 
-      <Sheet
-        open={!!selectedModel}
-        onOpenChange={(open) => !open && closeModelDetails()}
-      >
-        <SheetContent side="right" className="w-full max-w-none gap-0 p-0 sm:max-w-3xl">
-          {selectedModel && (
-            <>
-              <SheetHeader className="border-b border-border/60 px-4 py-4 sm:px-6 sm:py-5">
-                <div className="space-y-1 pr-8">
+      {isMobileDetailDialog ? (
+        <Dialog
+          open={!!selectedModel}
+          onOpenChange={(open) => !open && closeModelDetails()}
+        >
+          <DialogContent className="flex max-h-[86vh] w-[calc(100%-2rem)] max-w-[420px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[18px] border border-border/80 p-0 shadow-[0_18px_60px_rgba(15,23,42,0.24)] ring-1 ring-black/5 dark:border-white/15 dark:shadow-[0_24px_80px_rgba(0,0,0,0.72)] dark:ring-white/10">
+            {selectedModel && (
+              <>
+                <DialogHeader className="gap-1 border-b border-border/60 px-4 py-4 pr-12 text-left">
+                  <DialogTitle className="break-all text-lg tracking-tight">
+                    {selectedModel.model}
+                  </DialogTitle>
+                  <DialogDescription>{selectedModel.provider}</DialogDescription>
+                </DialogHeader>
+                {renderModelDetails(selectedModel)}
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Sheet
+          open={!!selectedModel}
+          onOpenChange={(open) => !open && closeModelDetails()}
+        >
+          <SheetContent
+            side="right"
+            className="w-full max-w-none gap-0 p-0 sm:max-w-3xl"
+          >
+            {selectedModel && (
+              <>
+                <SheetHeader className="gap-1 border-b border-border/60 px-4 py-4 pr-12 sm:px-6 sm:py-5 sm:pr-14">
                   <SheetTitle className="break-all text-xl tracking-tight sm:text-2xl">
                     {selectedModel.model}
                   </SheetTitle>
                   <SheetDescription>{selectedModel.provider}</SheetDescription>
-                </div>
-              </SheetHeader>
-
-              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-                <div className="space-y-5 sm:space-y-6">
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-base font-semibold">
-                      <Info className="h-4 w-4 text-muted-foreground" />
-                      <span>{t("portal.models.infoSection")}</span>
-                    </div>
-                    <div className="rounded-md border border-border bg-background p-4 sm:p-5">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">
-                            {t("portal.models.providerFilter")}
-                          </div>
-                          <div className="font-medium">
-                            {selectedModel.provider}
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">
-                            {t("portal.models.billingType")}
-                          </div>
-                          <Badge className="rounded-md px-2.5 py-1">
-                            {t("portal.models.usageBilling")}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">
-                            {t("portal.models.accessGroups")}
-                          </div>
-                          <div className="font-medium">
-                            {selectedModel.accessGroups.length}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-1.5">
-                        {selectedModel.capabilities.map((capability) => (
-                          <Badge
-                            key={`${selectedModel.model}-sheet-${capability}`}
-                            variant="outline"
-                            className="rounded-md px-2 py-0.5"
-                          >
-                            {t(`portal.models.capability.${capability}`)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="space-y-3">
-                    <div className="text-base font-semibold">
-                      {t("portal.models.groupPricing")}
-                    </div>
-                    <Tabs
-                      value={
-                        selectedPricingGroup ||
-                        selectedModel.accessGroups[0]?.group
-                      }
-                      onValueChange={setSelectedPricingGroup}
-                      className="overflow-hidden rounded-md border border-border bg-background"
-                    >
-                      <div className="flex flex-col border-b border-border/60 bg-muted/10 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                        <TabsList className="min-h-8 min-w-0 flex-1 justify-start gap-0 overflow-x-auto rounded-none bg-transparent px-0 py-[5px]">
-                          {selectedModel.accessGroups.map((group) => (
-                            <TabsTrigger
-                              key={`${selectedModel.model}-tab-${group.group}`}
-                              value={group.group}
-                              className="h-8 shrink-0 rounded-none border-r border-border/60 bg-transparent px-2.5 text-[16px] font-normal shadow-none last:border-r-0 data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-amber-700 data-[state=active]:shadow-none dark:data-[state=active]:text-amber-300"
-                            >
-                              {group.group}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        {(() => {
-                          const activeGroup =
-                            selectedModel.accessGroups.find(
-                              (group) => group.group === selectedPricingGroup,
-                            ) || selectedModel.accessGroups[0];
-
-                          if (!activeGroup) {
-                            return null;
-                          }
-
-                          return (
-                            <div className="shrink-0 border-t border-border/60 px-3 py-2 text-[14px] text-muted-foreground sm:border-l sm:border-t-0 sm:py-0">
-                              {t("portal.models.priceMultiplier")}
-                              <span className="ml-1 font-mono text-amber-700 tabular-nums dark:text-amber-300">
-                                x {activeGroup.priceMultiplier.toFixed(2)}
-                              </span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      {selectedModel.accessGroups.map((group) => {
-                        const pricing = getGroupPricingTableData(group);
-                        const primaryPriceItems = [
-                          {
-                            label: t("portal.models.inputColumn"),
-                            value: pricing.input,
-                          },
-                          {
-                            label: t("portal.models.outputColumn"),
-                            value: pricing.output,
-                          },
-                        ].filter(
-                          (entry) =>
-                            entry.value &&
-                            entry.value !== t("portal.models.noPrice"),
-                        );
-                        const secondaryPriceItems = [
-                          {
-                            label: t("portal.models.requestColumn"),
-                            value: pricing.request,
-                          },
-                          ...pricing.extras.map((entry) => ({
-                            label: entry.label,
-                            value: entry.value,
-                          })),
-                        ].filter(
-                          (entry) =>
-                            entry.value &&
-                            entry.value !== t("portal.models.noPrice"),
-                        );
-
-                        return (
-                          <TabsContent
-                            key={`${selectedModel.model}-content-${group.group}`}
-                            value={group.group}
-                            className="m-0 space-y-2 px-3 py-2"
-                          >
-                            <div className="rounded-lg bg-background/70 px-2.5 py-2">
-                              <div className="mb-2 text-xs leading-4 text-muted-foreground">
-                                {group.description?.trim() || group.group}
-                              </div>
-                              {primaryPriceItems.length > 0 ? (
-                                <div className="grid gap-2 md:grid-cols-2">
-                                  {primaryPriceItems.map((entry, index) => (
-                                    <div
-                                      key={`${selectedModel.model}-${group.group}-${entry.label}`}
-                                      className={cn(
-                                        "space-y-1 text-center",
-                                        index > 0 &&
-                                          "md:border-l md:border-dashed md:border-border/60",
-                                      )}
-                                    >
-                                      <div className="text-xs text-muted-foreground">
-                                        {entry.label}
-                                      </div>
-                                      <div className="whitespace-nowrap font-mono text-sm font-normal text-foreground tabular-nums">
-                                        {entry.value}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-center text-sm text-muted-foreground">
-                                  {t("portal.models.noPrice")}
-                                </div>
-                              )}
-                            </div>
-
-                            {secondaryPriceItems.length > 0 && (
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                                {secondaryPriceItems.map((entry) => (
-                                  <div
-                                    key={`${selectedModel.model}-${group.group}-${entry.label}`}
-                                    className="flex items-baseline gap-1 whitespace-nowrap"
-                                  >
-                                    <span className="text-xs text-muted-foreground">
-                                      {entry.label}:
-                                    </span>
-                                    <span className="font-mono text-xs font-normal text-foreground tabular-nums">
-                                      {entry.value}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </TabsContent>
-                        );
-                      })}
-                    </Tabs>
-                  </section>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+                </SheetHeader>
+                {renderModelDetails(selectedModel)}
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
