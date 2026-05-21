@@ -110,6 +110,245 @@ func TestGetLogStatsAggregatesFilteredLogs(t *testing.T) {
 	})
 }
 
+func TestGetAppUserLogsAppliesPortalFilters(t *testing.T) {
+	withTestLogStatsDB(t, func() {
+		now := time.Date(2026, 5, 21, 12, 0, 0, 0, time.UTC)
+		user := &model.AppUser{
+			Email:        model.EmptyNullString("portal-logs@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		otherUser := &model.AppUser{
+			Email:        model.EmptyNullString("other-portal-logs@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		require.NoError(t, model.DB.Create(user).Error)
+		require.NoError(t, model.DB.Create(otherUser).Error)
+
+		token := &model.Token{
+			Name:        model.EmptyNullString("key-alpha"),
+			GroupID:     "alpha",
+			OwnerUserID: user.ID,
+			Status:      1,
+		}
+		require.NoError(t, model.DB.Create(token).Error)
+
+		logs := []*model.Log{
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_match"),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "key-alpha",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now.Add(time.Minute),
+				RequestAt:   now.Add(time.Minute).Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_error"),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "key-alpha",
+				OwnerUserID: user.ID,
+				Code:        500,
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_other_group"),
+				GroupID:     "beta",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "key-alpha",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_other_key"),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "key-beta",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_other_model"),
+				GroupID:     "alpha",
+				Model:       "claude-3.5",
+				TokenID:     token.ID,
+				TokenName:   "key-alpha",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now.Add(-48 * time.Hour),
+				RequestAt:   now.Add(-48*time.Hour - time.Second),
+				RequestID:   model.EmptyNullString("req_old"),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "key-alpha",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_other_user"),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenName:   "key-alpha",
+				OwnerUserID: otherUser.ID,
+				Code:        200,
+			},
+		}
+		require.NoError(t, model.LogDB.Create(logs).Error)
+
+		result, err := model.GetAppUserLogs(
+			user.ID,
+			"alpha",
+			now.Add(-time.Hour),
+			now.Add(2*time.Hour),
+			"gpt-4.1",
+			"",
+			"",
+			0,
+			"key-alpha",
+			"id-asc",
+			model.CodeTypeSuccess,
+			0,
+			false,
+			"",
+			1,
+			10,
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, result.Total)
+		require.Len(t, result.Logs, 1)
+		require.Equal(t, "req_match", string(result.Logs[0].RequestID))
+		require.ElementsMatch(t, []string{"alpha", "beta"}, result.Groups)
+		require.ElementsMatch(t, []string{"key-alpha", "key-beta"}, result.TokenNames)
+		require.ElementsMatch(t, []string{"gpt-4.1", "claude-3.5"}, result.Models)
+	})
+}
+
+func TestGetAppUserLogStatsAppliesPortalScopeAndFilters(t *testing.T) {
+	withTestLogStatsDB(t, func() {
+		now := time.Date(2026, 5, 21, 12, 0, 0, 0, time.UTC)
+		user := &model.AppUser{
+			Email:        model.EmptyNullString("portal-stats@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		otherUser := &model.AppUser{
+			Email:        model.EmptyNullString("other-portal-stats@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		require.NoError(t, model.DB.Create(user).Error)
+		require.NoError(t, model.DB.Create(otherUser).Error)
+
+		token := &model.Token{
+			Name:        model.EmptyNullString("stats-key"),
+			GroupID:     "alpha",
+			OwnerUserID: user.ID,
+			Status:      1,
+		}
+		require.NoError(t, model.DB.Create(token).Error)
+
+		logs := []*model.Log{
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-2 * time.Second),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "stats-key",
+				OwnerUserID: user.ID,
+				Code:        200,
+				Usage: model.Usage{
+					InputTokens:  100,
+					OutputTokens: 50,
+					TotalTokens:  150,
+				},
+				Amount: model.Amount{UsedAmount: 0.12},
+			},
+			{
+				CreatedAt:   now.Add(time.Minute),
+				RequestAt:   now.Add(time.Minute).Add(-1 * time.Second),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "stats-key",
+				OwnerUserID: user.ID,
+				Code:        500,
+				Usage: model.Usage{
+					InputTokens:  25,
+					OutputTokens: 10,
+					TotalTokens:  35,
+				},
+				Amount: model.Amount{UsedAmount: 0.03},
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				GroupID:     "beta",
+				Model:       "gpt-4.1",
+				TokenID:     token.ID,
+				TokenName:   "stats-key",
+				OwnerUserID: user.ID,
+				Code:        200,
+				Amount:      model.Amount{UsedAmount: 1},
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				GroupID:     "alpha",
+				Model:       "gpt-4.1",
+				TokenName:   "stats-key",
+				OwnerUserID: otherUser.ID,
+				Code:        200,
+				Amount:      model.Amount{UsedAmount: 1},
+			},
+		}
+		require.NoError(t, model.LogDB.Create(logs).Error)
+
+		stats, err := model.GetAppUserLogStats(
+			user.ID,
+			"alpha",
+			now.Add(-time.Hour),
+			now.Add(2*time.Hour),
+			"gpt-4.1",
+			"",
+			"",
+			0,
+			"stats-key",
+			model.CodeTypeAll,
+			0,
+			"",
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 2, stats.TotalCount)
+		require.EqualValues(t, 1, stats.SuccessCount)
+		require.EqualValues(t, 1, stats.ErrorCount)
+		require.Equal(t, 0.15, stats.UsedAmount)
+		require.EqualValues(t, 125, stats.InputTokens)
+		require.EqualValues(t, 60, stats.OutputTokens)
+		require.EqualValues(t, 185, stats.TotalTokens)
+		require.InDelta(t, 1500, stats.AverageMilliseconds, 1)
+	})
+}
+
 func TestRequestDetailApplyBodySizeLimitsZeroKeepsOriginalBody(t *testing.T) {
 	detail := &model.RequestDetail{
 		RequestBody:  "abcdef",
@@ -146,6 +385,7 @@ func withTestLogStatsDB(t *testing.T, fn func()) {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(
 		&model.AppUser{},
+		&model.Token{},
 		&model.Log{},
 		&model.RequestDetail{},
 	))

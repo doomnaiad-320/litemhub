@@ -45,6 +45,7 @@ const ModelPage = lazy(() => import("@/pages/model/page"))
 const LogPage = lazy(() => import("@/pages/log/page"))
 const MCPPage = lazy(() => import("@/pages/mcp/page"))
 const UserPortalDashboardPage = lazy(() => import("@/pages/user-portal/dashboard"))
+const UserPortalModelsPage = lazy(() => import("@/pages/user-portal/models"))
 const UserPortalGroupsPage = lazy(() => import("@/pages/user-portal/groups"))
 const UserPortalKeysPage = lazy(() => import("@/pages/user-portal/keys"))
 const UserPortalLogsPage = lazy(() => import("@/pages/user-portal/logs"))
@@ -146,7 +147,7 @@ export function useRoutes(): RouteObject[] {
                 },
                 {
                     path: ROUTES.USER_MODELS,
-                    element: <Navigate to={ROUTES.PUBLIC_MODELS} replace />,
+                    element: lazyLoad(UserPortalModelsPage),
                 },
                 {
                     path: ROUTES.USER_GROUPS,

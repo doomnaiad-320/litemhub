@@ -1,5 +1,5 @@
 import type { Token } from './token'
-import type { LogRecord } from './log'
+import type { LogRecord, LogStats } from './log'
 import type { ModelPrice } from './model'
 
 export interface UserPortalUser {
@@ -128,7 +128,14 @@ export interface UserPortalReferralRecordsResponse {
 
 export interface UserPortalModelLogsResponse {
     logs: LogRecord[]
+    groups?: string[]
+    models?: string[]
+    token_names?: string[]
     total: number
+}
+
+export interface UserPortalModelLogStatsResponse {
+    stats: LogStats
 }
 
 export interface UserPortalGroupModelOption {

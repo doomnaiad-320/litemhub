@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { ENV } from '@/utils/env'
 import { ApiError, type APIResponse } from './index'
-import type { LogRequestDetail } from '@/types/log'
+import type { LogFilters, LogRequestDetail } from '@/types/log'
 import type {
     UserPortalAuthResponse,
     UserPortalCreateKeyRequest,
@@ -11,6 +11,7 @@ import type {
     UserPortalGroupsResponse,
     UserPortalKeysResponse,
     UserPortalLoginRequest,
+    UserPortalModelLogStatsResponse,
     UserPortalModelLogsResponse,
     UserPortalPlaygroundChatRequest,
     UserPortalPlaygroundChatResponse,
@@ -78,8 +79,20 @@ userApiClient.interceptors.response.use(
     },
 )
 
-const get = async <T>(url: string, params?: Record<string, string | number>) => {
-    const response: AxiosResponse<APIResponse<T>> = await userApiClient.get(url, { params })
+const cleanParams = (params?: Record<string, string | number | undefined>) => {
+    if (!params) {
+        return undefined
+    }
+
+    return Object.fromEntries(
+        Object.entries(params).filter(([, value]) => value !== undefined),
+    ) as Record<string, string | number>
+}
+
+const get = async <T>(url: string, params?: Record<string, string | number | undefined>) => {
+    const response: AxiosResponse<APIResponse<T>> = await userApiClient.get(url, {
+        params: cleanParams(params),
+    })
     return response.data.data as T
 }
 
@@ -164,10 +177,33 @@ export const userPortalApi = {
         return post<UserPortalRechargeResponse>('wallet/recharge/dulupay', data)
     },
 
-    getModelLogs: async (page: number, perPage: number) => {
+    getModelLogs: async (page: number, perPage: number, filters?: LogFilters) => {
         return get<UserPortalModelLogsResponse>('logs', {
+            group: filters?.group,
+            token_name: filters?.token_name,
+            model_name: filters?.model,
+            start_timestamp: filters?.start_timestamp,
+            end_timestamp: filters?.end_timestamp,
+            timezone: filters?.timezone,
+            code_type: filters?.code_type,
+            code: filters?.code,
+            request_id: filters?.request_id,
             p: page,
             per_page: perPage,
+        })
+    },
+
+    getModelLogStats: async (filters?: LogFilters) => {
+        return get<UserPortalModelLogStatsResponse>('logs/stats', {
+            group: filters?.group,
+            token_name: filters?.token_name,
+            model_name: filters?.model,
+            start_timestamp: filters?.start_timestamp,
+            end_timestamp: filters?.end_timestamp,
+            timezone: filters?.timezone,
+            code_type: filters?.code_type,
+            code: filters?.code,
+            request_id: filters?.request_id,
         })
     },
 

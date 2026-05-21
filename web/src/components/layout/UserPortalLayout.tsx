@@ -48,6 +48,7 @@ export function UserPortalLayout() {
     const user = useUserPortalAuthStore((state) => state.user)
     const portalNavItems: PortalNavItem[] = [
         { label: t('portal.nav.wallet'), href: ROUTES.USER_DASHBOARD, icon: Wallet },
+        { label: t('portal.nav.models'), href: ROUTES.USER_MODELS, icon: Blocks },
         { label: t('portal.nav.keys'), href: ROUTES.USER_KEYS, icon: KeyRound },
         { label: t('portal.nav.logs'), href: ROUTES.USER_LOGS, icon: ScrollText },
         { label: t('portal.nav.referrals'), href: ROUTES.USER_REFERRALS, icon: Gift },

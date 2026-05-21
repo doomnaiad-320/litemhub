@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import type { LogFilters } from '@/types/log'
 import type {
     UserPortalCreateKeyRequest,
     UserPortalEmailCodeRequest,
@@ -184,10 +185,28 @@ export const useUserPortalDuluPayRecharge = () => {
     })
 }
 
-export const useUserPortalModelLogs = (page: number, perPage: number, enabled = true) => {
+export const useUserPortalModelLogs = (
+    page: number,
+    perPage: number,
+    filters?: LogFilters,
+    enabled = true,
+) => {
     return useQuery({
-        queryKey: ['userPortalModelLogs', page, perPage],
-        queryFn: () => userPortalApi.getModelLogs(page, perPage),
+        queryKey: ['userPortalModelLogs', page, perPage, filters],
+        queryFn: () => userPortalApi.getModelLogs(page, perPage, filters),
+        enabled,
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        retry: false,
+    })
+}
+
+export const useUserPortalModelLogStats = (filters?: LogFilters, enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalModelLogStats', filters],
+        queryFn: () => userPortalApi.getModelLogStats(filters),
         enabled,
         refetchInterval: false,
         refetchOnWindowFocus: false,

@@ -1,8 +1,10 @@
 package model
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -616,6 +618,7 @@ type GetLogsResult struct {
 	Total    int64    `json:"total"`
 	Channels []int    `json:"channels,omitempty"`
 	Models   []string `json:"models,omitempty"`
+	Groups   []string `json:"groups,omitempty"`
 }
 
 type LogStats struct {
@@ -633,6 +636,11 @@ type LogStats struct {
 type GetGroupLogsResult struct {
 	GetLogsResult
 	TokenNames []string `json:"token_names"`
+}
+
+type GetAppUserLogsResult struct {
+	GetLogsResult
+	TokenNames []string `json:"token_names,omitempty"`
 }
 
 func buildGetLogsQuery(
@@ -860,6 +868,7 @@ func getLogs(
 func buildAppUserLogsQuery(
 	userID int,
 	tokenIDs []int,
+	group string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
 	modelName string,
@@ -872,6 +881,10 @@ func buildAppUserLogsQuery(
 	user string,
 ) *gorm.DB {
 	tx := applyAppUserLogScope(LogDB.Model(&Log{}), userID, tokenIDs)
+
+	if group != "" {
+		tx = tx.Where("group_id = ?", group)
+	}
 
 	if requestID != "" {
 		tx = tx.Where("request_id = ?", requestID)
@@ -923,6 +936,7 @@ func buildAppUserLogsQuery(
 func getAppUserLogs(
 	userID int,
 	tokenIDs []int,
+	group string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
 	modelName string,
@@ -949,6 +963,7 @@ func getAppUserLogs(
 		return buildAppUserLogsQuery(
 			userID,
 			tokenIDs,
+			group,
 			startTimestamp,
 			endTimestamp,
 			modelName,
@@ -966,6 +981,7 @@ func getAppUserLogs(
 		query := buildAppUserLogsQuery(
 			userID,
 			tokenIDs,
+			group,
 			startTimestamp,
 			endTimestamp,
 			modelName,
@@ -1001,8 +1017,65 @@ func getAppUserLogs(
 	return total, logs, nil
 }
 
+func getAppUserLogGroupByValues[T cmp.Ordered](
+	userID int,
+	tokenIDs []int,
+	field string,
+	group string,
+	tokenName string,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+) ([]T, error) {
+	type Result struct {
+		Value T
+		Count int64
+	}
+
+	query := applyAppUserLogScope(LogDB.Model(&Log{}), userID, tokenIDs)
+	if group != "" {
+		query = query.Where("group_id = ?", group)
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
+	}
+
+	switch {
+	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
+		query = query.Where("created_at BETWEEN ? AND ?", startTimestamp, endTimestamp)
+	case !startTimestamp.IsZero():
+		query = query.Where("created_at >= ?", startTimestamp)
+	case !endTimestamp.IsZero():
+		query = query.Where("created_at <= ?", endTimestamp)
+	}
+
+	var results []Result
+	if err := query.
+		Select(field + " as value, COUNT(*) as count").
+		Where(field + " IS NOT NULL AND " + field + " != ''").
+		Group(field).
+		Find(&results).Error; err != nil {
+		return nil, err
+	}
+
+	slices.SortFunc(results, func(a, b Result) int {
+		if a.Count != b.Count {
+			return cmp.Compare(b.Count, a.Count)
+		}
+
+		return cmp.Compare(a.Value, b.Value)
+	})
+
+	values := make([]T, len(results))
+	for i, result := range results {
+		values[i] = result.Value
+	}
+
+	return values, nil
+}
+
 func GetAppUserLogs(
 	userID int,
+	group string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
 	modelName string,
@@ -1017,7 +1090,7 @@ func GetAppUserLogs(
 	user string,
 	page int,
 	perPage int,
-) (*GetLogsResult, error) {
+) (*GetAppUserLogsResult, error) {
 	if userID <= 0 {
 		return nil, errors.New("invalid user id")
 	}
@@ -1027,9 +1100,57 @@ func GetAppUserLogs(
 		return nil, err
 	}
 
+	var (
+		groups     []string
+		tokenNames []string
+		models     []string
+	)
+
+	g := new(errgroup.Group)
+	g.Go(func() error {
+		var queryErr error
+		groups, queryErr = getAppUserLogGroupByValues[string](
+			userID,
+			tokenIDs,
+			"group_id",
+			"",
+			"",
+			startTimestamp,
+			endTimestamp,
+		)
+		return queryErr
+	})
+	g.Go(func() error {
+		var queryErr error
+		tokenNames, queryErr = getAppUserLogGroupByValues[string](
+			userID,
+			tokenIDs,
+			"token_name",
+			group,
+			"",
+			startTimestamp,
+			endTimestamp,
+		)
+		return queryErr
+	})
+	g.Go(func() error {
+		var queryErr error
+		models, queryErr = getAppUserLogGroupByValues[string](
+			userID,
+			tokenIDs,
+			"model",
+			group,
+			tokenName,
+			startTimestamp,
+			endTimestamp,
+		)
+		return queryErr
+	})
+
 	total, logs, err := getAppUserLogs(
 		userID,
 		tokenIDs,
+		group,
 		startTimestamp,
 		endTimestamp,
 		modelName,
@@ -1048,15 +1169,63 @@ func GetAppUserLogs(
 	if err != nil {
 		return nil, err
 	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
 
 	if err := attachAppUsersToLogs(logs); err != nil {
 		return nil, err
 	}
 
-	return &GetLogsResult{
-		Logs:  logs,
-		Total: total,
+	return &GetAppUserLogsResult{
+		GetLogsResult: GetLogsResult{
+			Logs:   logs,
+			Total:  total,
+			Groups: groups,
+			Models: models,
+		},
+		TokenNames: tokenNames,
 	}, nil
+}
+
+func GetAppUserLogStats(
+	userID int,
+	group string,
+	startTimestamp time.Time,
+	endTimestamp time.Time,
+	modelName string,
+	requestID string,
+	upstreamID string,
+	tokenID int,
+	tokenName string,
+	codeType CodeType,
+	code int,
+	user string,
+) (*LogStats, error) {
+	if userID <= 0 {
+		return nil, errors.New("invalid user id")
+	}
+
+	tokenIDs, err := getAppUserTokenIDs(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return scanLogStats(buildAppUserLogsQuery(
+		userID,
+		tokenIDs,
+		group,
+		startTimestamp,
+		endTimestamp,
+		modelName,
+		requestID,
+		upstreamID,
+		tokenID,
+		tokenName,
+		codeType,
+		code,
+		user,
+	))
 }
 
 func GetLogs(

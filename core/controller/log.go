@@ -384,6 +384,7 @@ func GetCurrentUserModelLogs(c *gin.Context) {
 
 	result, err := model.GetAppUserLogs(
 		user.ID,
+		params.group,
 		startTime,
 		endTime,
 		params.modelName,
@@ -405,6 +406,35 @@ func GetCurrentUserModelLogs(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, result)
+}
+
+func GetCurrentUserModelLogStats(c *gin.Context) {
+	user := middleware.GetWalletUser(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
+	params := parseCommonParams(c)
+
+	stats, err := model.GetAppUserLogStats(
+		user.ID,
+		params.group,
+		startTime,
+		endTime,
+		params.modelName,
+		params.requestID,
+		params.upstreamID,
+		params.tokenID,
+		params.tokenName,
+		model.CodeType(params.codeType),
+		params.code,
+		params.user,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, gin.H{
+		"stats": stats,
+	})
 }
 
 func GetCurrentUserModelLogDetail(c *gin.Context) {

@@ -40,6 +40,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 
 		logsRouter := protectedUserAPI.Group("/logs")
 		logsRouter.GET("", controller.GetCurrentUserModelLogs)
+		logsRouter.GET("/stats", controller.GetCurrentUserModelLogStats)
 		logsRouter.GET("/detail/:log_id", controller.GetCurrentUserModelLogDetail)
 
 		playgroundRouter := protectedUserAPI.Group("/playground")

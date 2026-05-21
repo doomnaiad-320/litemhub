@@ -1,7 +1,6 @@
 import {
   Building2,
   Copy,
-  Cpu,
   Info,
   Layers3,
   RotateCcw,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,8 +29,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePublicModels } from "@/feature/public-models/hooks";
 import { useUserPortalGroups } from "@/feature/user-portal/hooks";
 import type { ModelPrice } from "@/types/model";
+import type { PublicModel } from "@/types/public-model";
 import type { UserPortalGroupModelOption } from "@/types/user-portal";
 import { cn } from "@/lib/utils";
 import {
@@ -57,9 +59,56 @@ interface ModelAccessGroup {
 interface ModelCardItem {
   accessGroups: ModelAccessGroup[];
   capabilities: string[];
+  contextLength?: number;
+  description?: string;
+  healthScore?: number;
   model: string;
   provider: string;
+  publicModel?: PublicModel;
 }
+
+const formatContextLength = (value?: number) => {
+  if (!value) {
+    return "-";
+  }
+
+  if (value >= 1_000_000) {
+    return `${Number((value / 1_000_000).toFixed(1))}M`;
+  }
+
+  if (value >= 1000) {
+    return `${Number((value / 1000).toFixed(0))}K`;
+  }
+
+  return String(value);
+};
+
+const formatRequestPriceValue = (
+  price: number | undefined,
+  unitLabel: string,
+) => {
+  if (price == null || price === 0) {
+    return null;
+  }
+
+  return `${formatPriceNumber(price)}/${unitLabel}`;
+};
+
+const getHealthToneClass = (score?: number) => {
+  if (score == null) {
+    return "border-[#d8dce3] bg-[#f8fafc] text-[#6b7280] dark:border-white/10 dark:bg-white/5 dark:text-white/60";
+  }
+
+  if (score >= 95) {
+    return "border-[#24c37a]/25 bg-[#24c37a]/10 text-[#0f8f5f] dark:border-[#24c37a]/30 dark:bg-[#24c37a]/15 dark:text-[#6ee7ad]";
+  }
+
+  if (score >= 90) {
+    return "border-[#d8951b]/30 bg-[#d8951b]/10 text-[#9a6400] dark:border-[#d8951b]/35 dark:bg-[#d8951b]/15 dark:text-[#f0c36a]";
+  }
+
+  return "border-[#dc2626]/25 bg-[#dc2626]/10 text-[#b91c1c] dark:border-[#ef4444]/35 dark:bg-[#ef4444]/15 dark:text-[#fca5a5]";
+};
 
 const scalePriceNumber = (value: number | undefined, multiplier: number) => {
   if (value == null) {
@@ -204,7 +253,18 @@ export default function UserPortalModelsPage() {
   );
   const [selectedPricingGroup, setSelectedPricingGroup] = useState("");
   const { data, isLoading } = useUserPortalGroups(true);
+  const { data: publicModelsData } = usePublicModels();
   const groups = data?.groups || [];
+  const publicModelMap = useMemo(
+    () =>
+      new Map(
+        (publicModelsData?.models || []).map((model) => [
+          model.model.toLowerCase(),
+          model,
+        ]),
+      ),
+    [publicModelsData?.models],
+  );
   const groupItems = useMemo(
     () =>
       [...groups].sort((left, right) => left.group.localeCompare(right.group)),
@@ -223,10 +283,17 @@ export default function UserPortalModelsPage() {
       );
 
       group.models.forEach((model) => {
+        const publicModel = publicModelMap.get(model.toLowerCase());
         const current = groupedModels.get(model) || {
           model,
-          capabilities: inferCapabilities(model),
-          provider: inferProvider(model),
+          capabilities: publicModel?.capabilities?.length
+            ? publicModel.capabilities
+            : inferCapabilities(model),
+          contextLength: publicModel?.context_length,
+          description: publicModel?.description,
+          healthScore: publicModel?.health?.health_percent,
+          provider: publicModel?.provider || inferProvider(model),
+          publicModel,
           accessGroups: [],
         };
         const modelDetail = modelDetailMap.get(model.toLowerCase());
@@ -259,7 +326,7 @@ export default function UserPortalModelsPage() {
         }),
       }))
       .sort((left, right) => left.model.localeCompare(right.model));
-  }, [groups]);
+  }, [groups, publicModelMap]);
 
   const providerOptions = useMemo(
     () =>
@@ -276,91 +343,6 @@ export default function UserPortalModelsPage() {
       ),
     [modelCards],
   );
-
-  const buildPriceEntries = (accessGroup?: ModelAccessGroup) => {
-    if (!accessGroup) {
-      return [];
-    }
-
-    const price = accessGroup.price;
-    const entries: Array<{ label: string; value: string }> = [];
-
-    const prioritizedCandidates: Array<{ key: string; value: string | null }> =
-      [
-        {
-          key: "input",
-          value: formatTokenPriceValue(
-            price?.input_price,
-            price?.input_price_unit,
-          ),
-        },
-        {
-          key: "output",
-          value: formatTokenPriceValue(
-            price?.output_price,
-            price?.output_price_unit,
-          ),
-        },
-        {
-          key: "requestInput",
-          value:
-            price?.input_request_price != null
-              ? formatPriceNumber(price.input_request_price)
-              : null,
-        },
-        {
-          key: "requestOutput",
-          value:
-            price?.output_request_price != null
-              ? formatPriceNumber(price.output_request_price)
-              : null,
-        },
-        {
-          key: "imageInput",
-          value: formatTokenPriceValue(
-            price?.image_input_price,
-            price?.image_input_price_unit,
-          ),
-        },
-        {
-          key: "imageOutput",
-          value: formatTokenPriceValue(
-            price?.image_output_price,
-            price?.image_output_price_unit,
-          ),
-        },
-        {
-          key: "audioInput",
-          value: formatTokenPriceValue(
-            price?.audio_input_price,
-            price?.audio_input_price_unit,
-          ),
-        },
-      ];
-
-    prioritizedCandidates.forEach((candidate) => {
-      if (!candidate.value) {
-        return;
-      }
-
-      entries.push({
-        label: t(`portal.models.price.${candidate.key}`),
-        value: candidate.value,
-      });
-    });
-
-    if (entries.length > 0) {
-      return entries;
-    }
-
-    return buildImagePriceEntries(
-      accessGroup.imagePrices,
-      accessGroup.imageQualityPrices,
-    ).map((entry) => ({
-      label: `${t("portal.models.price.imageSize")} ${entry.label}`,
-      value: entry.value,
-    }));
-  };
 
   const getBaseAccessGroup = (item: ModelCardItem) => {
     const exactBase = item.accessGroups.find(
@@ -402,8 +384,55 @@ export default function UserPortalModelsPage() {
     );
   };
 
-  const getPreviewPriceEntries = (item: ModelCardItem) => {
-    return buildPriceEntries(getPreviewAccessGroup(item));
+  const getPreviewInputPrice = (item: ModelCardItem) => {
+    const accessGroup = getPreviewAccessGroup(item);
+    const price = accessGroup?.price;
+
+    return (
+      formatTokenPriceValue(price?.input_price, price?.input_price_unit) ||
+      formatTokenPriceValue(
+        price?.image_input_price,
+        price?.image_input_price_unit,
+      ) ||
+      formatTokenPriceValue(
+        price?.audio_input_price,
+        price?.audio_input_price_unit,
+      )
+    );
+  };
+
+  const getPreviewOutputPrice = (item: ModelCardItem) => {
+    const accessGroup = getPreviewAccessGroup(item);
+    const price = accessGroup?.price;
+
+    return (
+      formatTokenPriceValue(price?.output_price, price?.output_price_unit) ||
+      formatRequestPriceValue(
+        price?.output_request_price,
+        t("portal.models.perRequestUnit"),
+      ) ||
+      formatTokenPriceValue(
+        price?.image_output_price,
+        price?.image_output_price_unit,
+      ) ||
+      formatTokenPriceValue(
+        price?.thinking_mode_output_price,
+        price?.thinking_mode_output_price_unit,
+      ) ||
+      buildImagePriceEntries(
+        accessGroup?.imagePrices,
+        accessGroup?.imageQualityPrices,
+      )[0]?.value
+    );
+  };
+
+  const copyModelId = async (model: string) => {
+    try {
+      await navigator.clipboard.writeText(model);
+      toast.success(t("publicModels.copied"));
+    } catch {
+      toast.error(t("publicModels.copyFailed"));
+    }
   };
 
   const getGroupPricingTableData = (accessGroup: ModelAccessGroup) => {
@@ -728,166 +757,108 @@ export default function UserPortalModelsPage() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
         {isLoading ? (
           <>
-            <Skeleton className="h-[136px] rounded-md" />
-            <Skeleton className="h-[136px] rounded-md" />
-            <Skeleton className="h-[136px] rounded-md" />
-            <Skeleton className="h-[136px] rounded-md" />
-            <Skeleton className="h-[136px] rounded-md" />
+            <Skeleton className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
+            <Skeleton className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
+            <Skeleton className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
+            <Skeleton className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
+            <Skeleton className="h-[190px] rounded-[16px] sm:h-[286px] sm:rounded-[20px]" />
           </>
         ) : filteredModels.length > 0 ? (
           filteredModels.map((item) => {
-            const priceEntries = getPreviewPriceEntries(item);
-            const inputEntry = priceEntries.find(
-              (entry) => entry.label === t("portal.models.price.input"),
-            );
-            const outputEntry = priceEntries.find(
-              (entry) => entry.label === t("portal.models.price.output"),
-            );
-            const requestEntry = priceEntries.find(
-              (entry) => entry.label === t("portal.models.price.request"),
-            );
-            const fallbackEntries = priceEntries.filter(
-              (entry) => entry !== inputEntry && entry !== outputEntry,
-            );
-            const primaryEntry = inputEntry || fallbackEntries[0];
-            const secondaryEntry =
-              outputEntry ||
-              (primaryEntry === fallbackEntries[0]
-                ? fallbackEntries[1]
-                : fallbackEntries[0]);
-            const extractNumber = (value?: string) =>
-              value ? value.split("/")[0].trim() : null;
-            const primaryValue = extractNumber(primaryEntry?.value);
-            const secondaryValue = extractNumber(secondaryEntry?.value);
-            const requestValue = requestEntry?.value;
-            const tokenPriceParts = [
-              inputEntry && primaryValue
-                ? `${t("portal.models.price.input")} ${primaryValue}`
-                : null,
-              outputEntry && secondaryValue
-                ? `${t("portal.models.price.output")} ${secondaryValue}`
-                : null,
-            ].filter(Boolean);
-            const fallbackPriceText =
-              tokenPriceParts.length === 0 && primaryEntry
-                ? `${primaryEntry.label} ${primaryEntry.value}`
-                : null;
-            const priceSummary = [
-              tokenPriceParts.length > 0
-                ? `${tokenPriceParts.join(" · ")} / ${t("portal.models.tokenUnitShort")}`
-                : fallbackPriceText,
-              requestValue
-                ? `${t("portal.models.price.request")} ${requestValue} / ${t("portal.models.perRequestUnit")}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(` ${t("portal.models.priceOr")} `);
-            const previewCapabilities = item.capabilities.slice(0, 2);
-            const hiddenCapabilityCount = Math.max(
-              0,
-              item.capabilities.length - previewCapabilities.length,
-            );
-            const descriptionCapabilities = item.capabilities
-              .slice(0, 3)
-              .map((capability) => t(`portal.models.capability.${capability}`))
-              .join(" / ");
+            const healthScore = item.healthScore;
 
             return (
-              <div
+              <article
                 key={item.model}
                 role="button"
                 tabIndex={0}
                 aria-label={`${t("portal.models.openDetails")}: ${item.model}`}
-                className="group relative flex min-h-[126px] cursor-pointer flex-col overflow-hidden rounded-md border border-border bg-background p-3.5 shadow-none transition-colors duration-200 hover:border-primary/35 hover:bg-muted/20 dark:bg-background sm:min-h-[136px] sm:p-4"
+                className="group flex cursor-pointer flex-col rounded-[16px] bg-white p-3 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-white/5 dark:ring-white/10 sm:rounded-[20px] sm:p-[10px]"
                 onClick={() => openModelDetails(item)}
                 onKeyDown={(event) => {
+                  if (event.currentTarget !== event.target) {
+                    return;
+                  }
+
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     openModelDetails(item);
                   }
                 }}
               >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground">
-                    <Cpu className="h-4.5 w-4.5" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex min-w-0 items-start gap-1.5">
-                      <div
-                        className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-foreground"
-                        title={item.model}
-                      >
-                        {item.model}
-                      </div>
-                      <button
-                        type="button"
-                        className="-mr-1 -mt-1 rounded-md p-1 text-muted-foreground/70 opacity-70 transition-colors hover:bg-muted hover:text-foreground group-hover:opacity-100"
-                        aria-label={`${t("portal.models.copyModel")}: ${item.model}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void navigator.clipboard?.writeText(item.model);
-                        }}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <div
-                      className="line-clamp-1 break-all font-mono text-[12px] font-semibold tabular-nums text-foreground/90"
-                      title={priceSummary || t("portal.models.noPrice")}
-                    >
-                      {priceSummary || t("portal.models.noPrice")}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 min-h-[32px] text-[12px] leading-4 text-muted-foreground">
-                  <span className="font-medium text-foreground/80">
+                <div className="mb-[5px] flex items-start justify-between gap-3">
+                  <Badge className="rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
                     {item.provider}
-                  </span>
-                  {descriptionCapabilities && (
-                    <span> · {descriptionCapabilities}</span>
-                  )}
-                </div>
-
-                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
-                  <button
+                  </Badge>
+                  <Button
                     type="button"
-                    className={cn(
-                      "inline-flex h-6 items-center rounded-md border border-border/70 bg-muted/45 px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/10 hover:text-primary",
-                      providerFilter === item.provider &&
-                        "border-primary/35 bg-primary/10 text-primary",
-                    )}
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 shrink-0 rounded-lg border-[#e5e7eb] bg-white text-[#45515e] shadow-none hover:bg-[#f0f0f0] dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    aria-label={`${t("publicModels.copyModelId")}: ${item.model}`}
                     onClick={(event) => {
                       event.stopPropagation();
-                      setProviderFilter(item.provider);
+                      void copyModelId(item.model);
                     }}
                   >
-                    {item.provider}
-                  </button>
-                  {previewCapabilities.map((capability) => (
-                    <button
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <button
+                  type="button"
+                  className="break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openModelDetails(item);
+                  }}
+                >
+                  {item.model}
+                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
+                  <span
+                    className={cn(
+                      "inline-flex h-6 items-center rounded-full border px-2.5 font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-semibold tabular-nums",
+                      getHealthToneClass(healthScore),
+                    )}
+                  >
+                    {t("publicModels.health")}{" "}
+                    {healthScore == null
+                      ? t("publicModels.unmonitored")
+                      : `${healthScore}%`}
+                  </span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <span className="text-[#8e8e93]">{t("publicModels.table.input")}</span>
+                    <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+                      {getPreviewInputPrice(item) || t("publicModels.freePrice")}
+                    </span>
+                  </span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <span className="text-[#8e8e93]">{t("publicModels.table.output")}</span>
+                    <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+                      {getPreviewOutputPrice(item) || "-"}
+                    </span>
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-1 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-3 sm:line-clamp-2 sm:leading-[1.7]">
+                  {item.description || t("publicModels.defaultDescription")}
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-5">
+                  <Badge className="rounded-full border-[#1456f0]/20 bg-[#1456f0] px-2.5 py-1 text-xs font-semibold text-white shadow-[rgba(20,86,240,0.18)_0px_4px_10px] hover:bg-[#1456f0] dark:border-[#60a5fa]/30 dark:bg-[#2563eb] dark:text-white">
+                    {t("publicModels.table.context")} {formatContextLength(item.contextLength)}
+                  </Badge>
+                  {(item.capabilities || []).slice(0, 5).map((capability) => (
+                    <Badge
                       key={`${item.model}-${capability}`}
-                      type="button"
-                      className={cn(
-                        "inline-flex h-6 items-center rounded-md border border-border/70 bg-muted/45 px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/10 hover:text-primary",
-                        capabilityFilter === capability &&
-                          "border-primary/35 bg-primary/10 text-primary",
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setCapabilityFilter(capability);
-                      }}
+                      variant="outline"
+                      className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-xs font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
                     >
                       {t(`portal.models.capability.${capability}`)}
-                    </button>
+                    </Badge>
                   ))}
-                  {hiddenCapabilityCount > 0 && (
-                    <span className="inline-flex h-6 items-center rounded-md border border-dashed border-border/70 px-2 text-[11px] text-muted-foreground/80">
-                      +{hiddenCapabilityCount}
-                    </span>
-                  )}
                 </div>
-              </div>
+              </article>
             );
           })
         ) : (

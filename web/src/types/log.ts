@@ -141,6 +141,7 @@ export interface LogStatsResponse {
 
 // 日志过滤器
 export interface LogFilters {
+  group?: string
   model?: string
   token_name?: string
   channel?: number
