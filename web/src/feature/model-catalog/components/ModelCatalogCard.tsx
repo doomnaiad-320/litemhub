@@ -149,7 +149,7 @@ export function ModelCatalogCard({
         </span>
       </div>
 
-      <p className="mt-2 line-clamp-1 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-3 sm:line-clamp-2 sm:leading-[1.7]">
+      <p className="mt-2 line-clamp-2 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-3 sm:leading-[1.7]">
         {model.description || defaultDescription}
       </p>
 
