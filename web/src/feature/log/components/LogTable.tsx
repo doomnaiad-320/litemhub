@@ -67,6 +67,11 @@ interface LogTableProps {
     onPageSizeChange: (pageSize: number) => void
     onOpenGroupLog?: (group: string, tokenName?: string) => void
     detailScope?: LogDetailScope
+    hidePageSizeSelector?: boolean
+    mobileInfiniteScroll?: boolean
+    hasMore?: boolean
+    loadingMore?: boolean
+    onLoadMore?: () => void
 }
 
 // 使用一个单独的组件来处理每行的展开内容，这样每一行都有自己的state
@@ -80,6 +85,11 @@ export function LogTable({
     onPageSizeChange,
     onOpenGroupLog,
     detailScope = 'admin',
+    hidePageSizeSelector = false,
+    mobileInfiniteScroll = false,
+    hasMore = false,
+    loadingMore = false,
+    onLoadMore,
 }: LogTableProps) {
     const { t } = useTranslation()
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
@@ -342,6 +352,7 @@ export function LogTable({
         pageCount: Math.ceil(total / pageSize),
     })
     const tableRows = table.getRowModel().rows
+    const totalPages = Math.ceil(total / pageSize) || 1
     const headerGroups = table.getHeaderGroups()
     const leafHeaders = headerGroups[0]?.headers ?? []
     const desktopGridTemplateColumns = leafHeaders
@@ -375,6 +386,19 @@ export function LogTable({
     useEffect(() => {
         mobileVirtualizer.measure()
     }, [mobileVirtualizer, data])
+
+    const handleMobileScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+        if (!mobileInfiniteScroll || loading || loadingMore || !hasMore || !onLoadMore) {
+            return
+        }
+
+        const target = event.currentTarget
+        const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+
+        if (distanceToBottom < 160) {
+            onLoadMore()
+        }
+    }, [hasMore, loading, loadingMore, mobileInfiniteScroll, onLoadMore])
 
     return (
         <div className="h-full flex flex-col">
@@ -490,7 +514,7 @@ export function LogTable({
                         </div>
                     </div>
                 ) : (
-                    <div ref={mobileScrollRef} className="h-full min-h-[420px] overflow-auto pr-1">
+                    <div ref={mobileScrollRef} className="h-full min-h-[420px] overflow-auto pr-1" onScroll={handleMobileScroll}>
                         {loading ? (
                             <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
                                 <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
@@ -572,34 +596,42 @@ export function LogTable({
                                 })}
                             </div>
                         )}
+                        {mobileInfiniteScroll && data.length > 0 && (
+                            <div className="py-3 text-center text-xs text-muted-foreground">
+                                {loadingMore ? t('common.loading') : hasMore ? '继续下滑加载更多' : '没有更多了'}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
 
             {/* 分页控制 - 固定在底部 */}
+            {(!mobileInfiniteScroll || isDesktop) && (
             <div className="flex-shrink-0 pt-4">
                 <div className="flex flex-col gap-3 px-2 md:flex-row md:items-center md:justify-between">
                     <div className="text-sm text-muted-foreground md:flex-1">
                         {t('table.pageInfo', {
                             current: page,
-                            total: Math.ceil(total / pageSize) || 1
+                            total: totalPages
                         })}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 md:justify-end lg:gap-8">
-                        <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium whitespace-nowrap">{t('table.rowsPerPage')}</p>
-                            <select
-                                value={pageSize}
-                                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                                className="h-8 max-w-[80px] rounded border border-input bg-background px-2 text-sm"
-                            >
-                                {[10, 20, 30, 40, 50].map((size) => (
-                                    <option key={size} value={size}>
-                                        {size}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {!hidePageSizeSelector && (
+                            <div className="flex items-center space-x-2">
+                                <p className="text-sm font-medium whitespace-nowrap">{t('table.rowsPerPage')}</p>
+                                <select
+                                    value={pageSize}
+                                    onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                                    className="h-8 max-w-[80px] rounded border border-input bg-background px-2 text-sm"
+                                >
+                                    {[10, 20, 30, 40, 50].map((size) => (
+                                        <option key={size} value={size}>
+                                            {size}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                         <div className="flex items-center space-x-2">
                             <Button
                                 variant="outline"
@@ -620,16 +652,16 @@ export function LogTable({
                             <Button
                                 variant="outline"
                                 className="h-8 w-8 p-0"
-                                onClick={() => onPageChange(Math.min(Math.ceil(total / pageSize), page + 1))}
-                                disabled={page >= Math.ceil(total / pageSize)}
+                                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                                disabled={page >= totalPages}
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="outline"
                                 className="hidden h-8 w-8 p-0 md:inline-flex"
-                                onClick={() => onPageChange(Math.ceil(total / pageSize))}
-                                disabled={page >= Math.ceil(total / pageSize)}
+                                onClick={() => onPageChange(totalPages)}
+                                disabled={page >= totalPages}
                             >
                                 <ChevronsRight className="h-4 w-4" />
                             </Button>
@@ -637,6 +669,7 @@ export function LogTable({
                     </div>
                 </div>
             </div>
+            )}
             {!isDesktop && (
                 <Dialog open={!!selectedMobileLog} onOpenChange={(open) => !open && setSelectedMobileLog(null)}>
                     <DialogContent className="max-h-[88dvh] gap-0 overflow-hidden p-0 sm:max-w-3xl">

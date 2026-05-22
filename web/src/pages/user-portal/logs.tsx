@@ -1,4 +1,4 @@
-import { useRef, useState, type TouchEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DateRange } from 'react-day-picker'
 import { Activity, CircleCheck, CircleX, Coins, RotateCcw, RefreshCw } from 'lucide-react'
@@ -14,12 +14,13 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { DateRangePicker } from '@/components/common/DateRangePicker'
-import type { LogFilters } from '@/types/log'
+import type { LogFilters, LogRecord } from '@/types/log'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
 
 const ALL_VALUE = '__all__'
 const PULL_REFRESH_TRIGGER = 64
 const PULL_REFRESH_MAX_DISTANCE = 72
+const MODEL_LOG_PAGE_SIZE = 20
 
 const getDefaultDateRange = (): DateRange => {
     const today = new Date()
@@ -40,25 +41,62 @@ const withSelectedValue = (options: string[] | undefined, selected?: string) => 
 const formatCount = (value?: number) => Number(value || 0).toLocaleString()
 const formatMoney = (value?: number) => `$${Number(value || 0).toFixed(4)}`
 
+function useMediaQuery(query: string) {
+    const getMatches = () => {
+        if (typeof window === 'undefined') {
+            return false
+        }
+
+        return window.matchMedia(query).matches
+    }
+
+    const [matches, setMatches] = useState(getMatches)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia(query)
+        const handleChange = () => setMatches(mediaQuery.matches)
+
+        handleChange()
+        mediaQuery.addEventListener('change', handleChange)
+
+        return () => mediaQuery.removeEventListener('change', handleChange)
+    }, [query])
+
+    return matches
+}
+
 export default function UserPortalLogsPage() {
     const { t: rawT } = useTranslation()
     const t = rawT as (key: string) => string
     const [modelPage, setModelPage] = useState(1)
-    const [modelPageSize, setModelPageSize] = useState(20)
     const [group, setGroup] = useState(ALL_VALUE)
     const [tokenName, setTokenName] = useState(ALL_VALUE)
     const [modelName, setModelName] = useState(ALL_VALUE)
     const [codeType, setCodeType] = useState<'all' | 'success' | 'error'>('all')
     const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange())
+    const [mobileLogs, setMobileLogs] = useState<LogRecord[]>([])
     const [pullDistance, setPullDistance] = useState(0)
     const [isPullRefreshing, setIsPullRefreshing] = useState(false)
     const pullStartYRef = useRef<number | null>(null)
     const pullDistanceRef = useRef(0)
+    const isMobile = useMediaQuery('(max-width: 767px)')
 
     const activeGroup = group === ALL_VALUE ? '' : group
     const activeTokenName = tokenName === ALL_VALUE ? '' : tokenName
     const activeModelName = modelName === ALL_VALUE ? '' : modelName
     const effectiveTimezone = DEFAULT_TIMEZONE
+    const filterSignature = useMemo(() => JSON.stringify({
+        group: activeGroup,
+        tokenName: activeTokenName,
+        modelName: activeModelName,
+        codeType,
+        from: dateRange?.from?.getTime(),
+        to: dateRange?.to?.getTime(),
+    }), [activeGroup, activeModelName, activeTokenName, codeType, dateRange?.from, dateRange?.to])
     const filters: LogFilters = {
         group: activeGroup || undefined,
         token_name: activeTokenName || undefined,
@@ -78,15 +116,17 @@ export default function UserPortalLogsPage() {
         isLoading: isModelLoading,
         isFetching: isModelFetching,
         refetch: refetchModelLogs,
-    } = useUserPortalModelLogs(modelPage, modelPageSize, filters, true)
+    } = useUserPortalModelLogs(modelPage, MODEL_LOG_PAGE_SIZE, filters, true)
     const {
         data: statsData,
         isLoading: isStatsLoading,
         isFetching: isStatsFetching,
         refetch: refetchModelStats,
     } = useUserPortalModelLogStats(filters, true)
-    const modelLogs = modelData?.logs || []
+    const modelDataLogs = modelData?.logs || []
+    const modelLogs = isMobile ? mobileLogs : modelDataLogs
     const modelTotal = modelData?.total || 0
+    const hasMoreMobileLogs = mobileLogs.length < modelTotal
     const stats = statsData?.stats
     const groupOptions = withSelectedValue(modelData?.groups, activeGroup)
     const tokenOptions = withSelectedValue(modelData?.token_names, activeTokenName)
@@ -123,6 +163,28 @@ export default function UserPortalLogsPage() {
         },
     ]
 
+    useEffect(() => {
+        setMobileLogs([])
+        setModelPage(1)
+    }, [filterSignature])
+
+    useEffect(() => {
+        if (!modelData?.logs) {
+            return
+        }
+
+        setMobileLogs((current) => {
+            if (modelPage === 1) {
+                return modelData.logs
+            }
+
+            const seen = new Set(current.map((item) => item.id))
+            const nextLogs = modelData.logs.filter((item) => !seen.has(item.id))
+
+            return [...current, ...nextLogs]
+        })
+    }, [modelData?.logs, modelPage])
+
     const resetPage = () => setModelPage(1)
     const handleRefresh = async () => {
         await Promise.all([
@@ -138,6 +200,13 @@ export default function UserPortalLogsPage() {
         setDateRange(getDefaultDateRange())
         setModelPage(1)
     }
+    const handleLoadMoreLogs = useCallback(() => {
+        if (isModelFetching || !hasMoreMobileLogs) {
+            return
+        }
+
+        setModelPage((page) => page + 1)
+    }, [hasMoreMobileLogs, isModelFetching])
     const updatePullDistance = (distance: number) => {
         pullDistanceRef.current = distance
         setPullDistance(distance)
@@ -348,15 +417,17 @@ export default function UserPortalLogsPage() {
             <LogTable
                 data={modelLogs}
                 total={modelTotal}
-                loading={isModelLoading}
+                loading={isModelLoading && modelPage === 1}
                 page={modelPage}
-                pageSize={modelPageSize}
+                pageSize={MODEL_LOG_PAGE_SIZE}
                 onPageChange={setModelPage}
-                onPageSizeChange={(size) => {
-                    setModelPageSize(size)
-                    setModelPage(1)
-                }}
+                onPageSizeChange={() => setModelPage(1)}
                 detailScope="user"
+                hidePageSizeSelector
+                mobileInfiniteScroll
+                hasMore={hasMoreMobileLogs}
+                loadingMore={isModelFetching && modelPage > 1}
+                onLoadMore={handleLoadMoreLogs}
             />
         </div>
     )
