@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState, type TouchEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DateRange } from 'react-day-picker'
 import { Activity, CircleCheck, CircleX, Coins, RotateCcw, RefreshCw } from 'lucide-react'
@@ -14,11 +14,12 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { DateRangePicker } from '@/components/common/DateRangePicker'
-import { TimezoneInput } from '@/components/common/TimezoneInput'
 import type { LogFilters } from '@/types/log'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
 
 const ALL_VALUE = '__all__'
+const PULL_REFRESH_TRIGGER = 64
+const PULL_REFRESH_MAX_DISTANCE = 72
 
 const getDefaultDateRange = (): DateRange => {
     const today = new Date()
@@ -49,12 +50,15 @@ export default function UserPortalLogsPage() {
     const [modelName, setModelName] = useState(ALL_VALUE)
     const [codeType, setCodeType] = useState<'all' | 'success' | 'error'>('all')
     const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange())
-    const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE)
+    const [pullDistance, setPullDistance] = useState(0)
+    const [isPullRefreshing, setIsPullRefreshing] = useState(false)
+    const pullStartYRef = useRef<number | null>(null)
+    const pullDistanceRef = useRef(0)
 
     const activeGroup = group === ALL_VALUE ? '' : group
     const activeTokenName = tokenName === ALL_VALUE ? '' : tokenName
     const activeModelName = modelName === ALL_VALUE ? '' : modelName
-    const effectiveTimezone = timezone.trim() || DEFAULT_TIMEZONE
+    const effectiveTimezone = DEFAULT_TIMEZONE
     const filters: LogFilters = {
         group: activeGroup || undefined,
         token_name: activeTokenName || undefined,
@@ -120,9 +124,11 @@ export default function UserPortalLogsPage() {
     ]
 
     const resetPage = () => setModelPage(1)
-    const handleRefresh = () => {
-        refetchModelLogs()
-        refetchModelStats()
+    const handleRefresh = async () => {
+        await Promise.all([
+            refetchModelLogs(),
+            refetchModelStats(),
+        ])
     }
     const handleResetFilters = () => {
         setGroup(ALL_VALUE)
@@ -130,44 +136,97 @@ export default function UserPortalLogsPage() {
         setModelName(ALL_VALUE)
         setCodeType('all')
         setDateRange(getDefaultDateRange())
-        setTimezone(DEFAULT_TIMEZONE)
         setModelPage(1)
+    }
+    const updatePullDistance = (distance: number) => {
+        pullDistanceRef.current = distance
+        setPullDistance(distance)
+    }
+    const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+        if (window.matchMedia('(min-width: 640px)').matches || window.scrollY > 0 || isPullRefreshing) {
+            return
+        }
+
+        pullStartYRef.current = event.touches[0]?.clientY ?? null
+    }
+    const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+        if (pullStartYRef.current === null || window.scrollY > 0) {
+            return
+        }
+
+        const currentY = event.touches[0]?.clientY ?? pullStartYRef.current
+        const distance = currentY - pullStartYRef.current
+
+        if (distance <= 0) {
+            updatePullDistance(0)
+            return
+        }
+
+        updatePullDistance(Math.min(distance * 0.45, PULL_REFRESH_MAX_DISTANCE))
+    }
+    const handleTouchEnd = () => {
+        const shouldRefresh = pullDistanceRef.current >= PULL_REFRESH_TRIGGER
+        pullStartYRef.current = null
+
+        if (!shouldRefresh) {
+            updatePullDistance(0)
+            return
+        }
+
+        setIsPullRefreshing(true)
+        void handleRefresh().finally(() => {
+            updatePullDistance(0)
+            setIsPullRefreshing(false)
+        })
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="max-w-3xl text-[12px] leading-5 text-muted-foreground">{t('portal.logs.description')}</p>
+        <div
+            className="space-y-4 sm:space-y-6"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+        >
+            <div
+                className="flex items-center justify-center overflow-hidden text-[11px] text-muted-foreground transition-[height] duration-200 sm:hidden"
+                style={{ height: isPullRefreshing ? PULL_REFRESH_TRIGGER : pullDistance }}
+            >
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isPullRefreshing ? 'animate-spin' : ''}`} />
+                {isPullRefreshing ? '刷新中' : '下拉刷新'}
+            </div>
+
+            <section className="hidden rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:block sm:p-4">
+                <div className="flex justify-end">
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleRefresh}
+                        onClick={() => void handleRefresh()}
                         disabled={isModelFetching || isStatsFetching}
                         className="h-9 px-3 sm:shrink-0"
                     >
                         <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isModelFetching || isStatsFetching ? 'animate-spin' : ''}`} />
-                        {t('common.refresh')}
+                        刷新
                     </Button>
                 </div>
             </section>
 
-            <section className="flex flex-wrap gap-2">
+            <section className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 {statPills.map((item) => {
                     const Icon = item.icon
 
                     return (
                         <div
                             key={item.key}
-                            className="flex min-h-10 min-w-0 items-center gap-2 rounded-full border border-border bg-background px-3 py-2 shadow-none dark:border-white/10 sm:px-4"
+                            className="flex min-w-0 items-center gap-1.5 rounded-full border border-border bg-background px-2 py-1.5 shadow-none dark:border-white/10 sm:min-h-10 sm:gap-2 sm:px-4 sm:py-2"
                         >
-                            <Icon className={`h-3.5 w-3.5 shrink-0 ${item.className}`} />
-                            <span className="shrink-0 text-xs text-muted-foreground">{item.label}</span>
+                            <Icon className={`h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 ${item.className}`} />
+                            <span className="min-w-0 truncate text-[11px] text-muted-foreground sm:shrink-0 sm:text-xs">{item.label}</span>
                             {statsLoading ? (
-                                <Skeleton className="h-4 w-14 rounded-full" />
+                                <Skeleton className="ml-auto h-3.5 w-10 rounded-full sm:h-4 sm:w-14" />
                             ) : (
-                                <span className="font-mono text-sm font-semibold text-foreground">{item.value}</span>
+                                <span className="ml-auto min-w-0 truncate text-right font-mono text-xs font-semibold text-foreground sm:text-sm">{item.value}</span>
                             )}
                         </div>
                     )
@@ -176,7 +235,7 @@ export default function UserPortalLogsPage() {
 
             <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="w-full min-w-0 sm:w-40">
+                    <div className="hidden min-w-0 sm:block sm:w-40">
                         <Select
                             value={group}
                             onValueChange={(value) => {
@@ -218,7 +277,7 @@ export default function UserPortalLogsPage() {
                         </Select>
                     </div>
 
-                    <div className="w-full min-w-0 sm:w-48">
+                    <div className="hidden min-w-0 sm:block sm:w-48">
                         <Select
                             value={modelName}
                             onValueChange={(value) => {
@@ -271,16 +330,6 @@ export default function UserPortalLogsPage() {
                             className="h-9"
                         />
                     </div>
-
-                    <TimezoneInput
-                        value={timezone}
-                        onChange={(value) => {
-                            setTimezone(value)
-                            resetPage()
-                        }}
-                        disabled={isModelFetching}
-                        className="h-9 w-full sm:w-44"
-                    />
 
                     <Button
                         type="button"

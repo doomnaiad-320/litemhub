@@ -1,6 +1,6 @@
 import {
   Building2,
-  Info,
+  ChevronDown,
   Layers3,
   RotateCcw,
   Search,
@@ -96,6 +96,38 @@ const formatRequestPriceValue = (
   }
 
   return `${formatPriceNumber(price)}/${unitLabel}`;
+};
+
+const getPriceMultiplierClassName = (multiplier: number) => {
+  if (multiplier <= 1) {
+    return "text-emerald-600 dark:text-emerald-400";
+  }
+
+  if (multiplier <= 1.5) {
+    return "text-[#1456f0] dark:text-[#93c5fd]";
+  }
+
+  if (multiplier <= 2) {
+    return "text-amber-600 dark:text-amber-300";
+  }
+
+  return "text-rose-600 dark:text-rose-400";
+};
+
+const formatContextLength = (value?: number) => {
+  if (!value) {
+    return "-";
+  }
+
+  if (value >= 1_000_000) {
+    return `${Number((value / 1_000_000).toFixed(1))}M`;
+  }
+
+  if (value >= 1000) {
+    return `${Number((value / 1000).toFixed(0))}K`;
+  }
+
+  return String(value);
 };
 
 const scalePriceNumber = (value: number | undefined, multiplier: number) => {
@@ -268,6 +300,7 @@ export default function UserPortalModelsPage() {
     null,
   );
   const [selectedPricingGroup, setSelectedPricingGroup] = useState("");
+  const [isModelDescriptionOpen, setIsModelDescriptionOpen] = useState(true);
   const isMobileDetailDialog = useMediaQuery("(max-width: 639px)");
   const { data, isLoading } = useUserPortalGroups(true);
   const { data: publicModelsData } = usePublicModels();
@@ -615,20 +648,18 @@ export default function UserPortalModelsPage() {
   const openModelDetails = (item: ModelCardItem) => {
     setSelectedModel(item);
     setSelectedPricingGroup(item.accessGroups[0]?.group || "");
+    setIsModelDescriptionOpen(true);
   };
 
   const closeModelDetails = () => {
     setSelectedModel(null);
     setSelectedPricingGroup("");
+    setIsModelDescriptionOpen(true);
   };
 
   const renderModelDetails = (model: ModelCardItem) => (
     <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-      <section className="space-y-3">
-        <div className="flex items-center gap-2 text-base font-semibold">
-          <Info className="h-4 w-4 text-muted-foreground" />
-          <span>{t("portal.models.infoSection")}</span>
-        </div>
+      <section>
         <div className="divide-y divide-border/50 overflow-hidden rounded-md bg-muted/20 dark:bg-white/[0.02]">
           <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
             <div className="text-sm text-muted-foreground">
@@ -648,14 +679,6 @@ export default function UserPortalModelsPage() {
               </Badge>
             </div>
           </div>
-          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
-            <div className="text-sm text-muted-foreground">
-              {t("portal.models.accessGroups")}
-            </div>
-            <div className="text-right text-sm font-medium text-foreground tabular-nums sm:text-left">
-              {model.accessGroups.length}
-            </div>
-          </div>
           <div className="grid grid-cols-[92px_minmax(0,1fr)] items-start gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
             <div className="pt-0.5 text-sm text-muted-foreground">
               {t("portal.models.capabilities")}
@@ -672,6 +695,14 @@ export default function UserPortalModelsPage() {
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
+            <div className="text-sm text-muted-foreground">
+              {t("publicModels.table.context")}
+            </div>
+            <div className="min-w-0 text-right font-mono text-sm font-medium text-foreground tabular-nums sm:text-left">
+              {formatContextLength(model.contextLength)}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -682,21 +713,21 @@ export default function UserPortalModelsPage() {
         <Tabs
           value={selectedPricingGroup || model.accessGroups[0]?.group}
           onValueChange={setSelectedPricingGroup}
-          className="overflow-hidden rounded-md border border-border bg-background"
+          className="space-y-2"
         >
-          <div className="bg-muted/10">
-            <TabsList className="min-h-8 min-w-0 flex-1 justify-start gap-1 overflow-x-auto rounded-none bg-transparent px-1.5 py-[5px]">
-              {model.accessGroups.map((group) => (
-                <TabsTrigger
-                  key={`${model.model}-tab-${group.group}`}
-                  value={group.group}
-                  className="h-8 shrink-0 rounded-md bg-transparent px-2.5 text-[16px] font-normal shadow-none data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-amber-700 data-[state=active]:shadow-none dark:data-[state=active]:text-amber-300"
-                >
+          <TabsList className="h-10 w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border/70 bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {model.accessGroups.map((group) => (
+              <TabsTrigger
+                key={`${model.model}-tab-${group.group}`}
+                value={group.group}
+                className="relative h-10 shrink-0 rounded-none bg-transparent px-4 text-sm font-medium text-muted-foreground shadow-none after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:rounded-full after:bg-transparent after:content-[''] data-[state=active]:bg-transparent data-[state=active]:text-[#1456f0] data-[state=active]:shadow-none data-[state=active]:after:bg-[#1456f0] dark:data-[state=active]:text-[#93c5fd] dark:data-[state=active]:after:bg-[#60a5fa]"
+              >
+                <span className="max-w-[148px] truncate">
                   {group.group}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
           {model.accessGroups.map((group) => {
             const pricing = getGroupPricingTableData(group);
@@ -704,6 +735,9 @@ export default function UserPortalModelsPage() {
               {
                 label: t("portal.models.priceMultiplier"),
                 value: `x ${group.priceMultiplier.toFixed(2)}`,
+                valueClassName: getPriceMultiplierClassName(
+                  group.priceMultiplier,
+                ),
               },
               {
                 label: t("portal.models.inputColumn"),
@@ -735,7 +769,7 @@ export default function UserPortalModelsPage() {
               <TabsContent
                 key={`${model.model}-content-${group.group}`}
                 value={group.group}
-                className="m-0 space-y-2 px-3 py-3"
+                className="m-0 space-y-2"
               >
                 <div className="space-y-1 overflow-hidden rounded-lg bg-background/70 px-3 py-2">
                   <div className="pb-1 text-xs leading-4 text-muted-foreground">
@@ -750,7 +784,12 @@ export default function UserPortalModelsPage() {
                         <div className="text-xs text-muted-foreground">
                           {entry.label}
                         </div>
-                        <div className="min-w-0 text-right font-mono text-sm font-normal text-foreground tabular-nums">
+                        <div
+                          className={cn(
+                            "min-w-0 text-right font-mono text-sm font-normal text-foreground tabular-nums",
+                            entry.valueClassName,
+                          )}
+                        >
                           {entry.value}
                         </div>
                       </div>
@@ -1033,11 +1072,38 @@ export default function UserPortalModelsPage() {
           <DialogContent className="flex max-h-[86vh] w-[calc(100%-2rem)] max-w-[420px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[18px] border border-border/80 p-0 shadow-[0_18px_60px_rgba(15,23,42,0.24)] ring-1 ring-black/5 dark:border-white/15 dark:shadow-[0_24px_80px_rgba(0,0,0,0.72)] dark:ring-white/10">
             {selectedModel && (
               <>
-                <DialogHeader className="gap-1 border-b border-border/60 px-4 py-4 pr-12 text-left">
+                <DialogHeader className="relative gap-1 border-b border-border/60 px-4 py-4 pr-12 text-left">
                   <DialogTitle className="break-all text-lg tracking-tight">
                     {selectedModel.model}
                   </DialogTitle>
-                  <DialogDescription>{selectedModel.provider}</DialogDescription>
+                  <DialogDescription
+                    className={cn(
+                      "leading-5",
+                      !isModelDescriptionOpen && "line-clamp-2",
+                    )}
+                  >
+                    {selectedModel.description ||
+                      t("publicModels.defaultDescription")}
+                  </DialogDescription>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-12 h-6 w-6 rounded-full text-muted-foreground hover:text-foreground"
+                    onClick={() =>
+                      setIsModelDescriptionOpen((current) => !current)
+                    }
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 transition-transform",
+                        isModelDescriptionOpen && "rotate-180",
+                      )}
+                    />
+                    <span className="sr-only">
+                      {isModelDescriptionOpen ? "隐藏模型介绍" : "展开模型介绍"}
+                    </span>
+                  </Button>
                 </DialogHeader>
                 {renderModelDetails(selectedModel)}
               </>
@@ -1055,11 +1121,38 @@ export default function UserPortalModelsPage() {
           >
             {selectedModel && (
               <>
-                <SheetHeader className="gap-1 border-b border-border/60 px-4 py-4 pr-12 sm:px-6 sm:py-5 sm:pr-14">
+                <SheetHeader className="relative gap-1 border-b border-border/60 px-4 py-4 pr-12 sm:px-6 sm:py-5 sm:pr-14">
                   <SheetTitle className="break-all text-xl tracking-tight sm:text-2xl">
                     {selectedModel.model}
                   </SheetTitle>
-                  <SheetDescription>{selectedModel.provider}</SheetDescription>
+                  <SheetDescription
+                    className={cn(
+                      "leading-5",
+                      !isModelDescriptionOpen && "line-clamp-2",
+                    )}
+                  >
+                    {selectedModel.description ||
+                      t("publicModels.defaultDescription")}
+                  </SheetDescription>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-12 h-6 w-6 rounded-full text-muted-foreground hover:text-foreground sm:top-14"
+                    onClick={() =>
+                      setIsModelDescriptionOpen((current) => !current)
+                    }
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 transition-transform",
+                        isModelDescriptionOpen && "rotate-180",
+                      )}
+                    />
+                    <span className="sr-only">
+                      {isModelDescriptionOpen ? "隐藏模型介绍" : "展开模型介绍"}
+                    </span>
+                  </Button>
                 </SheetHeader>
                 {renderModelDetails(selectedModel)}
               </>
