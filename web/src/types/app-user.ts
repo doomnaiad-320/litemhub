@@ -107,12 +107,18 @@ export interface AppRechargeLog {
     user_email?: string
     user_phone?: string
     amount: number
+    pay_amount?: number
+    discount_amount?: number
+    discount_code?: string
     channel?: string
+    pay_type?: string
+    out_trade_no?: string
     trade_no?: string
     status: AppRechargeStatus
     raw_payload?: string
     created_at: number
     updated_at: number
+    paid_at?: number
 }
 
 export interface AdjustAppUserWalletBalanceResponse {

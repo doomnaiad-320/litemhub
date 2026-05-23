@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import type { LogFilters } from '@/types/log'
@@ -130,10 +130,52 @@ export const useUserPortalWalletLogs = (page: number, perPage: number, enabled =
     })
 }
 
+export const useInfiniteUserPortalWalletLogs = (perPage = 20, enabled = true) => {
+    return useInfiniteQuery({
+        queryKey: ['userPortalWalletLogs', 'infinite', perPage],
+        queryFn: ({ pageParam }) => userPortalApi.getWalletLogs(Number(pageParam), perPage),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage, allPages) => {
+            const loadedCount = allPages.reduce(
+                (count, page) => count + (page.wallet_logs?.length || 0),
+                0,
+            )
+
+            if (loadedCount >= lastPage.total || (lastPage.wallet_logs?.length || 0) < perPage) {
+                return undefined
+            }
+
+            return allPages.length + 1
+        },
+        enabled,
+    })
+}
+
 export const useUserPortalRechargeLogs = (page: number, perPage: number, enabled = true) => {
     return useQuery({
         queryKey: ['userPortalRechargeLogs', page, perPage],
         queryFn: () => userPortalApi.getRechargeLogs(page, perPage),
+        enabled,
+    })
+}
+
+export const useInfiniteUserPortalRechargeLogs = (perPage = 20, enabled = true) => {
+    return useInfiniteQuery({
+        queryKey: ['userPortalRechargeLogs', 'infinite', perPage],
+        queryFn: ({ pageParam }) => userPortalApi.getRechargeLogs(Number(pageParam), perPage),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage, allPages) => {
+            const loadedCount = allPages.reduce(
+                (count, page) => count + (page.recharge_logs?.length || 0),
+                0,
+            )
+
+            if (loadedCount >= lastPage.total || (lastPage.recharge_logs?.length || 0) < perPage) {
+                return undefined
+            }
+
+            return allPages.length + 1
+        },
         enabled,
     })
 }

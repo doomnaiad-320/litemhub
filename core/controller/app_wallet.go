@@ -50,19 +50,23 @@ type AppUserAdminResponse struct {
 }
 
 type AppRechargeLogResponse struct {
-	ID         int     `json:"id"`
-	UserID     int     `json:"user_id"`
-	UserEmail  string  `json:"user_email,omitempty"`
-	UserPhone  string  `json:"user_phone,omitempty"`
-	Amount     float64 `json:"amount"`
-	PayAmount  float64 `json:"pay_amount,omitempty"`
-	Channel    string  `json:"channel,omitempty"`
-	PayType    string  `json:"pay_type,omitempty"`
-	TradeNo    string  `json:"trade_no,omitempty"`
-	Status     string  `json:"status"`
-	RawPayload string  `json:"raw_payload,omitempty"`
-	CreatedAt  int64   `json:"created_at"`
-	UpdatedAt  int64   `json:"updated_at"`
+	ID             int     `json:"id"`
+	UserID         int     `json:"user_id"`
+	UserEmail      string  `json:"user_email,omitempty"`
+	UserPhone      string  `json:"user_phone,omitempty"`
+	Amount         float64 `json:"amount"`
+	PayAmount      float64 `json:"pay_amount,omitempty"`
+	DiscountAmount float64 `json:"discount_amount,omitempty"`
+	DiscountCode   string  `json:"discount_code,omitempty"`
+	Channel        string  `json:"channel,omitempty"`
+	PayType        string  `json:"pay_type,omitempty"`
+	OutTradeNo     string  `json:"out_trade_no,omitempty"`
+	TradeNo        string  `json:"trade_no,omitempty"`
+	Status         string  `json:"status"`
+	RawPayload     string  `json:"raw_payload,omitempty"`
+	CreatedAt      int64   `json:"created_at"`
+	UpdatedAt      int64   `json:"updated_at"`
+	PaidAt         int64   `json:"paid_at,omitempty"`
 }
 
 type UserReferralRecordResponse struct {
@@ -204,12 +208,14 @@ func buildAppRechargeLogResponse(log *model.AppRechargeLogWithUser) *AppRecharge
 		Amount:     log.Amount,
 		PayAmount:  log.Amount,
 		Channel:    string(log.Channel),
-		PayType:    string(log.Channel),
-		TradeNo:    string(log.TradeNo),
+		PayType:    "",
+		OutTradeNo: string(log.TradeNo),
+		TradeNo:    "",
 		Status:     log.Status,
 		RawPayload: log.RawPayload,
 		CreatedAt:  log.CreatedAt.UnixMilli(),
 		UpdatedAt:  log.UpdatedAt.UnixMilli(),
+		PaidAt:     log.CreatedAt.UnixMilli(),
 	}
 }
 
@@ -234,21 +240,35 @@ func buildUserReferralStatsResponse(stats *model.AppReferralStats) *UserReferral
 }
 
 func buildAppPaymentOrderResponse(order *model.AppPaymentOrderWithUser) *AppRechargeLogResponse {
-	return &AppRechargeLogResponse{
-		ID:         order.ID,
-		UserID:     order.UserID,
-		UserEmail:  string(order.UserEmail),
-		UserPhone:  string(order.UserPhone),
-		Amount:     order.Amount,
-		PayAmount:  order.ExpectedPayAmount(),
-		Channel:    order.Channel,
-		PayType:    string(order.PayType),
-		TradeNo:    order.AdminTradeNo,
-		Status:     order.AdminStatus,
-		RawPayload: order.NotifyPayload,
-		CreatedAt:  order.AdminCreatedAt.UnixMilli(),
-		UpdatedAt:  order.UpdatedAt.UnixMilli(),
+	payAmount := order.ExpectedPayAmount()
+	discountAmount := order.Amount - payAmount
+	if discountAmount < 0 {
+		discountAmount = 0
 	}
+
+	response := &AppRechargeLogResponse{
+		ID:             order.ID,
+		UserID:         order.UserID,
+		UserEmail:      string(order.UserEmail),
+		UserPhone:      string(order.UserPhone),
+		Amount:         order.Amount,
+		PayAmount:      payAmount,
+		DiscountAmount: discountAmount,
+		DiscountCode:   string(order.DiscountCode),
+		Channel:        order.Channel,
+		PayType:        string(order.PayType),
+		OutTradeNo:     order.OutTradeNo,
+		TradeNo:        string(order.TradeNo),
+		Status:         order.AdminStatus,
+		RawPayload:     order.NotifyPayload,
+		CreatedAt:      order.AdminCreatedAt.UnixMilli(),
+		UpdatedAt:      order.UpdatedAt.UnixMilli(),
+	}
+	if order.PaidAt != nil {
+		response.PaidAt = order.PaidAt.UnixMilli()
+	}
+
+	return response
 }
 
 func buildAppPaymentOrderResponses(orders []*model.AppPaymentOrderWithUser) []*AppRechargeLogResponse {
@@ -370,7 +390,7 @@ func GetCurrentUserWalletLogs(c *gin.Context) {
 		page,
 		perPage,
 		order,
-		[]string{model.AppWalletLogTypeRecharge, model.AppWalletLogTypeRebate},
+		[]string{model.AppWalletLogTypeRecharge, model.AppWalletLogTypeRebate, model.AppWalletLogTypeAdjust},
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())

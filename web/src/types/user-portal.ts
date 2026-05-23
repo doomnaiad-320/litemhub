@@ -54,13 +54,17 @@ export interface UserPortalRechargeLog {
     user_id: number
     amount: number
     pay_amount?: number
+    discount_amount?: number
+    discount_code?: string
     channel?: string
     pay_type?: string
+    out_trade_no?: string
     trade_no?: string
     status: UserPortalRechargeStatus
     raw_payload?: string
     created_at: number
     updated_at: number
+    paid_at?: number
 }
 
 export interface UserPortalRechargeLogsResponse {
