@@ -198,6 +198,7 @@ function DateTimePicker({
 }
 
 type PortalT = (key: string, options?: Record<string, unknown>) => string
+const LINE_ROUTE_PREVIEW_LIMIT = 2
 
 const formatDateTime = (value?: number) => {
     if (!value) return ''
@@ -215,14 +216,56 @@ const getModelLimitText = (t: PortalT, token: Token) => {
         : t('portal.keys.allModels')
 }
 
+function ApiEndpointRow({
+    lineRoute,
+    onCopy,
+    t,
+}: {
+    lineRoute: UserPortalLineRoute
+    onCopy: (value: string) => void
+    t: PortalT
+}) {
+    return (
+        <div className="flex items-center gap-3 py-2.5">
+            <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                onClick={() => onCopy(lineRoute.api_url)}
+            >
+                <div className="flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 truncate text-sm font-medium text-foreground">{lineRoute.description}</span>
+                    {lineRoute.note && (
+                        <span className="max-w-[45%] shrink-0 truncate text-xs text-muted-foreground">{lineRoute.note}</span>
+                    )}
+                </div>
+                <div className="mt-1 truncate font-mono text-xs text-muted-foreground transition-colors hover:text-foreground">
+                    {lineRoute.api_url}
+                </div>
+            </button>
+            <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-md"
+                onClick={() => onCopy(lineRoute.api_url)}
+            >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="sr-only">{t('portal.keys.copyApiUrl')}</span>
+            </Button>
+        </div>
+    )
+}
+
 function ApiEndpointList({
     lineRoutes,
     onCopy,
     t,
+    limit,
 }: {
     lineRoutes: UserPortalLineRoute[]
     onCopy: (value: string) => void
     t: PortalT
+    limit?: number
 }) {
     if (lineRoutes.length === 0) {
         return (
@@ -232,36 +275,17 @@ function ApiEndpointList({
         )
     }
 
+    const visibleLineRoutes = typeof limit === 'number' ? lineRoutes.slice(0, limit) : lineRoutes
+
     return (
         <div className="divide-y divide-border/60 border-y border-border/60 dark:divide-white/10 dark:border-white/10">
-            {lineRoutes.map((lineRoute) => (
-                <div key={lineRoute.id} className="grid gap-2 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                    <button
-                        type="button"
-                        className="min-w-0 text-left"
-                        onClick={() => onCopy(lineRoute.api_url)}
-                    >
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate text-sm font-medium text-foreground">{lineRoute.description}</span>
-                            {lineRoute.note && (
-                                <span className="line-clamp-1 text-xs text-muted-foreground">{lineRoute.note}</span>
-                            )}
-                        </div>
-                        <div className="mt-1 truncate font-mono text-xs text-muted-foreground transition-colors hover:text-foreground">
-                            {lineRoute.api_url}
-                        </div>
-                    </button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-full justify-center rounded-md text-xs lg:w-auto"
-                        onClick={() => onCopy(lineRoute.api_url)}
-                    >
-                        <Copy className="h-3.5 w-3.5" />
-                        {t('portal.keys.copyApiUrl')}
-                    </Button>
-                </div>
+            {visibleLineRoutes.map((lineRoute) => (
+                <ApiEndpointRow
+                    key={lineRoute.id}
+                    lineRoute={lineRoute}
+                    onCopy={onCopy}
+                    t={t}
+                />
             ))}
         </div>
     )
@@ -332,6 +356,7 @@ export default function UserPortalKeysPage() {
     const groupFilter = 'all'
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [lineRoutesDialogOpen, setLineRoutesDialogOpen] = useState(false)
     const [editingKey, setEditingKey] = useState<Token | null>(null)
 
     const { data: groupsData } = useUserPortalGroups(true)
@@ -343,6 +368,7 @@ export default function UserPortalKeysPage() {
 
     const groups = groupsData?.groups || []
     const lineRoutes = lineRoutesData?.line_routes || []
+    const hasMoreLineRoutes = lineRoutes.length > LINE_ROUTE_PREVIEW_LIMIT
     const keys = data?.keys || []
     const total = data?.total || 0
     const groupModelsByGroup = useMemo(() => {
@@ -578,91 +604,59 @@ export default function UserPortalKeysPage() {
     return (
         <div className="space-y-4 sm:space-y-6">
             <section className="space-y-4 rounded-md border border-border bg-background p-4 shadow-none dark:border-white/10 sm:p-5">
-                <div className="border-b border-border/60 pb-4 dark:border-white/10">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-foreground">{t('portal.keys.usageTitle')}</div>
-                        <Button className="hidden rounded-md sm:inline-flex" onClick={() => setDialogOpen(true)}>
-                            <Plus className="h-4 w-4" />
-                            {t('portal.keys.create')}
-                        </Button>
-                    </div>
-                    <div className="mt-3 grid gap-3 text-xs text-muted-foreground sm:grid-cols-3">
-                        <div>
-                            <div className="font-medium text-foreground">1. {t('portal.keys.usageBaseUrl')}</div>
-                            <div className="mt-1">{t('portal.keys.usageBaseUrlHint')}</div>
-                        </div>
-                        <div>
-                            <div className="font-medium text-foreground">2. {t('portal.keys.usageKey')}</div>
-                            <div className="mt-1">{t('portal.keys.usageKeyHint')}</div>
-                        </div>
-                        <div>
-                            <div className="font-medium text-foreground">3. {t('portal.keys.usageModel')}</div>
-                            <div className="mt-1">{t('portal.keys.usageModelHint')}</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/*
-                <div className="min-w-0">
-                    <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
-                    <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                        {t('portal.keys.apiAccessDescription')}
-                    </p>
-                </div>
-                */}
-
-                <Button className="w-full rounded-md sm:hidden" onClick={() => setDialogOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    {t('portal.keys.create')}
-                </Button>
-
-                <div className="mb-3 flex items-end justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                     <div>
                         <div className="text-sm font-medium text-foreground">{t('portal.keys.apiEndpointTitle')}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.apiEndpointHint')}</div>
+                        <div className="mt-1 hidden text-xs text-muted-foreground sm:block">{t('portal.keys.apiEndpointHint')}</div>
                     </div>
-                    <div className="hidden text-[11px] font-medium text-muted-foreground sm:block">
-                        {t('portal.keys.lineRoutes')}
-                    </div>
+                    {hasMoreLineRoutes && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 shrink-0 rounded-md px-2 text-xs"
+                            onClick={() => setLineRoutesDialogOpen(true)}
+                        >
+                            {t('portal.keys.viewAllLineRoutes', { count: lineRoutes.length })}
+                        </Button>
+                    )}
                 </div>
                 <ApiEndpointList
                     lineRoutes={lineRoutes}
                     onCopy={copyApiUrlToClipboard}
                     t={t}
+                    limit={LINE_ROUTE_PREVIEW_LIMIT}
                 />
             </section>
 
-            {/*
-            <div className="flex flex-col gap-3 border-b border-border/60 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <Dialog open={lineRoutesDialogOpen} onOpenChange={setLineRoutesDialogOpen}>
+                <DialogContent className="max-h-[82vh] max-w-3xl gap-0 overflow-hidden p-0">
+                    <DialogHeader className="border-b border-border/60 px-5 py-4 dark:border-white/10 sm:px-6">
+                        <DialogTitle className="text-lg">{t('portal.keys.allLineRoutesTitle')}</DialogTitle>
+                        <DialogDescription>{t('portal.keys.allLineRoutesDescription')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[62vh] overflow-y-auto px-5 py-3 sm:px-6">
+                        <ApiEndpointList
+                            lineRoutes={lineRoutes}
+                            onCopy={copyApiUrlToClipboard}
+                            t={t}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                    <div className="text-base font-semibold text-foreground">{t('portal.keys.keyListTitle')}</div>
+                    <div className="text-sm font-medium text-foreground">{t('portal.keys.keyListTitle')}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
                         {t('portal.keys.keyTotal', { count: total })}
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <Select value={groupFilter} onValueChange={(value) => {
-                        setGroupFilter(value)
-                        setPage(1)
-                    }}>
-                        <SelectTrigger className="w-full rounded-md sm:w-[180px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">{t('portal.keys.allGroups')}</SelectItem>
-                            {groups.map((group) => (
-                                <SelectItem key={group.group} value={group.group}>{group.group}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button variant="outline" className="rounded-md sm:hidden" onClick={() => setDialogOpen(true)}>
-                        <Plus className="h-4 w-4" />
-                        {t('portal.keys.create')}
-                    </Button>
-                </div>
+                <Button className="shrink-0 rounded-md" onClick={() => setDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    {t('portal.keys.create')}
+                </Button>
             </div>
-            */}
 
             <div className="space-y-3 md:hidden">
                 {isLoading ? (
