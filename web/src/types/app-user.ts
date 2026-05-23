@@ -154,6 +154,7 @@ export interface AppRechargeStatsResponse {
 
 export interface AppBillingSettings {
     recharge_discount: number
+    discount_code_discount: number
     recharge_rebate_ratio: number
 }
 
@@ -163,5 +164,6 @@ export interface AppBillingSettingsResponse {
 
 export interface UpdateAppBillingSettingsRequest {
     recharge_discount: number
+    discount_code_discount: number
     recharge_rebate_ratio: number
 }

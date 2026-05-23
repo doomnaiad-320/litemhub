@@ -4,6 +4,7 @@ import { ApiError, type APIResponse } from './index'
 import type { LogFilters, LogRequestDetail } from '@/types/log'
 import type {
     UserPortalAuthResponse,
+    UserPortalBillingSettingsResponse,
     UserPortalCreateKeyRequest,
     UserPortalDiscountCodeResponse,
     UserPortalEmailCodeRequest,
@@ -143,6 +144,10 @@ export const userPortalApi = {
 
     getWallet: async () => {
         return get<UserPortalWalletResponse>('wallet')
+    },
+
+    getBillingSettings: async () => {
+        return get<UserPortalBillingSettingsResponse>('wallet/billing_settings')
     },
 
     getWalletLogs: async (page: number, perPage: number) => {

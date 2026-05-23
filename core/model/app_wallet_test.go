@@ -697,6 +697,53 @@ func TestGetOrCreateAppUserDiscountCodeGeneratesShortAlphanumericCode(t *testing
 	})
 }
 
+func TestCreateAppUserWithWalletAndReferralIgnoresInvalidInviteCode(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := &model.AppUser{
+			Username:     model.EmptyNullString("newuser"),
+			Email:        model.EmptyNullString("new@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+
+		require.NoError(t, model.CreateAppUserWithWalletAndReferral(user, "missing"))
+		require.NotZero(t, user.ID)
+
+		wallet, err := model.GetAppUserWalletByUserID(user.ID)
+		require.NoError(t, err)
+		require.Equal(t, user.ID, wallet.UserID)
+
+		_, err = model.GetAppUserReferralByInvitedUserID(user.ID)
+		require.ErrorIs(t, err, model.ErrAppUserReferralNotFound)
+	})
+}
+
+func TestCreateAppUserWithWalletAndReferralCreatesReferralForValidInviteCode(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		inviter := createTestAppUserWithEmail(t, "inviter@example.com")
+		discountCode := &model.AppUserDiscountCode{
+			UserID: inviter.ID,
+			Code:   "A123",
+			Status: model.AppUserStatusEnabled,
+		}
+		require.NoError(t, model.DB.Create(discountCode).Error)
+
+		user := &model.AppUser{
+			Username:     model.EmptyNullString("newuser"),
+			Email:        model.EmptyNullString("new@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+
+		require.NoError(t, model.CreateAppUserWithWalletAndReferral(user, "a-123"))
+
+		referral, err := model.GetAppUserReferralByInvitedUserID(user.ID)
+		require.NoError(t, err)
+		require.Equal(t, inviter.ID, referral.InviterUserID)
+		require.Equal(t, "A123", string(referral.DiscountCode))
+	})
+}
+
 func TestReleaseAppUserReservation(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)

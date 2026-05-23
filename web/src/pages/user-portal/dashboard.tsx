@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+    useUserPortalBillingSettings,
     useUserPortalDuluPayRecharge,
     useUserPortalWallet,
 } from '@/feature/user-portal/hooks'
@@ -24,6 +25,9 @@ import { UserPortalWalletLogHistory } from '@/feature/user-portal/components/Use
 
 const presetAmounts = [10, 50, 100, 500, 1000, 5000]
 const normalizeDiscountCodeInput = (value: string) => value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
+const normalizeDiscount = (value?: number) => (value && value > 0 && value <= 1 ? value : 1)
+const normalizeDiscountRatio = (value?: number) => (value !== undefined && value >= 0 && value < 1 ? value : 0)
+const roundMoney = (value: number) => Math.round(value * 100) / 100
 
 const formatMoney = (amount?: number) => `$${(amount || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -44,11 +48,22 @@ export default function UserPortalDashboardPage() {
     const pullStartYRef = useRef<number | null>(null)
     const pullDistanceRef = useRef(0)
     const rechargeMutation = useUserPortalDuluPayRecharge()
+    const { data: billingSettingsData } = useUserPortalBillingSettings(true)
 
     const wallet = walletData?.wallet
     const totalBalance = (wallet?.available_balance || 0) + (wallet?.frozen_balance || 0)
     const selectedAmount = Number(rechargeAmount)
     const hasCustomAmount = Number.isFinite(selectedAmount) && !presetAmounts.includes(selectedAmount)
+    const normalizedDiscountCode = normalizeDiscountCodeInput(discountCode)
+    const rechargeDiscount = normalizeDiscount(billingSettingsData?.settings.recharge_discount)
+    const discountCodeDiscount = normalizedDiscountCode
+        ? normalizeDiscountRatio(billingSettingsData?.settings.discount_code_discount)
+        : 0
+    const effectiveDiscount = rechargeDiscount * (1 - discountCodeDiscount)
+    const estimatedPayAmount = Number.isFinite(selectedAmount) && selectedAmount > 0
+        ? roundMoney(selectedAmount * effectiveDiscount)
+        : undefined
+    const hasDiscount = estimatedPayAmount !== undefined && estimatedPayAmount < selectedAmount
 
     const refreshPage = useCallback(async () => {
         await Promise.all([
@@ -124,7 +139,7 @@ export default function UserPortalDashboardPage() {
         const response = await rechargeMutation.mutateAsync({
             amount,
             type: paymentType,
-            discount_code: normalizeDiscountCodeInput(discountCode) || undefined,
+            discount_code: normalizedDiscountCode || undefined,
         })
         const payment = response.payment
         if (payment.pay_type === 'jump' || payment.pay_type === 'urlscheme') {
@@ -318,7 +333,13 @@ export default function UserPortalDashboardPage() {
                                         {t('portal.dashboard.verify')}
                                     </Button>
                                 </div>
-                                <p className="text-xs text-[#8e8e93]">{t('portal.dashboard.discountCodeHelp')}</p>
+                                <p className="text-xs text-[#8e8e93]">
+                                    {normalizedDiscountCode
+                                        ? t('portal.dashboard.discountCodeEstimate', {
+                                            percent: Math.round(discountCodeDiscount * 10000) / 100,
+                                        })
+                                        : t('portal.dashboard.discountCodeHelp')}
+                                </p>
                             </div>
                         </div>
                     </section>
@@ -362,14 +383,27 @@ export default function UserPortalDashboardPage() {
                         </div>
 
                         <div className="mt-4 flex flex-col gap-3 border-t border-[#f2f3f5] pt-4 dark:border-white/10 sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
-                            <div className="text-xs text-[#5f5f5f] dark:text-white/60 sm:text-sm">
-                                <span>{t('portal.dashboard.rechargeAmount')}: </span>
-                                <span className="font-mono font-semibold text-[#18181b] dark:text-white">
-                                    {Number.isFinite(selectedAmount) && selectedAmount > 0 ? formatMoney(selectedAmount) : '-'}
-                                </span>
-                                {hasCustomAmount && (
-                                    <span className="ml-2 text-xs text-[#8e8e93]">{t('portal.dashboard.customAmountTag')}</span>
-                                )}
+                            <div className="space-y-1 text-xs text-[#5f5f5f] dark:text-white/60 sm:text-sm">
+                                <div>
+                                    <span>{t('portal.dashboard.rechargeAmount')}: </span>
+                                    <span className="font-mono font-semibold text-[#18181b] dark:text-white">
+                                        {Number.isFinite(selectedAmount) && selectedAmount > 0 ? formatMoney(selectedAmount) : '-'}
+                                    </span>
+                                    {hasCustomAmount && (
+                                        <span className="ml-2 text-xs text-[#8e8e93]">{t('portal.dashboard.customAmountTag')}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <span>{t('portal.dashboard.payAmount')}: </span>
+                                    <span className="font-mono font-semibold text-[#18181b] dark:text-white">
+                                        {estimatedPayAmount !== undefined ? formatMoney(estimatedPayAmount) : '-'}
+                                    </span>
+                                    {hasDiscount && (
+                                        <span className="ml-2 text-xs text-[#6f9d8d]">
+                                            {t('portal.dashboard.discountApplied')}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <Button

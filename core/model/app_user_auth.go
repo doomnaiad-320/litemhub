@@ -94,12 +94,15 @@ func CreateAppUserWithWalletAndReferral(user *AppUser, inviteCode string) error 
 		}
 
 		if inviteCode != "" {
-			discountCode, err := GetAppUserDiscountCodeByCode(inviteCode)
+			discountCode, err := resolveAppUserReferralDiscountCodeWithDB(tx, inviteCode)
 			if err != nil {
 				return err
 			}
+			if discountCode == nil {
+				return nil
+			}
 			if discountCode.UserID == user.ID {
-				return errors.New("invite code is invalid")
+				return nil
 			}
 
 			referral := &AppUserReferral{

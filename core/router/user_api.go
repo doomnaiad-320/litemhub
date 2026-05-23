@@ -32,6 +32,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 
 		walletRouter := protectedUserAPI.Group("/wallet")
 		walletRouter.GET("", controller.GetCurrentUserWallet)
+		walletRouter.GET("/billing_settings", controller.GetCurrentUserBillingSettings)
 		walletRouter.GET("/logs", controller.GetCurrentUserWalletLogs)
 		walletRouter.GET("/discount-code", controller.GetCurrentUserDiscountCode)
 		walletRouter.POST("/discount-code", controller.GenerateCurrentUserDiscountCode)

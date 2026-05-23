@@ -109,6 +109,7 @@ export function AppRechargeOverview() {
     const [channelFilter, setChannelFilter] = useState('all')
     const [granularity, setGranularity] = useState<Granularity>('day')
     const [discountInput, setDiscountInput] = useState('')
+    const [discountCodeDiscountInput, setDiscountCodeDiscountInput] = useState('')
     const [rebateRatioInput, setRebateRatioInput] = useState('')
 
     const startTimestamp = dateRange?.from
@@ -140,6 +141,7 @@ export function AppRechargeOverview() {
 
     const stats = statsData?.stats
     const rechargeDiscount = billingSettingsData?.settings.recharge_discount ?? 1
+    const discountCodeDiscount = billingSettingsData?.settings.discount_code_discount ?? 0
     const rechargeRebateRatio = billingSettingsData?.settings.recharge_rebate_ratio ?? 0
     const logs = logsData?.recharge_logs || []
     const total = logsData?.total || 0
@@ -150,10 +152,17 @@ export function AppRechargeOverview() {
         if (billingSettingsData?.settings.recharge_discount) {
             setDiscountInput(String(billingSettingsData.settings.recharge_discount))
         }
+        if (billingSettingsData?.settings.discount_code_discount !== undefined) {
+            setDiscountCodeDiscountInput(String(billingSettingsData.settings.discount_code_discount))
+        }
         if (billingSettingsData?.settings.recharge_rebate_ratio !== undefined) {
             setRebateRatioInput(String(billingSettingsData.settings.recharge_rebate_ratio))
         }
-    }, [billingSettingsData?.settings.recharge_discount, billingSettingsData?.settings.recharge_rebate_ratio])
+    }, [
+        billingSettingsData?.settings.discount_code_discount,
+        billingSettingsData?.settings.recharge_discount,
+        billingSettingsData?.settings.recharge_rebate_ratio,
+    ])
 
     const chartOption: EChartsOption = useMemo(() => {
         const series = stats?.time_series || []
@@ -255,6 +264,10 @@ export function AppRechargeOverview() {
         if (!Number.isFinite(discount) || discount <= 0 || discount > 1) {
             return
         }
+        const discountCodeDiscount = Number(discountCodeDiscountInput)
+        if (!Number.isFinite(discountCodeDiscount) || discountCodeDiscount < 0 || discountCodeDiscount >= 1) {
+            return
+        }
         const rebateRatio = Number(rebateRatioInput)
         if (!Number.isFinite(rebateRatio) || rebateRatio < 0 || rebateRatio > 1) {
             return
@@ -262,9 +275,11 @@ export function AppRechargeOverview() {
 
         await updateBillingSettingsMutation.mutateAsync({
             recharge_discount: discount,
+            discount_code_discount: discountCodeDiscount,
             recharge_rebate_ratio: rebateRatio,
         })
         setDiscountInput(String(discount))
+        setDiscountCodeDiscountInput(String(discountCodeDiscount))
         setRebateRatioInput(String(rebateRatio))
     }
 
@@ -470,7 +485,7 @@ export function AppRechargeOverview() {
             </Card>
 
             <Card className="overflow-hidden rounded-md border-border bg-background shadow-none">
-                <div className="grid gap-5 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_520px] xl:items-end">
+                <div className="grid gap-5 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_640px] xl:items-end">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium text-primary">
                             <Percent className="h-4 w-4 shrink-0" />
@@ -487,6 +502,12 @@ export function AppRechargeOverview() {
                             )}
                         </div>
                         <div className="mt-1 text-sm font-medium text-muted-foreground">
+                            {t('appUser.rechargeStats.currentDiscountCodeDiscount', {
+                                discount: discountCodeDiscount,
+                                percent: Math.round(discountCodeDiscount * 10000) / 100,
+                            })}
+                        </div>
+                        <div className="mt-1 text-sm font-medium text-muted-foreground">
                             {t('appUser.rechargeStats.currentRebateRatio', {
                                 ratio: rechargeRebateRatio,
                                 percent: Math.round(rechargeRebateRatio * 10000) / 100,
@@ -498,7 +519,7 @@ export function AppRechargeOverview() {
                     </div>
 
                     <div className="grid gap-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-3">
                             <div className="grid gap-2">
                                 <label htmlFor="recharge-discount" className="text-xs font-medium text-muted-foreground">
                                     {t('appUser.rechargeStats.discountInput')}
@@ -511,6 +532,21 @@ export function AppRechargeOverview() {
                                     step="0.01"
                                     value={discountInput}
                                     onChange={(event) => setDiscountInput(event.target.value)}
+                                    className="h-10 rounded-md border-border bg-background font-mono shadow-none"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <label htmlFor="discount-code-discount" className="text-xs font-medium text-muted-foreground">
+                                    {t('appUser.rechargeStats.discountCodeDiscountInput')}
+                                </label>
+                                <Input
+                                    id="discount-code-discount"
+                                    type="number"
+                                    min="0"
+                                    max="0.99"
+                                    step="0.01"
+                                    value={discountCodeDiscountInput}
+                                    onChange={(event) => setDiscountCodeDiscountInput(event.target.value)}
                                     className="h-10 rounded-md border-border bg-background font-mono shadow-none"
                                 />
                             </div>

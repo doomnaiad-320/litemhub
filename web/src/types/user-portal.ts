@@ -80,6 +80,16 @@ export interface UserPortalRechargeLogsResponse {
     total: number
 }
 
+export interface UserPortalBillingSettings {
+    recharge_discount: number
+    discount_code_discount: number
+    recharge_rebate_ratio: number
+}
+
+export interface UserPortalBillingSettingsResponse {
+    settings: UserPortalBillingSettings
+}
+
 export interface UserPortalRechargeRequest {
     amount: number
     type?: string
@@ -92,6 +102,8 @@ export interface UserPortalPayment {
     amount: number
     pay_amount?: number
     discount?: number
+    recharge_discount?: number
+    discount_code_discount?: number
     out_trade_no: string
     trade_no?: string
     pay_type: string

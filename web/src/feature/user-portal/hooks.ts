@@ -123,6 +123,15 @@ export const useUserPortalWallet = (enabled = true) => {
     })
 }
 
+export const useUserPortalBillingSettings = (enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalBillingSettings'],
+        queryFn: () => userPortalApi.getBillingSettings(),
+        enabled,
+        staleTime: 60 * 1000,
+    })
+}
+
 export const useUserPortalWalletLogs = (page: number, perPage: number, enabled = true) => {
     return useQuery({
         queryKey: ['userPortalWalletLogs', page, perPage],

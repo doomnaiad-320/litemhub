@@ -125,10 +125,6 @@ func verifyUserPortalRegisterEmailCode(email, code string) error {
 		return errUserPortalRegisterCodeInvalid
 	}
 
-	if err := model.DeleteAppUserRegisterCodeByEmail(email); err != nil {
-		return err
-	}
-
 	return nil
 }
 

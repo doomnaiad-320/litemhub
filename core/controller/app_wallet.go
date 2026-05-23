@@ -99,13 +99,15 @@ type UserReferralStatsResponse struct {
 }
 
 type AppBillingSettingsResponse struct {
-	RechargeDiscount    float64 `json:"recharge_discount"`
-	RechargeRebateRatio float64 `json:"recharge_rebate_ratio"`
+	RechargeDiscount     float64 `json:"recharge_discount"`
+	DiscountCodeDiscount float64 `json:"discount_code_discount"`
+	RechargeRebateRatio  float64 `json:"recharge_rebate_ratio"`
 }
 
 type UpdateAppBillingSettingsRequest struct {
-	RechargeDiscount    float64 `json:"recharge_discount"`
-	RechargeRebateRatio float64 `json:"recharge_rebate_ratio"`
+	RechargeDiscount     float64 `json:"recharge_discount"`
+	DiscountCodeDiscount float64 `json:"discount_code_discount"`
+	RechargeRebateRatio  float64 `json:"recharge_rebate_ratio"`
 }
 
 type UserDiscountCodeResponse struct {
@@ -483,8 +485,19 @@ func GetCurrentUserReferralRecords(c *gin.Context) {
 func GetAppBillingSettings(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"settings": AppBillingSettingsResponse{
-			RechargeDiscount:    config.GetDuluPayRechargeDiscount(),
-			RechargeRebateRatio: config.GetDuluPayRechargeRebateRatio(),
+			RechargeDiscount:     config.GetDuluPayRechargeDiscount(),
+			DiscountCodeDiscount: config.GetDuluPayDiscountCodeDiscount(),
+			RechargeRebateRatio:  config.GetDuluPayRechargeRebateRatio(),
+		},
+	})
+}
+
+func GetCurrentUserBillingSettings(c *gin.Context) {
+	middleware.SuccessResponse(c, gin.H{
+		"settings": AppBillingSettingsResponse{
+			RechargeDiscount:     config.GetDuluPayRechargeDiscount(),
+			DiscountCodeDiscount: config.GetDuluPayDiscountCodeDiscount(),
+			RechargeRebateRatio:  config.GetDuluPayRechargeRebateRatio(),
 		},
 	})
 }
@@ -500,6 +513,10 @@ func UpdateAppBillingSettings(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "recharge discount must be greater than 0 and less than or equal to 1")
 		return
 	}
+	if req.DiscountCodeDiscount < 0 || req.DiscountCodeDiscount >= 1 {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "discount code discount must be greater than or equal to 0 and less than 1")
+		return
+	}
 	if req.RechargeRebateRatio < 0 || req.RechargeRebateRatio > 1 {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "recharge rebate ratio must be greater than or equal to 0 and less than or equal to 1")
 		return
@@ -507,6 +524,11 @@ func UpdateAppBillingSettings(c *gin.Context) {
 
 	value := strconv.FormatFloat(req.RechargeDiscount, 'f', -1, 64)
 	if err := model.UpdateOption("DuluPayRechargeDiscount", value); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	value = strconv.FormatFloat(req.DiscountCodeDiscount, 'f', -1, 64)
+	if err := model.UpdateOption("DuluPayDiscountCodeDiscount", value); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -518,8 +540,9 @@ func UpdateAppBillingSettings(c *gin.Context) {
 
 	middleware.SuccessResponse(c, gin.H{
 		"settings": AppBillingSettingsResponse{
-			RechargeDiscount:    config.GetDuluPayRechargeDiscount(),
-			RechargeRebateRatio: config.GetDuluPayRechargeRebateRatio(),
+			RechargeDiscount:     config.GetDuluPayRechargeDiscount(),
+			DiscountCodeDiscount: config.GetDuluPayDiscountCodeDiscount(),
+			RechargeRebateRatio:  config.GetDuluPayRechargeRebateRatio(),
 		},
 	})
 }

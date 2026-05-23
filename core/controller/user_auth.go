@@ -184,6 +184,34 @@ func validateUserPortalRegisterRequest(username, email, code, password string) s
 	return validateUserPassword(password)
 }
 
+func validateUserPortalRegisterAccountAvailable(username, email string) (string, error) {
+	if _, err := model.GetAppUserByUsername(username); err == nil {
+		return "username already exists", nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+
+	if _, err := model.GetAppUserByEmail(email); err == nil {
+		return "email already exists", nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", err
+	}
+
+	return "", nil
+}
+
+func getUserPortalRegisterAccountConflictMessage(username, email string) string {
+	message, err := validateUserPortalRegisterAccountAvailable(username, email)
+	if err != nil {
+		return model.ErrAppUserAlreadyExists.Error()
+	}
+	if message == "" {
+		return model.ErrAppUserAlreadyExists.Error()
+	}
+
+	return message
+}
+
 func normalizeUserAuthAccount(email, phone string) (string, string) {
 	return strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(phone)
 }
@@ -229,6 +257,14 @@ func RegisterAppUser(c *gin.Context) {
 		return
 	}
 
+	if message, err := validateUserPortalRegisterAccountAvailable(req.Username, req.Email); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	} else if message != "" {
+		middleware.ErrorResponse(c, http.StatusConflict, message)
+		return
+	}
+
 	if err := verifyUserPortalRegisterEmailCode(req.Email, req.Code); err != nil {
 		switch {
 		case errors.Is(err, errUserPortalRegisterCodeNotFound),
@@ -258,17 +294,15 @@ func RegisterAppUser(c *gin.Context) {
 
 	if err := model.CreateAppUserWithWalletAndReferral(user, req.InviteCode); err != nil {
 		if errors.Is(err, model.ErrAppUserAlreadyExists) {
-			middleware.ErrorResponse(c, http.StatusConflict, err.Error())
-			return
-		}
-		if errors.Is(err, model.ErrAppUserDiscountCodeNotFound) || errors.Is(err, model.ErrAppUserDiscountCodeInvalid) {
-			middleware.ErrorResponse(c, http.StatusBadRequest, "invite code is invalid")
+			middleware.ErrorResponse(c, http.StatusConflict, getUserPortalRegisterAccountConflictMessage(req.Username, req.Email))
 			return
 		}
 
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	_ = model.DeleteAppUserRegisterCodeByEmail(req.Email)
 
 	middleware.SuccessResponse(c, gin.H{
 		"user": buildAppUserResponse(user),

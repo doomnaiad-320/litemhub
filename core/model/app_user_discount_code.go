@@ -73,17 +73,30 @@ func GetAppUserDiscountCodeByUserID(userID int) (*AppUserDiscountCode, error) {
 }
 
 func GetAppUserDiscountCodeByCode(code string) (*AppUserDiscountCode, error) {
+	return getAppUserDiscountCodeByCodeWithDB(DB, code)
+}
+
+func getAppUserDiscountCodeByCodeWithDB(db *gorm.DB, code string) (*AppUserDiscountCode, error) {
 	code = NormalizeAppUserDiscountCode(code)
 	if !IsAppUserDiscountCodeValid(code) {
 		return nil, ErrAppUserDiscountCodeInvalid
 	}
 
 	discountCode := &AppUserDiscountCode{}
-	err := DB.
+	err := db.
 		Where("code = ? AND status = ?", code, AppUserStatusEnabled).
 		First(discountCode).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrAppUserDiscountCodeNotFound
+	}
+
+	return discountCode, err
+}
+
+func resolveAppUserReferralDiscountCodeWithDB(db *gorm.DB, code string) (*AppUserDiscountCode, error) {
+	discountCode, err := getAppUserDiscountCodeByCodeWithDB(db, code)
+	if errors.Is(err, ErrAppUserDiscountCodeInvalid) || errors.Is(err, ErrAppUserDiscountCodeNotFound) {
+		return nil, nil
 	}
 
 	return discountCode, err

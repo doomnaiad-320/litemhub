@@ -47,6 +47,7 @@ var (
 	SMTPPassword                     string
 	SMTPFrom                         string
 	SMTPFromName                     string
+	SMTPTLSMode                      string
 	RegisterEmailCodeTTLMinutes      int64
 	RegisterEmailCodeCooldownSeconds int64
 	RegisterEmailCodeMaxAttempts     int64
@@ -92,6 +93,7 @@ func ReloadEnv() {
 	DuluPayMinAmount = env.Float64("DULUPAY_MIN_AMOUNT", 1)
 	DuluPayMaxAmount = env.Float64("DULUPAY_MAX_AMOUNT", 50000)
 	SetDuluPayRechargeDiscount(1)
+	SetDuluPayDiscountCodeDiscount(0)
 	SetDuluPayRechargeRebateRatio(0)
 	UserOAuthGitHubClientID = os.Getenv("USER_OAUTH_GITHUB_CLIENT_ID")
 	UserOAuthGitHubClientSecret = os.Getenv("USER_OAUTH_GITHUB_CLIENT_SECRET")
@@ -105,6 +107,7 @@ func ReloadEnv() {
 	SMTPPassword = env.String("SMTP_PASSWORD", "")
 	SMTPFrom = env.String("SMTP_FROM", SMTPUsername)
 	SMTPFromName = env.String("SMTP_FROM_NAME", "LiteMHub")
+	SMTPTLSMode = env.String("SMTP_TLS_MODE", "auto")
 	RegisterEmailCodeTTLMinutes = env.Int64("REGISTER_EMAIL_CODE_TTL_MINUTES", 10)
 	if RegisterEmailCodeTTLMinutes <= 0 {
 		RegisterEmailCodeTTLMinutes = 10

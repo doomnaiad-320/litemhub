@@ -131,6 +131,12 @@ func initOptionMap() error {
 		-1,
 		64,
 	)
+	optionMap["DuluPayDiscountCodeDiscount"] = strconv.FormatFloat(
+		config.GetDuluPayDiscountCodeDiscount(),
+		'f',
+		-1,
+		64,
+	)
 	optionMap["DuluPayRechargeRebateRatio"] = strconv.FormatFloat(
 		config.GetDuluPayRechargeRebateRatio(),
 		'f',
@@ -499,6 +505,17 @@ func updateOption(key, value string, isInit bool) (err error) {
 		}
 
 		config.SetDuluPayRechargeDiscount(discount)
+	case "DuluPayDiscountCodeDiscount":
+		discount, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+
+		if discount < 0 || discount >= 1 {
+			return errors.New("dulupay discount code discount must be greater than or equal to 0 and less than 1")
+		}
+
+		config.SetDuluPayDiscountCodeDiscount(discount)
 	case "DuluPayRechargeRebateRatio":
 		ratio, err := strconv.ParseFloat(value, 64)
 		if err != nil {

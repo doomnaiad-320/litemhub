@@ -51,14 +51,16 @@ type DuluPayCreateResponse struct {
 }
 
 type DuluPayRechargeResponse struct {
-	OrderID    int     `json:"order_id"`
-	Amount     float64 `json:"amount"`
-	PayAmount  float64 `json:"pay_amount"`
-	Discount   float64 `json:"discount"`
-	OutTradeNo string  `json:"out_trade_no"`
-	TradeNo    string  `json:"trade_no,omitempty"`
-	PayType    string  `json:"pay_type"`
-	PayInfo    string  `json:"pay_info"`
+	OrderID              int     `json:"order_id"`
+	Amount               float64 `json:"amount"`
+	PayAmount            float64 `json:"pay_amount"`
+	Discount             float64 `json:"discount"`
+	RechargeDiscount     float64 `json:"recharge_discount"`
+	DiscountCodeDiscount float64 `json:"discount_code_discount"`
+	OutTradeNo           string  `json:"out_trade_no"`
+	TradeNo              string  `json:"trade_no,omitempty"`
+	PayType              string  `json:"pay_type"`
+	PayInfo              string  `json:"pay_info"`
 }
 
 var requestDuluPayCreateFunc = requestDuluPayCreate
@@ -83,11 +85,16 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		return
 	}
 	discount := normalizeRechargeDiscount(config.GetDuluPayRechargeDiscount())
-	payAmount := calculateRechargePayAmount(amount, discount)
 	rebateResolution, err := resolveRechargeRebate(c, req.DiscountCode, user.ID)
 	if err != nil {
 		return
 	}
+	discountCodeDiscount := 0.0
+	if model.NormalizeAppUserDiscountCode(req.DiscountCode) != "" && rebateResolution.DiscountCode != "" {
+		discountCodeDiscount = normalizeRechargeDiscountRatio(config.GetDuluPayDiscountCodeDiscount())
+	}
+	effectiveDiscount := calculateRechargeDiscount(discount, calculateDiscountCodePayMultiplier(discountCodeDiscount))
+	payAmount := calculateRechargePayAmount(amount, effectiveDiscount)
 
 	payType := strings.TrimSpace(req.Type)
 	if payType == "" {
@@ -142,14 +149,16 @@ func CreateDuluPayRecharge(c *gin.Context) {
 
 	middleware.SuccessResponse(c, gin.H{
 		"payment": DuluPayRechargeResponse{
-			OrderID:    order.ID,
-			Amount:     order.Amount,
-			PayAmount:  order.ExpectedPayAmount(),
-			Discount:   discount,
-			OutTradeNo: order.OutTradeNo,
-			TradeNo:    string(order.TradeNo),
-			PayType:    string(order.PayType),
-			PayInfo:    order.PayInfo,
+			OrderID:              order.ID,
+			Amount:               order.Amount,
+			PayAmount:            order.ExpectedPayAmount(),
+			Discount:             effectiveDiscount,
+			RechargeDiscount:     discount,
+			DiscountCodeDiscount: discountCodeDiscount,
+			OutTradeNo:           order.OutTradeNo,
+			TradeNo:              string(order.TradeNo),
+			PayType:              string(order.PayType),
+			PayInfo:              order.PayInfo,
 		},
 	})
 }
@@ -363,6 +372,21 @@ func normalizeRechargeDiscount(discount float64) float64 {
 	return decimal.NewFromFloat(discount).Round(4).InexactFloat64()
 }
 
+func normalizeRechargeDiscountRatio(discount float64) float64 {
+	if discount < 0 || discount >= 1 {
+		return 0
+	}
+
+	return decimal.NewFromFloat(discount).Round(4).InexactFloat64()
+}
+
+func calculateDiscountCodePayMultiplier(discount float64) float64 {
+	return decimal.NewFromInt(1).
+		Sub(decimal.NewFromFloat(normalizeRechargeDiscountRatio(discount))).
+		Round(4).
+		InexactFloat64()
+}
+
 func calculateRechargePayAmount(amount float64, discount float64) float64 {
 	payAmount := decimal.NewFromFloat(amount).
 		Mul(decimal.NewFromFloat(normalizeRechargeDiscount(discount))).
@@ -372,6 +396,15 @@ func calculateRechargePayAmount(amount float64, discount float64) float64 {
 	}
 
 	return payAmount.InexactFloat64()
+}
+
+func calculateRechargeDiscount(discounts ...float64) float64 {
+	effectiveDiscount := decimal.NewFromInt(1)
+	for _, discount := range discounts {
+		effectiveDiscount = effectiveDiscount.Mul(decimal.NewFromFloat(normalizeRechargeDiscount(discount)))
+	}
+
+	return effectiveDiscount.Round(4).InexactFloat64()
 }
 
 func validateDuluPayConfig() error {
