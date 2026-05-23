@@ -69,8 +69,23 @@ type AppPaymentOrderWithUser struct {
 	UserEmail      EmptyNullString `json:"user_email"`
 	UserPhone      EmptyNullString `json:"user_phone"`
 	AdminStatus    string          `json:"admin_status"`
-	AdminTradeNo   string          `json:"admin_trade_no"`
 	AdminCreatedAt time.Time       `json:"admin_created_at"`
+}
+
+type AppWalletLogDetail struct {
+	OutTradeNo     string
+	TradeNo        string
+	PayAmount      float64
+	DiscountAmount float64
+	DiscountCode   string
+	Channel        string
+	PayType        string
+	PaidAt         *time.Time
+}
+
+type AppWalletLogWithDetail struct {
+	AppWalletLog
+	Detail *AppWalletLogDetail `gorm:"-"`
 }
 
 type AppReferralRecord struct {
@@ -526,8 +541,7 @@ func appPaymentOrderSelectSQL() string {
 		"recharge_orders.recharge_log_id AS recharge_log_id, recharge_orders.created_at AS created_at, " +
 		"recharge_orders.updated_at AS updated_at, recharge_orders.paid_at AS paid_at, " +
 		"recharge_orders.user_email AS user_email, recharge_orders.user_phone AS user_phone, " +
-		"recharge_orders.admin_created_at AS admin_created_at, " + statusSQL + " AS admin_status, " +
-		"CASE WHEN recharge_orders.trade_no IS NOT NULL AND recharge_orders.trade_no != '' THEN recharge_orders.trade_no ELSE recharge_orders.out_trade_no END AS admin_trade_no"
+		"recharge_orders.admin_created_at AS admin_created_at, " + statusSQL + " AS admin_status"
 }
 
 func appPaymentOrderQuery(
@@ -598,7 +612,7 @@ func appPaymentOrderSourceQuery() *gorm.DB {
 		Select(
 			"app_recharge_log.id * -1 AS id, app_recharge_log.user_id, app_recharge_log.amount, app_recharge_log.amount AS pay_amount, " +
 				"COALESCE(app_recharge_log.channel, '') AS channel, COALESCE(app_recharge_log.trade_no, '') AS out_trade_no, " +
-				"app_recharge_log.trade_no, '' AS pay_type, '' AS pay_info, '" + AppPaymentStatusPaid + "' AS source_status, " +
+				"'' AS trade_no, '' AS pay_type, '' AS pay_info, '" + AppPaymentStatusPaid + "' AS source_status, " +
 				"app_recharge_log.raw_payload AS notify_payload, app_recharge_log.id AS recharge_log_id, app_recharge_log.created_at, " +
 				"app_recharge_log.updated_at, app_recharge_log.created_at AS paid_at, app_recharge_log.created_at AS admin_created_at, " +
 				"app_user.email AS user_email, app_user.phone AS user_phone",
@@ -658,7 +672,6 @@ func CleanupAppWalletConsumptionLogs() error {
 			AppWalletLogTypeReserve,
 			AppWalletLogTypeSettle,
 			AppWalletLogTypeRelease,
-			AppWalletLogTypeAdjust,
 		}).
 		Delete(&AppWalletLog{}).Error
 }
@@ -914,7 +927,7 @@ func GetAppUserWalletsByUserIDs(userIDs []int) (map[int]*AppUserWallet, error) {
 }
 
 func GetAppWalletLogs(userID, page, perPage int, order string) (
-	logs []*AppWalletLog,
+	logs []*AppWalletLogWithDetail,
 	total int64,
 	err error,
 ) {
@@ -922,7 +935,7 @@ func GetAppWalletLogs(userID, page, perPage int, order string) (
 }
 
 func GetAppWalletLogsByTypes(userID, page, perPage int, order string, logTypes []string) (
-	logs []*AppWalletLog,
+	logs []*AppWalletLogWithDetail,
 	total int64,
 	err error,
 ) {
@@ -930,7 +943,7 @@ func GetAppWalletLogsByTypes(userID, page, perPage int, order string, logTypes [
 }
 
 func getAppWalletLogs(userID, page, perPage int, order string, logTypes []string) (
-	logs []*AppWalletLog,
+	logs []*AppWalletLogWithDetail,
 	total int64,
 	err error,
 ) {
@@ -953,8 +966,92 @@ func getAppWalletLogs(userID, page, perPage int, order string, logTypes []string
 
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.Order(getAppWalletLogOrder(order)).Limit(limit).Offset(offset).Find(&logs).Error
+	if err != nil || len(logs) == 0 {
+		return logs, total, err
+	}
+
+	if err = attachAppWalletLogDetails(logs); err != nil {
+		return nil, 0, err
+	}
 
 	return logs, total, err
+}
+
+func attachAppWalletLogDetails(logs []*AppWalletLogWithDetail) error {
+	rechargeLogIDs := make([]int, 0)
+	for _, log := range logs {
+		if log.Type != AppWalletLogTypeRecharge || log.Remark != "DuluPay recharge" {
+			continue
+		}
+
+		rechargeLogIDs = append(rechargeLogIDs, log.ID)
+	}
+
+	if len(rechargeLogIDs) == 0 {
+		return nil
+	}
+
+	type walletLogPaymentRow struct {
+		WalletLogID  int
+		OutTradeNo   string
+		TradeNo      EmptyNullString
+		Amount       float64
+		PayAmount    float64
+		DiscountCode EmptyNullString
+		Channel      string
+		PayType      EmptyNullString
+		PaidAt       *time.Time
+	}
+
+	rows := make([]walletLogPaymentRow, 0, len(rechargeLogIDs))
+	walletLogTimeWindowSQL := "app_recharge_log.created_at BETWEEN datetime(app_wallet_log.created_at, '-5 seconds') AND datetime(app_wallet_log.created_at, '+5 seconds')"
+	if DB.Dialector.Name() == "postgres" {
+		walletLogTimeWindowSQL = "app_recharge_log.created_at BETWEEN app_wallet_log.created_at - INTERVAL '5 seconds' AND app_wallet_log.created_at + INTERVAL '5 seconds'"
+	}
+
+	if err := DB.
+		Table("app_wallet_log").
+		Select(
+			"app_wallet_log.id AS wallet_log_id, app_payment_order.out_trade_no, app_payment_order.trade_no, "+
+				"app_payment_order.amount, app_payment_order.pay_amount, app_payment_order.discount_code, "+
+				"app_payment_order.channel, app_payment_order.pay_type, app_payment_order.paid_at",
+		).
+		Joins("JOIN app_recharge_log ON app_recharge_log.user_id = app_wallet_log.user_id AND app_recharge_log.amount = app_wallet_log.amount AND " + walletLogTimeWindowSQL).
+		Joins("JOIN app_payment_order ON app_payment_order.recharge_log_id = app_recharge_log.id").
+		Where("app_wallet_log.id IN ?", rechargeLogIDs).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+
+	detailsByLogID := make(map[int]*AppWalletLogDetail, len(rows))
+	for _, row := range rows {
+		payAmount := row.PayAmount
+		if payAmount <= 0 {
+			payAmount = row.Amount
+		}
+
+		discountAmount := row.Amount - payAmount
+		if discountAmount < 0 {
+			discountAmount = 0
+		}
+
+		detailsByLogID[row.WalletLogID] = &AppWalletLogDetail{
+			OutTradeNo:     row.OutTradeNo,
+			TradeNo:        string(row.TradeNo),
+			PayAmount:      payAmount,
+			DiscountAmount: discountAmount,
+			DiscountCode:   string(row.DiscountCode),
+			Channel:        row.Channel,
+			PayType:        string(row.PayType),
+			PaidAt:         row.PaidAt,
+		}
+	}
+
+	for _, log := range logs {
+		log.Detail = detailsByLogID[log.ID]
+	}
+
+	return nil
 }
 
 func GetAppWalletReservationByID(id int) (*AppWalletReservation, error) {

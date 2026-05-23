@@ -3,7 +3,6 @@ import {
     CreditCard,
     ExternalLink,
     QrCode,
-    ReceiptText,
     Smartphone,
     Tag,
     Wallet,
@@ -14,13 +13,6 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,7 +21,6 @@ import {
     useUserPortalWallet,
 } from '@/feature/user-portal/hooks'
 import { UserPortalWalletLogHistory } from '@/feature/user-portal/components/UserPortalWalletLogHistory'
-import { UserPortalRechargeOrderHistory } from '@/feature/user-portal/components/UserPortalRechargeOrderHistory'
 
 const presetAmounts = [10, 50, 100, 500, 1000, 5000]
 const normalizeDiscountCodeInput = (value: string) => value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6)
@@ -50,7 +41,6 @@ export default function UserPortalDashboardPage() {
     const [paymentType, setPaymentType] = useState('alipay')
     const [pullDistance, setPullDistance] = useState(0)
     const [isPullRefreshing, setIsPullRefreshing] = useState(false)
-    const [rechargeOrderOpen, setRechargeOrderOpen] = useState(false)
     const pullStartYRef = useRef<number | null>(null)
     const pullDistanceRef = useRef(0)
     const rechargeMutation = useUserPortalDuluPayRecharge()
@@ -228,16 +218,6 @@ export default function UserPortalDashboardPage() {
                                 <div className="mt-1 truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] text-[24px] font-semibold leading-none text-[#18181b] dark:text-white sm:text-[30px] lg:text-[34px]">
                                     {formatMoney(wallet.available_balance)}
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setRechargeOrderOpen(true)}
-                                    className="mt-3 h-8 rounded-md border-[#e5e7eb] bg-background px-3 text-xs text-[#45515e] shadow-none hover:border-[#18181b] hover:bg-background dark:border-white/10 dark:text-white/70"
-                                >
-                                    <ReceiptText className="h-3.5 w-3.5" />
-                                    {t('portal.dashboard.paymentOrderButton')}
-                                </Button>
                             </div>
                         </div>
 
@@ -440,20 +420,6 @@ export default function UserPortalDashboardPage() {
             <div className="space-y-4 sm:space-y-5">
                 <UserPortalWalletLogHistory />
             </div>
-
-            <Dialog open={rechargeOrderOpen} onOpenChange={setRechargeOrderOpen}>
-                <DialogContent className="max-h-[88vh] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden border-[#e5e7eb] p-0 shadow-lg sm:max-w-[min(1280px,calc(100vw-4rem))] dark:border-white/15">
-                    <DialogHeader className="border-b border-[#f2f3f5] px-4 py-4 text-left dark:border-white/10 sm:px-6">
-                        <DialogTitle className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-lg">
-                            {t('portal.dashboard.paymentOrderHistory')}
-                        </DialogTitle>
-                        <DialogDescription className="pr-8 text-xs leading-5 sm:text-sm">
-                            {t('portal.dashboard.paymentOrderListDescription')}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <UserPortalRechargeOrderHistory />
-                </DialogContent>
-            </Dialog>
         </div>
     )
 }

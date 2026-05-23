@@ -26,15 +26,23 @@ type AppWalletResponse struct {
 }
 
 type AppWalletLogResponse struct {
-	ID            int     `json:"id"`
-	Type          string  `json:"type"`
-	Amount        float64 `json:"amount"`
-	BalanceBefore float64 `json:"balance_before"`
-	BalanceAfter  float64 `json:"balance_after"`
-	RequestID     string  `json:"request_id,omitempty"`
-	ReservationID int     `json:"reservation_id,omitempty"`
-	Remark        string  `json:"remark,omitempty"`
-	CreatedAt     int64   `json:"created_at"`
+	ID             int     `json:"id"`
+	Type           string  `json:"type"`
+	Amount         float64 `json:"amount"`
+	BalanceBefore  float64 `json:"balance_before"`
+	BalanceAfter   float64 `json:"balance_after"`
+	RequestID      string  `json:"request_id,omitempty"`
+	ReservationID  int     `json:"reservation_id,omitempty"`
+	Remark         string  `json:"remark,omitempty"`
+	OutTradeNo     string  `json:"out_trade_no,omitempty"`
+	TradeNo        string  `json:"trade_no,omitempty"`
+	PayAmount      float64 `json:"pay_amount,omitempty"`
+	DiscountAmount float64 `json:"discount_amount,omitempty"`
+	DiscountCode   string  `json:"discount_code,omitempty"`
+	Channel        string  `json:"channel,omitempty"`
+	PayType        string  `json:"pay_type,omitempty"`
+	PaidAt         int64   `json:"paid_at,omitempty"`
+	CreatedAt      int64   `json:"created_at"`
 }
 
 type AppUserAdminResponse struct {
@@ -148,8 +156,8 @@ func buildAppWalletResponse(wallet *model.AppUserWallet, historicalConsumed floa
 	}
 }
 
-func buildAppWalletLogResponse(log *model.AppWalletLog) *AppWalletLogResponse {
-	return &AppWalletLogResponse{
+func buildAppWalletLogResponse(log *model.AppWalletLogWithDetail) *AppWalletLogResponse {
+	response := &AppWalletLogResponse{
 		ID:            log.ID,
 		Type:          log.Type,
 		Amount:        log.Amount,
@@ -160,9 +168,23 @@ func buildAppWalletLogResponse(log *model.AppWalletLog) *AppWalletLogResponse {
 		Remark:        log.Remark,
 		CreatedAt:     log.CreatedAt.UnixMilli(),
 	}
+	if log.Detail != nil {
+		response.OutTradeNo = log.Detail.OutTradeNo
+		response.TradeNo = log.Detail.TradeNo
+		response.PayAmount = log.Detail.PayAmount
+		response.DiscountAmount = log.Detail.DiscountAmount
+		response.DiscountCode = log.Detail.DiscountCode
+		response.Channel = log.Detail.Channel
+		response.PayType = log.Detail.PayType
+		if log.Detail.PaidAt != nil {
+			response.PaidAt = log.Detail.PaidAt.UnixMilli()
+		}
+	}
+
+	return response
 }
 
-func buildAppWalletLogResponses(logs []*model.AppWalletLog) []*AppWalletLogResponse {
+func buildAppWalletLogResponses(logs []*model.AppWalletLogWithDetail) []*AppWalletLogResponse {
 	responses := make([]*AppWalletLogResponse, len(logs))
 	for i, log := range logs {
 		responses[i] = buildAppWalletLogResponse(log)

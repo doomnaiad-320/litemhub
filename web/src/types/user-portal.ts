@@ -39,6 +39,14 @@ export interface UserPortalWalletLog {
     request_id?: string
     reservation_id?: number
     remark?: string
+    out_trade_no?: string
+    trade_no?: string
+    pay_amount?: number
+    discount_amount?: number
+    discount_code?: string
+    channel?: string
+    pay_type?: string
+    paid_at?: number
     created_at: number
 }
 
