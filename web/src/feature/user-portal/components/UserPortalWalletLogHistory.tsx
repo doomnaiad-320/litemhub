@@ -443,10 +443,10 @@ export function UserPortalWalletLogHistory() {
                                         value={selectedLog.remark || t('portal.dashboard.walletLogNoRemark')}
                                         valueClassName="break-all"
                                     />
-                                    {hasDetailValue(selectedLog.out_trade_no) && (
+                                    {hasDetailValue(selectedLog.trade_no) && (
                                         <WalletLogDetailRow
-                                            label="订单号"
-                                            value={selectedLog.out_trade_no || '-'}
+                                            label={t('portal.dashboard.thirdPartyTradeNo')}
+                                            value={selectedLog.trade_no || '-'}
                                             valueClassName="break-all font-mono text-[13px]"
                                         />
                                     )}

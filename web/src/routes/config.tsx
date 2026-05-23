@@ -39,6 +39,7 @@ const ConsumptionRankingPage = lazy(() => import("@/pages/consumption-ranking/pa
 const AppUserPage = lazy(() => import("@/pages/app-user/page"))
 const BillingPage = lazy(() => import("@/pages/billing/page"))
 const AnnouncementPage = lazy(() => import("@/pages/announcement/page"))
+const LineRoutePage = lazy(() => import("@/pages/line-route/page"))
 const TokenPage = lazy(() => import("@/pages/token/page"))
 const ChannelPage = lazy(() => import("@/pages/channel/page"))
 const ModelPage = lazy(() => import("@/pages/model/page"))
@@ -107,6 +108,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.ANNOUNCEMENTS,
                     element: lazyLoad(AnnouncementPage),
+                },
+                {
+                    path: ROUTES.LINE_SETTINGS,
+                    element: lazyLoad(LineRoutePage),
                 },
                 {
                     path: ROUTES.LEGACY_GROUP_RANKING,

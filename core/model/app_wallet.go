@@ -980,11 +980,11 @@ func getAppWalletLogs(userID, page, perPage int, order string, logTypes []string
 func attachAppWalletLogDetails(logs []*AppWalletLogWithDetail) error {
 	rechargeLogIDs := make([]int, 0)
 	for _, log := range logs {
-		if log.Type != AppWalletLogTypeRecharge || log.Remark != "DuluPay recharge" {
+		if log.Type != AppWalletLogTypeRecharge || log.RechargeLogID == 0 {
 			continue
 		}
 
-		rechargeLogIDs = append(rechargeLogIDs, log.ID)
+		rechargeLogIDs = append(rechargeLogIDs, log.RechargeLogID)
 	}
 
 	if len(rechargeLogIDs) == 0 {
@@ -992,33 +992,26 @@ func attachAppWalletLogDetails(logs []*AppWalletLogWithDetail) error {
 	}
 
 	type walletLogPaymentRow struct {
-		WalletLogID  int
-		OutTradeNo   string
-		TradeNo      EmptyNullString
-		Amount       float64
-		PayAmount    float64
-		DiscountCode EmptyNullString
-		Channel      string
-		PayType      EmptyNullString
-		PaidAt       *time.Time
+		RechargeLogID int
+		OutTradeNo    string
+		TradeNo       EmptyNullString
+		Amount        float64
+		PayAmount     float64
+		DiscountCode  EmptyNullString
+		Channel       string
+		PayType       EmptyNullString
+		PaidAt        *time.Time
 	}
 
 	rows := make([]walletLogPaymentRow, 0, len(rechargeLogIDs))
-	walletLogTimeWindowSQL := "app_recharge_log.created_at BETWEEN datetime(app_wallet_log.created_at, '-5 seconds') AND datetime(app_wallet_log.created_at, '+5 seconds')"
-	if DB.Dialector.Name() == "postgres" {
-		walletLogTimeWindowSQL = "app_recharge_log.created_at BETWEEN app_wallet_log.created_at - INTERVAL '5 seconds' AND app_wallet_log.created_at + INTERVAL '5 seconds'"
-	}
-
 	if err := DB.
-		Table("app_wallet_log").
+		Table("app_payment_order").
 		Select(
-			"app_wallet_log.id AS wallet_log_id, app_payment_order.out_trade_no, app_payment_order.trade_no, "+
+			"app_payment_order.recharge_log_id, app_payment_order.out_trade_no, app_payment_order.trade_no, "+
 				"app_payment_order.amount, app_payment_order.pay_amount, app_payment_order.discount_code, "+
 				"app_payment_order.channel, app_payment_order.pay_type, app_payment_order.paid_at",
 		).
-		Joins("JOIN app_recharge_log ON app_recharge_log.user_id = app_wallet_log.user_id AND app_recharge_log.amount = app_wallet_log.amount AND " + walletLogTimeWindowSQL).
-		Joins("JOIN app_payment_order ON app_payment_order.recharge_log_id = app_recharge_log.id").
-		Where("app_wallet_log.id IN ?", rechargeLogIDs).
+		Where("app_payment_order.recharge_log_id IN ?", rechargeLogIDs).
 		Find(&rows).Error; err != nil {
 		return err
 	}
@@ -1035,7 +1028,7 @@ func attachAppWalletLogDetails(logs []*AppWalletLogWithDetail) error {
 			discountAmount = 0
 		}
 
-		detailsByLogID[row.WalletLogID] = &AppWalletLogDetail{
+		detailsByLogID[row.RechargeLogID] = &AppWalletLogDetail{
 			OutTradeNo:     row.OutTradeNo,
 			TradeNo:        string(row.TradeNo),
 			PayAmount:      payAmount,
@@ -1048,7 +1041,7 @@ func attachAppWalletLogDetails(logs []*AppWalletLogWithDetail) error {
 	}
 
 	for _, log := range logs {
-		log.Detail = detailsByLogID[log.ID]
+		log.Detail = detailsByLogID[log.RechargeLogID]
 	}
 
 	return nil
@@ -1169,6 +1162,7 @@ func rechargeAppUserBalanceWithTx(
 		Amount:        params.Amount,
 		BalanceBefore: balanceBefore,
 		BalanceAfter:  balanceAfter,
+		RechargeLogID:  rechargeLog.ID,
 		Remark:        params.Remark,
 	}
 

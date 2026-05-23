@@ -5,6 +5,7 @@
     "appUsers": "Users",
     "billing": "Billing",
     "announcements": "Announcements",
+    "lineSettings": "Line Settings",
     "consumptionRanking": "Consumption Ranking",
     "key": "API Keys",
     "channel": "Channel",
@@ -1213,10 +1214,10 @@
       "importing": "Importing...",
       "exportSuccess": "Model configs exported successfully",
       "importSuccess": "{{count}} model configs imported successfully",
-    "importFailed": "Failed to import model configs",
-    "fetchFailed": "Failed to fetch model",
-    "deleted": "Model has been deleted or does not exist",
-    "noDataToExport": "No model configs to export",
+      "importFailed": "Failed to import model configs",
+      "fetchFailed": "Failed to fetch model",
+      "deleted": "Model has been deleted or does not exist",
+      "noDataToExport": "No model configs to export",
       "invalidFormat": "Invalid file format"
     }
   },
@@ -1688,6 +1689,7 @@
       "badge": "User Keys",
       "title": "Key Management",
       "description": "Create your own access keys. A group must be selected during creation, and that key can only request models in the selected group.",
+      "lineRoutes": "Available Endpoints",
       "list": "Key List",
       "allGroups": "All Groups",
       "create": "Create Key",
@@ -1723,7 +1725,12 @@
       "nameRequired": "Please enter a key name",
       "groupRequired": "Please select a group",
       "copied": "Key copied to clipboard",
-      "copyFailed": "Copy failed"
+      "copyFailed": "Copy failed",
+      "apiEndpointTitle": "Model API Endpoints",
+      "apiEndpointHint": "Use any endpoint as the Base URL, together with a key below, to call models.",
+      "copyApiUrl": "Copy URL",
+      "apiUrlCopied": "API URL copied to clipboard",
+      "noLineRoutes": "No available endpoints yet. Please contact an administrator."
     },
     "logs": {
       "badge": "Model Requests",

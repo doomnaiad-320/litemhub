@@ -23,6 +23,12 @@ const (
 	AppPaymentAdminStatusFailed  = "failed"
 )
 
+const (
+	appPaymentOutTradeNoPrefix         = "UP"
+	appPaymentOutTradeNoRandomLength   = 12
+	appPaymentOutTradeNoCreateAttempts = 16
+)
+
 var (
 	ErrAppPaymentOrderNotFound       = errors.New("app payment order not found")
 	ErrAppPaymentOrderAlreadyHandled = errors.New("app payment order already handled")
@@ -57,8 +63,12 @@ type AppPaymentPaidParams struct {
 	NotifyPayload string
 }
 
-func NewAppPaymentOutTradeNo(userID int) string {
-	return fmt.Sprintf("UP%d%s", userID, common.ShortUUID()[:24])
+func NewAppPaymentOutTradeNo(_ int) string {
+	return fmt.Sprintf(
+		"%s%s",
+		appPaymentOutTradeNoPrefix,
+		common.ShortUUID()[:appPaymentOutTradeNoRandomLength],
+	)
 }
 
 func ResolveAppRechargeRebate(
@@ -127,31 +137,40 @@ func CreateAppPaymentOrder(params AppPaymentCreateParams) (*AppPaymentOrder, err
 		channel = "dulupay"
 	}
 
-	outTradeNo := strings.TrimSpace(params.OutTradeNo)
-	if outTradeNo == "" {
-		outTradeNo = NewAppPaymentOutTradeNo(params.UserID)
+	specifiedOutTradeNo := strings.TrimSpace(params.OutTradeNo)
+	for range appPaymentOutTradeNoCreateAttempts {
+		outTradeNo := specifiedOutTradeNo
+		if outTradeNo == "" {
+			outTradeNo = NewAppPaymentOutTradeNo(params.UserID)
+		}
+
+		order := &AppPaymentOrder{
+			UserID:       params.UserID,
+			Amount:       normalizeMoney(params.Amount),
+			PayAmount:    normalizeMoney(payAmount),
+			Channel:      channel,
+			OutTradeNo:   outTradeNo,
+			TradeNo:      EmptyNullString(strings.TrimSpace(params.TradeNo)),
+			PayType:      EmptyNullString(strings.TrimSpace(params.PayType)),
+			PayInfo:      strings.TrimSpace(params.PayInfo),
+			Status:       AppPaymentStatusPending,
+			DiscountCode: EmptyNullString(NormalizeAppUserDiscountCode(params.DiscountCode)),
+			RebateUserID: params.RebateUserID,
+			RebateRatio:  params.RebateRatio,
+		}
+
+		if err := DB.Create(order).Error; err != nil {
+			if specifiedOutTradeNo == "" && errors.Is(err, gorm.ErrDuplicatedKey) {
+				continue
+			}
+
+			return nil, err
+		}
+
+		return order, nil
 	}
 
-	order := &AppPaymentOrder{
-		UserID:       params.UserID,
-		Amount:       normalizeMoney(params.Amount),
-		PayAmount:    normalizeMoney(payAmount),
-		Channel:      channel,
-		OutTradeNo:   outTradeNo,
-		TradeNo:      EmptyNullString(strings.TrimSpace(params.TradeNo)),
-		PayType:      EmptyNullString(strings.TrimSpace(params.PayType)),
-		PayInfo:      strings.TrimSpace(params.PayInfo),
-		Status:       AppPaymentStatusPending,
-		DiscountCode: EmptyNullString(NormalizeAppUserDiscountCode(params.DiscountCode)),
-		RebateUserID: params.RebateUserID,
-		RebateRatio:  params.RebateRatio,
-	}
-
-	if err := DB.Create(order).Error; err != nil {
-		return nil, err
-	}
-
-	return order, nil
+	return nil, errors.New("failed to generate unique app payment order no")
 }
 
 func UpdateAppPaymentOrderDuluPayInfo(outTradeNo, tradeNo, payType, payInfo string) (*AppPaymentOrder, error) {

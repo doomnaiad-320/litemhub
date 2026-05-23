@@ -160,6 +160,7 @@ func migrateDB() error {
 		&AppWalletLog{},
 		&AppUserGroup{},
 		&Announcement{},
+		&LineRoute{},
 		&Token{},
 		&PublicMCP{},
 		&GroupModelConfig{},

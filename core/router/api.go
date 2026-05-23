@@ -212,6 +212,16 @@ func SetAPIRouter(router *gin.Engine) {
 			announcementsRoute.POST("/:id/status", controller.UpdateAnnouncementStatus)
 		}
 
+		lineRoutesRoute := apiRouter.Group("/line_routes")
+		{
+			lineRoutesRoute.GET("", controller.GetLineRoutes)
+			lineRoutesRoute.GET("/", controller.GetLineRoutes)
+			lineRoutesRoute.POST("", controller.CreateLineRoute)
+			lineRoutesRoute.POST("/", controller.CreateLineRoute)
+			lineRoutesRoute.PUT("/:id", controller.UpdateLineRoute)
+			lineRoutesRoute.DELETE("/:id", controller.DeleteLineRoute)
+		}
+
 		logsRoute := apiRouter.Group("/logs")
 		{
 			logsRoute.GET("/export", controller.ExportLogs)

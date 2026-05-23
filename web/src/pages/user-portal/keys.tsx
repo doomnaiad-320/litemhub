@@ -13,7 +13,6 @@ import { CalendarIcon, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -47,7 +46,7 @@ import {
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
 import { MultiSelectCombobox } from '@/components/select/MultiSelectCombobox'
-import { useUserPortalCreateKey, useUserPortalDeleteKey, useUserPortalGroups, useUserPortalKeys, useUserPortalUpdateKey } from '@/feature/user-portal/hooks'
+import { useUserPortalCreateKey, useUserPortalDeleteKey, useUserPortalGroups, useUserPortalKeys, useUserPortalLineRoutes, useUserPortalUpdateKey } from '@/feature/user-portal/hooks'
 import type { Token } from '@/types/token'
 
 interface CreateKeyFormValues {
@@ -208,12 +207,14 @@ export default function UserPortalKeysPage() {
     const [editingKey, setEditingKey] = useState<Token | null>(null)
 
     const { data: groupsData } = useUserPortalGroups(true)
+    const { data: lineRoutesData } = useUserPortalLineRoutes(true)
     const { data, isLoading } = useUserPortalKeys(page, pageSize, groupFilter === 'all' ? undefined : groupFilter, true)
     const createKeyMutation = useUserPortalCreateKey()
     const deleteKeyMutation = useUserPortalDeleteKey()
     const updateKeyMutation = useUserPortalUpdateKey()
 
     const groups = groupsData?.groups || []
+    const lineRoutes = lineRoutesData?.line_routes || []
     const keys = data?.keys || []
     const total = data?.total || 0
     const groupModelsByGroup = useMemo(() => {
@@ -297,13 +298,21 @@ export default function UserPortalKeysPage() {
         })
     }
 
-    const copyToClipboard = async (value: string) => {
+    const copyValueToClipboard = async (value: string, successMessage: string) => {
         try {
             await navigator.clipboard.writeText(value)
-            toast.success(t('portal.keys.copied'))
+            toast.success(successMessage)
         } catch {
             toast.error(t('portal.keys.copyFailed'))
         }
+    }
+
+    const copyKeyToClipboard = (value: string) => {
+        copyValueToClipboard(value, t('portal.keys.copied'))
+    }
+
+    const copyApiUrlToClipboard = (value: string) => {
+        copyValueToClipboard(value, t('portal.keys.apiUrlCopied'))
     }
 
     const openEditDialog = (token: Token) => {
@@ -363,7 +372,7 @@ export default function UserPortalKeysPage() {
                     <code className="max-w-[220px] truncate rounded-lg bg-muted px-2 py-1 text-xs">
                         {row.original.key}
                     </code>
-                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(row.original.key)}>
+                    <Button variant="ghost" size="icon" onClick={() => copyKeyToClipboard(row.original.key)}>
                         <Copy className="h-4 w-4" />
                     </Button>
                 </div>
@@ -443,13 +452,12 @@ export default function UserPortalKeysPage() {
     return (
         <div className="space-y-4 sm:space-y-6">
             <section className="rounded-md border border-border bg-background p-3 shadow-none dark:border-white/10 sm:p-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-2">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
                         <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
-                        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
-                        <p className="max-w-3xl text-muted-foreground">{t('portal.keys.description')}</p>
+                        <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
                     </div>
-                    <div className="grid gap-3 sm:flex sm:flex-wrap">
+                    <div className="flex flex-wrap items-center gap-3">
                         <Select value={groupFilter} onValueChange={(value) => {
                             setGroupFilter(value)
                             setPage(1)
@@ -471,15 +479,68 @@ export default function UserPortalKeysPage() {
                         </Button>
                     </div>
                 </div>
+
+                <div className="mt-4 border-t border-border/60 pt-4 dark:border-white/10">
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                            <div className="text-sm font-medium text-foreground">{t('portal.keys.apiEndpointTitle')}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.apiEndpointHint')}</div>
+                        </div>
+                        <div className="text-[11px] font-medium text-muted-foreground">
+                            {t('portal.keys.lineRoutes')}
+                        </div>
+                    </div>
+
+                    {lineRoutes.length > 0 ? (
+                        <div className="grid gap-2 lg:grid-cols-2">
+                            {lineRoutes.map((lineRoute) => (
+                                <div
+                                    key={lineRoute.id}
+                                    className="min-w-0 rounded-md border border-border/60 bg-muted/20 p-3 dark:border-white/10 dark:bg-white/[0.03]"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm font-medium text-foreground">
+                                                {lineRoute.description}
+                                            </div>
+                                            {lineRoute.note && (
+                                                <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                                                    {lineRoute.note}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 shrink-0 rounded-md px-2 text-xs"
+                                            onClick={() => copyApiUrlToClipboard(lineRoute.api_url)}
+                                        >
+                                            <Copy className="h-3.5 w-3.5" />
+                                            {t('portal.keys.copyApiUrl')}
+                                        </Button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="mt-3 flex w-full min-w-0 items-center gap-2 rounded-md bg-background px-3 py-2 text-left font-mono text-[11px] text-muted-foreground ring-1 ring-border/60 transition-colors hover:text-foreground dark:bg-background/40 dark:ring-white/10"
+                                        onClick={() => copyApiUrlToClipboard(lineRoute.api_url)}
+                                    >
+                                        <span className="min-w-0 flex-1 truncate">{lineRoute.api_url}</span>
+                                        <Copy className="h-3.5 w-3.5 shrink-0" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-md border border-dashed border-border/70 px-3 py-4 text-sm text-muted-foreground dark:border-white/10">
+                            {t('portal.keys.noLineRoutes')}
+                        </div>
+                    )}
+                </div>
             </section>
 
-            <Card className="rounded-md border-border bg-background shadow-none dark:border-white/10">
-                <CardHeader className="p-4 sm:p-6">
-                    <CardTitle>{t('portal.keys.list')}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                    <div className="px-4 pb-4 sm:px-6 sm:pb-5">
-                        <div className="space-y-3 md:hidden">
+            <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-3 md:hidden">
                             {isLoading ? (
                                 Array.from({ length: 3 }).map((_, index) => (
                                     <div key={index} className="h-36 rounded-md bg-muted/70" />
@@ -505,33 +566,31 @@ export default function UserPortalKeysPage() {
                                         </div>
                                         <div className="mt-4 flex items-center gap-2 rounded-md bg-muted/70 px-3 py-2">
                                             <code className="min-w-0 flex-1 truncate text-xs">{token.key}</code>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyToClipboard(token.key)}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => copyKeyToClipboard(token.key)}>
                                                 <Copy className="h-4 w-4" />
                                             </Button>
                                         </div>
                                         <div className="mt-3 text-xs text-muted-foreground">
                                             {format(new Date(token.created_at), 'yyyy-MM-dd HH:mm')}
                                         </div>
-                                        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/60 pt-3 text-xs">
+                                        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+                                            <div>
+                                                <div className="text-muted-foreground">{t('portal.keys.group')}</div>
+                                                <div className="mt-1 truncate text-sm font-medium">
+                                                    {token.group}
+                                                </div>
+                                            </div>
                                             <div>
                                                 <div className="text-muted-foreground">{t('portal.keys.quota')}</div>
-                                                <div className="mt-1 font-mono text-sm font-semibold">{formatQuota(token.quota)}</div>
+                                                <div className="mt-1 truncate font-mono text-sm font-semibold">{formatQuota(token.quota)}</div>
                                             </div>
                                             <div>
                                                 <div className="text-muted-foreground">{t('portal.keys.expiredAt')}</div>
-                                                <div className="mt-1 text-sm font-medium">
+                                                <div className="mt-1 truncate text-sm font-medium">
                                                     {token.expired_at
                                                         ? format(new Date(token.expired_at), 'yyyy-MM-dd HH:mm')
                                                         : t('portal.keys.neverExpires')}
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 border-t border-border/60 pt-3 text-xs">
-                                            <div className="text-muted-foreground">{t('portal.keys.models')}</div>
-                                            <div className="mt-1 text-sm font-medium">
-                                                {token.models && token.models.length > 0
-                                                    ? t('portal.keys.modelLimitCount', { count: token.models.length })
-                                                    : t('portal.keys.allModels')}
                                             </div>
                                         </div>
                                     </div>
@@ -541,18 +600,16 @@ export default function UserPortalKeysPage() {
                                     {t('table.noData')}
                                 </div>
                             )}
-                        </div>
-                        <div className="hidden md:block">
-                        <DataTable
-                            table={table}
-                            columns={columns}
-                            isLoading={isLoading}
-                            loadingStyle="skeleton"
-                            fixedHeader={true}
-                            showScrollShadows={false}
-                        />
-                        </div>
-                    </div>
+                </div>
+                <div className="hidden rounded-md border border-border bg-background shadow-none dark:border-white/10 md:block">
+                    <DataTable
+                        table={table}
+                        columns={columns}
+                        isLoading={isLoading}
+                        loadingStyle="skeleton"
+                        fixedHeader={true}
+                        showScrollShadows={false}
+                    />
                     <div className="border-t border-border/60 px-3">
                         <ServerPagination
                             page={page}
@@ -565,8 +622,8 @@ export default function UserPortalKeysPage() {
                             }}
                         />
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">

@@ -16,3 +16,4 @@
 
 - User wallet and prepaid billing design is documented in `docs/user-wallet-mvp.md`.
 - Public-facing page design must follow the design system documented in `design.md`. Before designing or redesigning UI pages, read `design.md` and apply its typography, color, spacing, button, card, shadow, and layout rules unless the user explicitly requests a different style.
+- Product-facing changes must be implemented as formal, maintainable product work. Avoid patch-style fixes, temporary workarounds, hard-coded one-off behavior, and scattered local overrides. When an area has accumulated patchy changes, consolidate it into a clear data flow, reusable structure, and stable UI behavior suitable for production.

@@ -10,11 +10,12 @@ import {
     Bell,
     ChevronLeft,
     ChevronRight,
-    FileText,
-    Github,
+    // FileText,
+    // Github,
     LogOut,
     MessageCircle,
     ReceiptText,
+    Route,
     Trophy,
     User,
     Users,
@@ -86,6 +87,12 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             display: true,
         },
         {
+            title: t("sidebar.lineSettings"),
+            icon: Route,
+            href: ROUTES.LINE_SETTINGS,
+            display: true,
+        },
+        {
             title: t("sidebar.consumptionRanking"),
             icon: Trophy,
             href: ROUTES.CONSUMPTION_RANKING,
@@ -103,20 +110,20 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             href: ROUTES.MCP,
             display: true,
         },
-        {
-            title: t("sidebar.doc"),
-            icon: FileText,
-            href: "https://sealos.run/docs/guides/ai-proxy",
-            display: true,
-            external: true,
-        },
-        {
-            title: t("sidebar.github"),
-            icon: Github,
-            href: "https://github.com/labring/aiproxy",
-            display: true,
-            external: true,
-        },
+        // {
+        //     title: t("sidebar.doc"),
+        //     icon: FileText,
+        //     href: "https://sealos.run/docs/guides/ai-proxy",
+        //     display: true,
+        //     external: true,
+        // },
+        // {
+        //     title: t("sidebar.github"),
+        //     icon: Github,
+        //     href: "https://github.com/labring/aiproxy",
+        //     display: true,
+        //     external: true,
+        // },
     ]
 }
 
@@ -126,6 +133,7 @@ interface SidebarDisplayConfig {
     appUsers?: boolean
     billing?: boolean
     announcements?: boolean
+    lineSettings?: boolean
     consumptionRanking?: boolean
     key?: boolean
     channel?: boolean
@@ -156,14 +164,15 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
         if (item.href === ROUTES.GROUP) configKey = "group"
         if (item.href === ROUTES.APP_USERS) configKey = "appUsers"
         if (item.href === ROUTES.ANNOUNCEMENTS) configKey = "announcements"
+        if (item.href === ROUTES.LINE_SETTINGS) configKey = "lineSettings"
         if (item.href === ROUTES.CONSUMPTION_RANKING) configKey = "consumptionRanking"
         if (item.href === ROUTES.KEY) configKey = "key"
         if (item.href === ROUTES.CHANNEL) configKey = "channel"
         if (item.href === ROUTES.MODEL) configKey = "model"
         if (item.href === ROUTES.MCP) configKey = "mcp"
         if (item.href === ROUTES.LOG) configKey = "log"
-        if (item.href === "https://sealos.run/docs/guides/ai-proxy") configKey = "doc"
-        if (item.href === "https://github.com/labring/aiproxy") configKey = "github"
+        // if (item.href === "https://sealos.run/docs/guides/ai-proxy") configKey = "doc"
+        // if (item.href === "https://github.com/labring/aiproxy") configKey = "github"
 
         const shouldDisplay = displayConfig[configKey] !== undefined ? displayConfig[configKey] : item.display
 

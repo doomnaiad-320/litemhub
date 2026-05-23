@@ -10,6 +10,7 @@ export const ROUTES = {
     APP_USERS: "/app-users",
     BILLING: "/billing",
     ANNOUNCEMENTS: "/announcements",
+    LINE_SETTINGS: "/line-settings",
     USER_LOGIN: "/login",
     USER_REGISTER: "/register",
     USER_INVITE: "/r/:code",

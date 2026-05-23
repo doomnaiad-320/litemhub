@@ -25,6 +25,7 @@ const invalidatePortalQueries = (queryClient: ReturnType<typeof useQueryClient>)
     queryClient.invalidateQueries({ queryKey: ['userPortalReferralRecords'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalModelLogs'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalGroups'] })
+    queryClient.invalidateQueries({ queryKey: ['userPortalLineRoutes'] })
     queryClient.invalidateQueries({ queryKey: ['userPortalKeys'] })
 }
 
@@ -262,6 +263,14 @@ export const useUserPortalGroups = (enabled = true) => {
     return useQuery({
         queryKey: ['userPortalGroups'],
         queryFn: () => userPortalApi.getGroups(),
+        enabled,
+    })
+}
+
+export const useUserPortalLineRoutes = (enabled = true) => {
+    return useQuery({
+        queryKey: ['userPortalLineRoutes'],
+        queryFn: () => userPortalApi.getLineRoutes(),
         enabled,
     })
 }

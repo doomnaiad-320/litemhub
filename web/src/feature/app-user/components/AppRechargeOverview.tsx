@@ -567,7 +567,7 @@ export function AppRechargeOverview() {
                                     <TableHead>{t('appUser.amount')}</TableHead>
                                     <TableHead>{t('appUser.rechargeStats.channel')}</TableHead>
                                     <TableHead>{t('appUser.status')}</TableHead>
-                                    <TableHead>{t('appUser.rechargeStats.tradeNo')}</TableHead>
+                                    <TableHead>{t('appUser.rechargeStats.outTradeNo')}</TableHead>
                                     <TableHead>{t('appUser.createdAt')}</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -603,8 +603,15 @@ export function AppRechargeOverview() {
                                                     {t(`appUser.rechargeStats.statuses.${log.status}`)}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
-                                                {log.trade_no || '-'}
+                                            <TableCell className="max-w-[260px] font-mono text-xs text-muted-foreground">
+                                                <div className="truncate font-medium text-foreground">
+                                                    {log.out_trade_no || '-'}
+                                                </div>
+                                                {log.trade_no && (
+                                                    <div className="mt-1 truncate">
+                                                        {t('appUser.rechargeStats.tradeNo')}: {log.trade_no}
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell className="min-w-[150px] text-muted-foreground">
                                                 {formatDateTime(log.created_at)}

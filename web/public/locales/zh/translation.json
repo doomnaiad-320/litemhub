@@ -5,6 +5,7 @@
     "appUsers": "用户管理",
     "billing": "账单",
     "announcements": "公告",
+    "lineSettings": "线路设定",
     "consumptionRanking": "消耗排行",
     "key": "API Keys",
     "channel": "渠道",
@@ -1201,10 +1202,10 @@
       "importing": "导入中...",
       "exportSuccess": "模型配置导出成功",
       "importSuccess": "成功导入 {{count}} 个模型配置",
-    "importFailed": "导入模型配置失败",
-    "fetchFailed": "获取模型信息失败",
-    "deleted": "模型已被删除或不存在",
-    "noDataToExport": "没有可导出的模型配置",
+      "importFailed": "导入模型配置失败",
+      "fetchFailed": "获取模型信息失败",
+      "deleted": "模型已被删除或不存在",
+      "noDataToExport": "没有可导出的模型配置",
       "invalidFormat": "文件格式无效"
     }
   },
@@ -1676,6 +1677,7 @@
       "badge": "用户 Key",
       "title": "Key 管理",
       "description": "创建自己的调用 Key。创建时必须选择一个分组，该 Key 只能请求该分组内的模型。",
+      "lineRoutes": "可用调用地址",
       "list": "Key 列表",
       "allGroups": "全部分组",
       "create": "创建 Key",
@@ -1711,7 +1713,12 @@
       "nameRequired": "请输入 Key 名称",
       "groupRequired": "请选择分组",
       "copied": "Key 已复制到剪贴板",
-      "copyFailed": "复制失败"
+      "copyFailed": "复制失败",
+      "apiEndpointTitle": "模型调用地址",
+      "apiEndpointHint": "选择任意线路作为 Base URL，配合下方 Key 即可调用模型。",
+      "copyApiUrl": "复制地址",
+      "apiUrlCopied": "API 地址已复制到剪贴板",
+      "noLineRoutes": "暂无可用线路，请联系管理员配置调用地址。"
     },
     "logs": {
       "badge": "模型请求",

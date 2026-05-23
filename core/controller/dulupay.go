@@ -103,13 +103,11 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		device = config.DuluPayDevice
 	}
 
-	outTradeNo := model.NewAppPaymentOutTradeNo(user.ID)
 	order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
 		UserID:       user.ID,
 		Amount:       amount,
 		PayAmount:    payAmount,
 		Channel:      duluPayChannel,
-		OutTradeNo:   outTradeNo,
 		DiscountCode: rebateResolution.DiscountCode,
 		RebateUserID: rebateResolution.RebateUserID,
 		RebateRatio:  rebateResolution.RebateRatio,
@@ -120,14 +118,14 @@ func CreateDuluPayRecharge(c *gin.Context) {
 	}
 
 	createResp, err := requestDuluPayCreateFunc(duluPayCreateRequest{
-		OutTradeNo: outTradeNo,
+		OutTradeNo: order.OutTradeNo,
 		Amount:     payAmount,
 		ClientIP:   c.ClientIP(),
 		Type:       payType,
 		Device:     device,
 	})
 	if err != nil {
-		if _, markErr := model.MarkAppPaymentOrderFailed(outTradeNo); markErr != nil {
+		if _, markErr := model.MarkAppPaymentOrderFailed(order.OutTradeNo); markErr != nil {
 			middleware.ErrorResponse(c, http.StatusInternalServerError, markErr.Error())
 			return
 		}
@@ -135,7 +133,7 @@ func CreateDuluPayRecharge(c *gin.Context) {
 		return
 	}
 
-	updatedOrder, err := model.UpdateAppPaymentOrderDuluPayInfo(outTradeNo, createResp.TradeNo, createResp.PayType, createResp.PayInfo)
+	updatedOrder, err := model.UpdateAppPaymentOrderDuluPayInfo(order.OutTradeNo, createResp.TradeNo, createResp.PayType, createResp.PayInfo)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

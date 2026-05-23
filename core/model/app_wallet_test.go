@@ -13,6 +13,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func TestReserveAndSettleAppUserReservation(t *testing.T) {
@@ -185,7 +186,7 @@ func TestAdjustAppUserWalletBalanceCannotOverdraw(t *testing.T) {
 	})
 }
 
-func TestCleanupAppWalletConsumptionLogsKeepsRechargeLogs(t *testing.T) {
+func TestCleanupAppWalletConsumptionLogsKeepsAccountLogs(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		user := createTestAppUser(t)
 
@@ -193,6 +194,17 @@ func TestCleanupAppWalletConsumptionLogsKeepsRechargeLogs(t *testing.T) {
 			UserID: user.ID,
 			Type:   model.AppWalletLogTypeRecharge,
 			Amount: 5,
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeAdjust,
+			Amount: 3,
+			Remark: "manual credit",
+		}).Error)
+		require.NoError(t, model.DB.Create(&model.AppWalletLog{
+			UserID: user.ID,
+			Type:   model.AppWalletLogTypeRebate,
+			Amount: 1,
 		}).Error)
 		require.NoError(t, model.DB.Create(&model.AppWalletLog{
 			UserID: user.ID,
@@ -214,9 +226,11 @@ func TestCleanupAppWalletConsumptionLogsKeepsRechargeLogs(t *testing.T) {
 
 		logs, total, err := model.GetAppWalletLogs(user.ID, 1, 10, "id-asc")
 		require.NoError(t, err)
-		require.EqualValues(t, 1, total)
-		require.Len(t, logs, 1)
+		require.EqualValues(t, 3, total)
+		require.Len(t, logs, 3)
 		require.Equal(t, model.AppWalletLogTypeRecharge, logs[0].Type)
+		require.Equal(t, model.AppWalletLogTypeAdjust, logs[1].Type)
+		require.Equal(t, model.AppWalletLogTypeRebate, logs[2].Type)
 	})
 }
 
@@ -286,9 +300,11 @@ func TestGetAppPaymentOrdersIncludesPaidPendingAndFailedStatuses(t *testing.T) {
 		require.EqualValues(t, 3, total)
 		require.Len(t, orders, 3)
 		require.Equal(t, model.AppPaymentAdminStatusSuccess, orders[0].AdminStatus)
-		require.Equal(t, "dulupay-paid", orders[0].AdminTradeNo)
+		require.Equal(t, "UP-paid", orders[0].OutTradeNo)
+		require.Equal(t, "dulupay-paid", string(orders[0].TradeNo))
 		require.Equal(t, model.AppPaymentAdminStatusUnpaid, orders[1].AdminStatus)
-		require.Equal(t, "UP-pending", orders[1].AdminTradeNo)
+		require.Equal(t, "UP-pending", orders[1].OutTradeNo)
+		require.Empty(t, string(orders[1].TradeNo))
 		require.Equal(t, model.AppPaymentAdminStatusFailed, orders[2].AdminStatus)
 
 		orders, total, err = model.GetAppPaymentOrders(0, "", "", model.AppPaymentAdminStatusUnpaid, time.Time{}, time.Time{}, 1, 10, "id-asc")
@@ -296,6 +312,93 @@ func TestGetAppPaymentOrdersIncludesPaidPendingAndFailedStatuses(t *testing.T) {
 		require.EqualValues(t, 1, total)
 		require.Len(t, orders, 1)
 		require.Equal(t, "UP-pending", orders[0].OutTradeNo)
+	})
+}
+
+func TestGetAppPaymentOrdersSeparatesPlatformAndThirdPartyTradeNumbers(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+		paidAt := time.Date(2026, 5, 19, 12, 0, 0, 0, time.Local)
+		require.NoError(t, model.DB.Create(&model.AppPaymentOrder{
+			UserID:     user.ID,
+			Amount:     100,
+			PayAmount:  100,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-platform-order",
+			TradeNo:    model.EmptyNullString("third-party-trade"),
+			Status:     model.AppPaymentStatusPaid,
+			CreatedAt:  paidAt,
+			PaidAt:     &paidAt,
+		}).Error)
+
+		_, _, err := model.RechargeAppUserBalance(model.AppUserRechargeParams{
+			UserID:  user.ID,
+			Amount:  50,
+			Channel: "manual",
+			TradeNo: "manual-platform-order",
+			Remark:  "manual recharge",
+		})
+		require.NoError(t, err)
+
+		orders, total, err := model.GetAppPaymentOrders(user.ID, "", "", "", time.Time{}, time.Time{}, 1, 10, "id-asc")
+		require.NoError(t, err)
+		require.EqualValues(t, 2, total)
+		require.Len(t, orders, 2)
+
+		require.Equal(t, "manual-platform-order", orders[0].OutTradeNo)
+		require.Empty(t, string(orders[0].TradeNo))
+		require.Equal(t, "UP-platform-order", orders[1].OutTradeNo)
+		require.Equal(t, "third-party-trade", string(orders[1].TradeNo))
+	})
+}
+
+func TestNewAppPaymentOutTradeNoUsesShortStableFormat(t *testing.T) {
+	outTradeNo := model.NewAppPaymentOutTradeNo(12345)
+
+	require.Len(t, outTradeNo, 14)
+	require.True(t, strings.HasPrefix(outTradeNo, "UP"))
+	require.Regexp(t, `^UP[0-9a-f]{12}$`, outTradeNo)
+}
+
+func TestCreateAppPaymentOrderGeneratesShortOutTradeNo(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		order, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:  user.ID,
+			Amount:  100,
+			Channel: "dulupay",
+		})
+		require.NoError(t, err)
+		require.Len(t, order.OutTradeNo, 14)
+		require.True(t, strings.HasPrefix(order.OutTradeNo, "UP"))
+		require.Regexp(t, `^UP[0-9a-f]{12}$`, order.OutTradeNo)
+
+		storedOrder, err := model.GetAppPaymentOrderByOutTradeNo(order.OutTradeNo)
+		require.NoError(t, err)
+		require.Equal(t, order.ID, storedOrder.ID)
+	})
+}
+
+func TestCreateAppPaymentOrderKeepsExplicitOutTradeNoDuplicateError(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		user := createTestAppUser(t)
+
+		_, err := model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-explicit-duplicate",
+		})
+		require.NoError(t, err)
+
+		_, err = model.CreateAppPaymentOrder(model.AppPaymentCreateParams{
+			UserID:     user.ID,
+			Amount:     100,
+			Channel:    "dulupay",
+			OutTradeNo: "UP-explicit-duplicate",
+		})
+		require.ErrorIs(t, err, gorm.ErrDuplicatedKey)
 	})
 }
 

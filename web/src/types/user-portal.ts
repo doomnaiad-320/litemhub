@@ -175,6 +175,19 @@ export interface UserPortalKeysResponse {
     total: number
 }
 
+export interface UserPortalLineRoute {
+    id: number
+    api_url: string
+    description: string
+    note?: string
+    created_at: number
+    updated_at: number
+}
+
+export interface UserPortalLineRoutesResponse {
+    line_routes: UserPortalLineRoute[]
+}
+
 export interface UserPortalRegisterRequest {
     username: string
     email: string

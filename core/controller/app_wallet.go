@@ -156,8 +156,8 @@ func buildAppWalletResponse(wallet *model.AppUserWallet, historicalConsumed floa
 	}
 }
 
-func buildAppWalletLogResponse(log *model.AppWalletLogWithDetail) *AppWalletLogResponse {
-	response := &AppWalletLogResponse{
+func buildBaseAppWalletLogResponse(log *model.AppWalletLog) *AppWalletLogResponse {
+	return &AppWalletLogResponse{
 		ID:            log.ID,
 		Type:          log.Type,
 		Amount:        log.Amount,
@@ -168,6 +168,10 @@ func buildAppWalletLogResponse(log *model.AppWalletLogWithDetail) *AppWalletLogR
 		Remark:        log.Remark,
 		CreatedAt:     log.CreatedAt.UnixMilli(),
 	}
+}
+
+func buildAppWalletLogResponse(log *model.AppWalletLogWithDetail) *AppWalletLogResponse {
+	response := buildBaseAppWalletLogResponse(&log.AppWalletLog)
 	if log.Detail != nil {
 		response.OutTradeNo = log.Detail.OutTradeNo
 		response.TradeNo = log.Detail.TradeNo
@@ -980,7 +984,7 @@ func AdjustAppUserWalletBalance(c *gin.Context) {
 
 	middleware.SuccessResponse(c, gin.H{
 		"wallet":     buildAppWalletResponse(wallet, historicalConsumed),
-		"wallet_log": buildAppWalletLogResponse(walletLog),
+		"wallet_log": buildBaseAppWalletLogResponse(walletLog),
 	})
 }
 

@@ -278,6 +278,7 @@ type AppWalletLog struct {
 	BalanceAfter  float64         `json:"balance_after"`
 	RequestID     EmptyNullString `json:"request_id"     gorm:"size:64;index"`
 	ReservationID int             `json:"reservation_id" gorm:"index"`
+	RechargeLogID int             `json:"recharge_log_id" gorm:"index"`
 	Remark        string          `json:"remark"         gorm:"type:text"`
 	CreatedAt     time.Time       `json:"created_at"`
 }

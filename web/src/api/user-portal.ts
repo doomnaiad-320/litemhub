@@ -10,6 +10,7 @@ import type {
     UserPortalEmailCodeResponse,
     UserPortalGroupsResponse,
     UserPortalKeysResponse,
+    UserPortalLineRoutesResponse,
     UserPortalLoginRequest,
     UserPortalModelLogStatsResponse,
     UserPortalModelLogsResponse,
@@ -225,6 +226,10 @@ export const userPortalApi = {
 
     getGroups: async () => {
         return get<UserPortalGroupsResponse>('groups')
+    },
+
+    getLineRoutes: async () => {
+        return get<UserPortalLineRoutesResponse>('line_routes')
     },
 
     getKeys: async (page: number, perPage: number, group?: string) => {

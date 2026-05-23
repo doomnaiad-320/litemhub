@@ -28,6 +28,7 @@ func SetUserAPIRouter(router *gin.Engine) {
 		authPrivateRouter.PUT("/password", controller.UpdateCurrentAppUserPassword)
 
 		protectedUserAPI.GET("/groups", controller.GetCurrentUserGroups)
+		protectedUserAPI.GET("/line_routes", controller.GetCurrentUserLineRoutes)
 
 		walletRouter := protectedUserAPI.Group("/wallet")
 		walletRouter.GET("", controller.GetCurrentUserWallet)
