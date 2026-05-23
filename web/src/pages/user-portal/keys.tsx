@@ -577,9 +577,15 @@ export default function UserPortalKeysPage() {
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            <section className="rounded-md border border-border bg-background p-4 shadow-none dark:border-white/10 sm:p-5">
-                <div className="rounded-md border border-border/60 bg-muted/20 p-3 dark:border-white/10 dark:bg-white/[0.03]">
-                    <div className="text-sm font-medium text-foreground">{t('portal.keys.usageTitle')}</div>
+            <section className="space-y-4 rounded-md border border-border bg-background p-4 shadow-none dark:border-white/10 sm:p-5">
+                <div className="border-b border-border/60 pb-4 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-medium text-foreground">{t('portal.keys.usageTitle')}</div>
+                        <Button className="hidden rounded-md sm:inline-flex" onClick={() => setDialogOpen(true)}>
+                            <Plus className="h-4 w-4" />
+                            {t('portal.keys.create')}
+                        </Button>
+                    </div>
                     <div className="mt-3 grid gap-3 text-xs text-muted-foreground sm:grid-cols-3">
                         <div>
                             <div className="font-medium text-foreground">1. {t('portal.keys.usageBaseUrl')}</div>
@@ -596,127 +602,118 @@ export default function UserPortalKeysPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    {/*
-                    <div className="min-w-0">
-                        <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
-                        <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                            {t('portal.keys.apiAccessDescription')}
-                        </p>
+                {/*
+                <div className="min-w-0">
+                    <div className="text-sm text-primary">{t('portal.keys.badge')}</div>
+                    <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{t('portal.keys.title')}</h1>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                        {t('portal.keys.apiAccessDescription')}
+                    </p>
+                </div>
+                */}
+
+                <Button className="w-full rounded-md sm:hidden" onClick={() => setDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    {t('portal.keys.create')}
+                </Button>
+
+                <div className="mb-3 flex items-end justify-between gap-3">
+                    <div>
+                        <div className="text-sm font-medium text-foreground">{t('portal.keys.apiEndpointTitle')}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.apiEndpointHint')}</div>
                     </div>
-                    */}
-                    <Button className="w-full rounded-md sm:w-auto" onClick={() => setDialogOpen(true)}>
+                    <div className="hidden text-[11px] font-medium text-muted-foreground sm:block">
+                        {t('portal.keys.lineRoutes')}
+                    </div>
+                </div>
+                <ApiEndpointList
+                    lineRoutes={lineRoutes}
+                    onCopy={copyApiUrlToClipboard}
+                    t={t}
+                />
+            </section>
+
+            {/*
+            <div className="flex flex-col gap-3 border-b border-border/60 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="min-w-0">
+                    <div className="text-base font-semibold text-foreground">{t('portal.keys.keyListTitle')}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                        {t('portal.keys.keyTotal', { count: total })}
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Select value={groupFilter} onValueChange={(value) => {
+                        setGroupFilter(value)
+                        setPage(1)
+                    }}>
+                        <SelectTrigger className="w-full rounded-md sm:w-[180px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">{t('portal.keys.allGroups')}</SelectItem>
+                            {groups.map((group) => (
+                                <SelectItem key={group.group} value={group.group}>{group.group}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="rounded-md sm:hidden" onClick={() => setDialogOpen(true)}>
                         <Plus className="h-4 w-4" />
                         {t('portal.keys.create')}
                     </Button>
                 </div>
+            </div>
+            */}
 
-                <div className="mt-5">
-                    <div className="min-w-0">
-                        <div className="mb-3 flex items-end justify-between gap-3">
-                            <div>
-                                <div className="text-sm font-medium text-foreground">{t('portal.keys.apiEndpointTitle')}</div>
-                                <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.apiEndpointHint')}</div>
-                            </div>
-                            <div className="hidden text-[11px] font-medium text-muted-foreground sm:block">
-                                {t('portal.keys.lineRoutes')}
-                            </div>
-                        </div>
-                        <ApiEndpointList
-                            lineRoutes={lineRoutes}
-                            onCopy={copyApiUrlToClipboard}
+            <div className="space-y-3 md:hidden">
+                {isLoading ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index} className="h-36 rounded-md bg-muted/70" />
+                    ))
+                ) : keys.length > 0 ? (
+                    keys.map((token) => (
+                        <KeyMobileCard
+                            key={token.id}
+                            token={token}
+                            onCopy={copyKeyToClipboard}
+                            onEdit={openEditDialog}
+                            onDelete={(id) => deleteKeyMutation.mutate(id)}
                             t={t}
                         />
-                    </div>
-                </div>
-            </section>
-
-            <section className="rounded-md border border-border bg-background shadow-none dark:border-white/10">
-                {/*
-                <div className="flex flex-col gap-3 border-b border-border/60 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                    <div className="min-w-0">
-                        <div className="text-base font-semibold text-foreground">{t('portal.keys.keyListTitle')}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                            {t('portal.keys.keyTotal', { count: total })}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Select value={groupFilter} onValueChange={(value) => {
-                            setGroupFilter(value)
-                            setPage(1)
-                        }}>
-                            <SelectTrigger className="w-full rounded-md sm:w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('portal.keys.allGroups')}</SelectItem>
-                                {groups.map((group) => (
-                                    <SelectItem key={group.group} value={group.group}>{group.group}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button variant="outline" className="rounded-md sm:hidden" onClick={() => setDialogOpen(true)}>
+                    ))
+                ) : (
+                    <div className="rounded-md border border-dashed border-border bg-background p-6 text-center dark:border-white/10">
+                        <div className="text-sm font-medium text-foreground">{t('portal.keys.emptyKeysTitle')}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.emptyKeysDescription')}</div>
+                        <Button className="mt-4 rounded-md" onClick={() => setDialogOpen(true)}>
                             <Plus className="h-4 w-4" />
                             {t('portal.keys.create')}
                         </Button>
                     </div>
-                </div>
-                */}
+                )}
+            </div>
 
-                <div className="p-4 sm:p-5 md:p-0">
-                    <div className="space-y-3 md:hidden">
-                        {isLoading ? (
-                            Array.from({ length: 3 }).map((_, index) => (
-                                <div key={index} className="h-36 rounded-md bg-muted/70" />
-                            ))
-                        ) : keys.length > 0 ? (
-                            keys.map((token) => (
-                                <KeyMobileCard
-                                    key={token.id}
-                                    token={token}
-                                    onCopy={copyKeyToClipboard}
-                                    onEdit={openEditDialog}
-                                    onDelete={(id) => deleteKeyMutation.mutate(id)}
-                                    t={t}
-                                />
-                            ))
-                        ) : (
-                            <div className="rounded-md border border-dashed border-border p-6 text-center dark:border-white/10">
-                                <div className="text-sm font-medium text-foreground">{t('portal.keys.emptyKeysTitle')}</div>
-                                <div className="mt-1 text-xs text-muted-foreground">{t('portal.keys.emptyKeysDescription')}</div>
-                                <Button className="mt-4 rounded-md" onClick={() => setDialogOpen(true)}>
-                                    <Plus className="h-4 w-4" />
-                                    {t('portal.keys.create')}
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="hidden md:block">
-                        <DataTable
-                            table={table}
-                            columns={columns}
-                            isLoading={isLoading}
-                            loadingStyle="skeleton"
-                            fixedHeader={true}
-                            showScrollShadows={false}
-                        />
-                        <div className="border-t border-border/60 px-3">
-                            <ServerPagination
-                                page={page}
-                                pageSize={pageSize}
-                                total={total}
-                                onPageChange={setPage}
-                                onPageSizeChange={(size) => {
-                                    setPageSize(size)
-                                    setPage(1)
-                                }}
-                            />
-                        </div>
-                    </div>
+            <div className="hidden overflow-hidden rounded-md border border-border bg-background shadow-none dark:border-white/10 md:block">
+                <DataTable
+                    table={table}
+                    columns={columns}
+                    isLoading={isLoading}
+                    loadingStyle="skeleton"
+                    fixedHeader={true}
+                    showScrollShadows={false}
+                />
+                <div className="border-t border-border/60 px-3">
+                    <ServerPagination
+                        page={page}
+                        pageSize={pageSize}
+                        total={total}
+                        onPageChange={setPage}
+                        onPageSizeChange={(size) => {
+                            setPageSize(size)
+                            setPage(1)
+                        }}
+                    />
                 </div>
-            </section>
+            </div>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
