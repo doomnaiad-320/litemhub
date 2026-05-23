@@ -1574,7 +1574,11 @@
     "referrals": {
       "title": "邀请返利",
       "description": "生成你的专属折扣码，并查看邀请用户与对应返利记录。",
+      "discountCode": "折扣码",
       "copyCode": "复制",
+      "discountCodeCopied": "折扣码已复制",
+      "generateDiscountCode": "生成折扣码",
+      "generatingDiscountCode": "生成中...",
       "inviteLink": "邀请链接",
       "copyInviteLink": "复制邀请链接",
       "inviteLinkCopied": "邀请链接已复制",
@@ -1590,7 +1594,10 @@
       "rebateAmount": "返利金额",
       "rechargeCount": "充值次数",
       "statusInvited": "已邀请",
-      "statusRecharged": "已充值"
+      "statusRecharged": "已充值",
+      "loadMore": "加载更多",
+      "loadingMore": "加载中...",
+      "noMoreRecords": "没有更多记录"
     },
     "models": {
       "badge": "模型目录",

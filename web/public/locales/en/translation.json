@@ -1586,7 +1586,11 @@
     "referrals": {
       "title": "Referrals",
       "description": "Generate your personal discount code and review invited users with their rebate records.",
+      "discountCode": "Discount code",
       "copyCode": "Copy",
+      "discountCodeCopied": "Discount code copied",
+      "generateDiscountCode": "Generate code",
+      "generatingDiscountCode": "Generating...",
       "inviteLink": "Invite link",
       "copyInviteLink": "Copy invite link",
       "inviteLinkCopied": "Invite link copied",
@@ -1602,7 +1606,10 @@
       "rebateAmount": "Rebate amount",
       "rechargeCount": "Recharge count",
       "statusInvited": "Invited",
-      "statusRecharged": "Recharged"
+      "statusRecharged": "Recharged",
+      "loadMore": "Load more",
+      "loadingMore": "Loading...",
+      "noMoreRecords": "No more records"
     },
     "models": {
       "badge": "Model Catalog",

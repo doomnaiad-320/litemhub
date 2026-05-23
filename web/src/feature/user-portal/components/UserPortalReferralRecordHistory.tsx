@@ -1,18 +1,23 @@
 import { format } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Gift, ReceiptText } from 'lucide-react'
 import {
     getCoreRowModel,
     type ColumnDef,
     useReactTable,
 } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
-import { useUserPortalReferralRecords } from '@/feature/user-portal/hooks'
+import {
+    useInfiniteUserPortalReferralRecords,
+    useUserPortalReferralRecords,
+} from '@/feature/user-portal/hooks'
 import type { UserPortalReferralRecord } from '@/types/user-portal'
+
+const REFERRAL_RECORD_PAGE_SIZE = 20
 
 const formatMoney = (amount?: number) => `$${(amount || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -38,9 +43,20 @@ export function UserPortalReferralRecordHistory() {
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(20)
     const { data, isLoading } = useUserPortalReferralRecords(page, pageSize, true)
+    const {
+        data: mobileData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: isMobileLoading,
+    } = useInfiniteUserPortalReferralRecords(REFERRAL_RECORD_PAGE_SIZE, true)
 
     const records = data?.referral_records || []
     const total = data?.total || 0
+    const mobileRecords = useMemo(
+        () => mobileData?.pages.flatMap((item) => item.referral_records || []) || [],
+        [mobileData],
+    )
 
     const statusLabel = (status: string) => {
         switch (status) {
@@ -125,58 +141,77 @@ export function UserPortalReferralRecordHistory() {
     })
 
     return (
-        <div className="rounded-lg border border-[#e5e7eb] bg-background shadow-none dark:border-white/10">
-            <div className="space-y-3 p-4 md:hidden">
-                {isLoading ? (
+        <div>
+            <div className="space-y-2 md:hidden">
+                {isMobileLoading ? (
                     Array.from({ length: 3 }).map((_, index) => (
-                        <Skeleton key={index} className="h-36 rounded-md" />
+                        <Skeleton key={index} className="h-28 rounded-md" />
                     ))
-                ) : records.length > 0 ? (
-                    records.map((record) => (
-                        <div key={record.id} className="border-b border-[#f2f3f5] py-4 last:border-b-0 dark:border-white/10">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-[#18181b] dark:text-white">
-                                        <Gift className="h-4 w-4 text-[#8e8e93]" />
-                                        <span className="truncate">{invitedUserLabel(record)}</span>
+                ) : mobileRecords.length > 0 ? (
+                    <>
+                        {mobileRecords.map((record) => (
+                            <div key={record.id} className="rounded-md border border-[#e5e7eb] bg-background p-3 shadow-none dark:border-white/10">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-semibold text-[#18181b] dark:text-white">
+                                            {invitedUserLabel(record)}
+                                        </div>
+                                        <div className="mt-1 truncate text-xs text-[#8e8e93]">
+                                            {record.order_no || record.discount_code || '-'}
+                                        </div>
+                                        <div className="mt-2 text-xs text-[#8e8e93]">
+                                            {formatDateTime(record.created_at)}
+                                        </div>
                                     </div>
-                                    <div className="mt-2 truncate text-xs text-[#8e8e93]">{record.order_no || record.discount_code || '-'}</div>
+                                    <div className="shrink-0 text-right">
+                                        <Badge className="rounded-md border border-[#e5e7eb] bg-background px-2 py-1 text-xs font-medium text-[#45515e] shadow-none dark:border-white/10 dark:text-white/70">
+                                            {statusLabel(record.status)}
+                                        </Badge>
+                                        <div className="mt-2 font-mono text-sm font-semibold text-[#18181b] dark:text-white">
+                                            {formatMoney(record.rebate_amount)}
+                                        </div>
+                                    </div>
                                 </div>
-                                <Badge className="rounded-full border border-[#e5e7eb] bg-background px-2.5 py-1 text-xs font-medium text-[#45515e] shadow-none dark:border-white/10 dark:text-white/70">
-                                    {statusLabel(record.status)}
-                                </Badge>
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                    <div className="text-xs text-[#8e8e93]">{t('portal.referrals.rechargeAmount')}</div>
-                                    <div className="mt-1 font-mono font-semibold text-[#18181b] dark:text-white">{record.pay_amount > 0 ? formatMoney(record.pay_amount || record.amount) : '-'}</div>
+                                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#f2f3f5] pt-3 text-xs dark:border-white/10">
+                                    <div className="min-w-0">
+                                        <div className="text-[#8e8e93]">{t('portal.referrals.rechargeAmount')}</div>
+                                        <div className="mt-1 truncate font-mono text-[#45515e] dark:text-white/70">
+                                            {record.pay_amount > 0 ? formatMoney(record.pay_amount || record.amount) : '-'}
+                                        </div>
+                                    </div>
+                                    <div className="min-w-0 text-right">
+                                        <div className="text-[#8e8e93]">{t('portal.referrals.rechargeCount')}</div>
+                                        <div className="mt-1 text-[#45515e] dark:text-white/70">{record.order_count}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-xs text-[#8e8e93]">{t('portal.referrals.rebateAmount')}</div>
-                                    <div className="mt-1 font-mono font-semibold text-[#18181b] dark:text-white">{formatMoney(record.rebate_amount)}</div>
+                            </div>
+                        ))}
+                        <div className="pt-2">
+                            {hasNextPage ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-10 w-full rounded-md border-[#e5e7eb] bg-background text-sm font-medium text-[#45515e] shadow-none hover:border-[#18181b] hover:bg-background dark:border-white/10 dark:text-white/70"
+                                    disabled={isFetchingNextPage}
+                                    onClick={() => void fetchNextPage()}
+                                >
+                                    {isFetchingNextPage ? t('portal.referrals.loadingMore') : t('portal.referrals.loadMore')}
+                                </Button>
+                            ) : (
+                                <div className="py-2 text-center text-xs text-[#8e8e93]">
+                                    {t('portal.referrals.noMoreRecords')}
                                 </div>
-                            </div>
-                            <div className="mt-3 text-xs text-[#8e8e93]">
-                                {t('portal.referrals.rechargeCount')}: {record.order_count}
-                            </div>
-                            <div className="mt-3 flex items-center gap-2 text-xs text-[#8e8e93]">
-                                <ReceiptText className="h-3.5 w-3.5" />
-                                {t('portal.referrals.invitedAt')}: {formatDateTime(record.created_at)}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs text-[#8e8e93]">
-                                <ReceiptText className="h-3.5 w-3.5" />
-                                {t('portal.referrals.lastRechargedAt')}: {formatDateTime(record.paid_at)}
-                            </div>
+                            )}
                         </div>
-                    ))
+                    </>
                 ) : (
-                    <div className="border border-dashed border-[#e5e7eb] p-6 text-center text-sm text-[#8e8e93] dark:border-white/10">
+                    <div className="rounded-md border border-dashed border-[#e5e7eb] bg-background p-6 text-center text-sm text-[#8e8e93] dark:border-white/10">
                         {t('table.noData')}
                     </div>
                 )}
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden overflow-hidden rounded-md border border-[#e5e7eb] bg-background shadow-none dark:border-white/10 md:block">
                 <DataTable
                     table={table}
                     columns={columns}
@@ -187,7 +222,7 @@ export function UserPortalReferralRecordHistory() {
                 />
             </div>
 
-            <div className="border-t border-[#f2f3f5] px-3 dark:border-white/10">
+            <div className="mt-3 hidden rounded-md border border-[#e5e7eb] bg-background px-3 shadow-none dark:border-white/10 md:mt-0 md:block md:rounded-t-none md:border-t-0">
                 <ServerPagination
                     page={page}
                     pageSize={pageSize}

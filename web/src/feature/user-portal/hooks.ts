@@ -197,6 +197,27 @@ export const useUserPortalReferralRecords = (page: number, perPage: number, enab
     })
 }
 
+export const useInfiniteUserPortalReferralRecords = (perPage = 20, enabled = true) => {
+    return useInfiniteQuery({
+        queryKey: ['userPortalReferralRecords', 'infinite', perPage],
+        queryFn: ({ pageParam }) => userPortalApi.getReferralRecords(Number(pageParam), perPage),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage, allPages) => {
+            const loadedCount = allPages.reduce(
+                (count, page) => count + (page.referral_records?.length || 0),
+                0,
+            )
+
+            if (loadedCount >= lastPage.total || (lastPage.referral_records?.length || 0) < perPage) {
+                return undefined
+            }
+
+            return allPages.length + 1
+        },
+        enabled,
+    })
+}
+
 export const useGenerateUserPortalDiscountCode = () => {
     const queryClient = useQueryClient()
 
