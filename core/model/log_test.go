@@ -37,6 +37,28 @@ func TestRequestDetailApplyBodySizeLimits(t *testing.T) {
 	}
 }
 
+func TestAppUserLogJSONOmitsOwnerFields(t *testing.T) {
+	log := &model.Log{
+		AppUser:     &model.LogAppUser{ID: 123, Email: "user@example.com"},
+		OwnerUserID: 123,
+		CreatedAt:   time.Unix(1, 0),
+		RequestAt:   time.Unix(1, 0),
+		GroupID:     "default",
+		Model:       "gpt-test",
+		TokenID:     456,
+		TokenName:   "user-key",
+	}
+
+	payload, err := sonic.Marshal(model.NewAppUserLog(log))
+	require.NoError(t, err)
+
+	body := string(payload)
+	require.NotContains(t, body, "owner_user_id")
+	require.NotContains(t, body, "app_user")
+	require.Contains(t, body, `"model":"gpt-test"`)
+	require.Contains(t, body, `"token_id":456`)
+}
+
 func TestGetLogStatsAggregatesFilteredLogs(t *testing.T) {
 	withTestLogStatsDB(t, func() {
 		now := time.Date(2026, 4, 29, 12, 0, 0, 0, time.Local)

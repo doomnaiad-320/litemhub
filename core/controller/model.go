@@ -42,6 +42,8 @@ type OpenAIModels struct {
 	Created    int                     `json:"created"`
 }
 
+const publicModelOwner = "aiproxy"
+
 type BuiltinModelConfig model.ModelConfig
 
 func (c *BuiltinModelConfig) MarshalJSON() ([]byte, error) {
@@ -101,17 +103,17 @@ func init() {
 					ID:         _model.Model,
 					Object:     "model",
 					Created:    1626777600,
-					OwnedBy:    string(_model.Owner),
+					OwnedBy:    publicModelOwner,
 					Permission: permission,
 					Root:       _model.Model,
 					Parent:     nil,
 				}
 				builtinModels = append(builtinModels, (BuiltinModelConfig)(_model))
-			} else if v.OwnedBy != string(_model.Owner) {
+			} else if v.OwnedBy != publicModelOwner {
 				log.Fatalf(
 					"model %s owner mismatch, expect %s, actual %s",
 					_model.Model,
-					string(_model.Owner),
+					publicModelOwner,
 					v.OwnedBy,
 				)
 			}

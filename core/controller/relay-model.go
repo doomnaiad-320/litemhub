@@ -25,12 +25,12 @@ func ListModels(c *gin.Context) {
 	availableOpenAIModels := make([]*OpenAIModels, 0)
 
 	token.Range(func(model string) bool {
-		if mc, ok := enabledModelConfigsMap[model]; ok {
+		if _, ok := enabledModelConfigsMap[model]; ok {
 			availableOpenAIModels = append(availableOpenAIModels, &OpenAIModels{
 				ID:         model,
 				Object:     "model",
 				Created:    1626777600,
-				OwnedBy:    string(mc.Owner),
+				OwnedBy:    publicModelOwner,
 				Root:       model,
 				Permission: permission,
 				Parent:     nil,
@@ -61,7 +61,7 @@ func RetrieveModel(c *gin.Context) {
 	findModelName := token.FindModel(modelName)
 	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap
 
-	mc, ok := enabledModelConfigsMap[findModelName]
+	_, ok := enabledModelConfigsMap[findModelName]
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": &relaymodel.OpenAIError{
@@ -79,7 +79,7 @@ func RetrieveModel(c *gin.Context) {
 		ID:         modelName,
 		Object:     "model",
 		Created:    1626777600,
-		OwnedBy:    string(mc.Owner),
+		OwnedBy:    publicModelOwner,
 		Root:       modelName,
 		Permission: permission,
 		Parent:     nil,

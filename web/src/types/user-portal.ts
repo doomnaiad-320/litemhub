@@ -2,6 +2,9 @@ import type { Token } from './token'
 import type { LogRecord, LogStats } from './log'
 import type { ModelPrice } from './model'
 
+export type UserPortalLogRecord = Omit<LogRecord, 'app_user' | 'owner_user_id'>
+export type UserPortalToken = Omit<Token, 'owner_user_id'>
+
 export interface UserPortalUser {
     id: number
     username?: string
@@ -151,7 +154,7 @@ export interface UserPortalReferralRecordsResponse {
 }
 
 export interface UserPortalModelLogsResponse {
-    logs: LogRecord[]
+    logs: UserPortalLogRecord[]
     groups?: string[]
     models?: string[]
     token_names?: string[]
@@ -183,7 +186,7 @@ export interface UserPortalGroupsResponse {
 }
 
 export interface UserPortalKeysResponse {
-    keys: Token[]
+    keys: UserPortalToken[]
     total: number
 }
 

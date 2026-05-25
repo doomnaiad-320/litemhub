@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
@@ -46,6 +47,93 @@ type UserGroupOptionResponse struct {
 	AvailableSets   []string                        `json:"available_sets"`
 	Models          []string                        `json:"models"`
 	ModelDetails    []*UserGroupModelDetailResponse `json:"model_details,omitempty"`
+}
+
+type UserTokenResponse struct {
+	CreatedAt              time.Time             `json:"created_at"`
+	AccessedAt             time.Time             `json:"accessed_at"`
+	Key                    string                `json:"key"`
+	Name                   model.EmptyNullString `json:"name"`
+	GroupID                string                `json:"group"`
+	Subnets                []string              `json:"subnets"`
+	Models                 []string              `json:"models"`
+	Status                 int                   `json:"status"`
+	ID                     int                   `json:"id"`
+	ExpiredAt              time.Time             `json:"expired_at,omitempty"`
+	UsedAmount             float64               `json:"used_amount"`
+	RequestCount           int                   `json:"request_count"`
+	Quota                  float64               `json:"quota"`
+	PeriodQuota            float64               `json:"period_quota"`
+	PeriodType             model.EmptyNullString `json:"period_type"`
+	PeriodLastUpdateTime   time.Time             `json:"period_last_update_time"`
+	PeriodLastUpdateAmount float64               `json:"period_last_update_amount"`
+}
+
+func (t *UserTokenResponse) MarshalJSON() ([]byte, error) {
+	type Alias UserTokenResponse
+
+	accessedAt := int64(0)
+	if !t.AccessedAt.IsZero() {
+		accessedAt = t.AccessedAt.UnixMilli()
+	}
+	expiredAt := int64(0)
+	if !t.ExpiredAt.IsZero() {
+		expiredAt = t.ExpiredAt.UnixMilli()
+	}
+
+	return sonic.Marshal(&struct {
+		*Alias
+		CreatedAt            int64 `json:"created_at"`
+		ExpiredAt            int64 `json:"expired_at"`
+		PeriodLastUpdateTime int64 `json:"period_last_update_time"`
+		AccessedAt           int64 `json:"accessed_at"`
+	}{
+		Alias:                (*Alias)(t),
+		CreatedAt:            t.CreatedAt.UnixMilli(),
+		ExpiredAt:            expiredAt,
+		PeriodLastUpdateTime: t.PeriodLastUpdateTime.UnixMilli(),
+		AccessedAt:           accessedAt,
+	})
+}
+
+func buildUserTokenResponse(token *model.Token) *UserTokenResponse {
+	if token == nil {
+		return nil
+	}
+
+	lastRequestAt, _ := model.GetGroupTokenLastRequestTimeMinute(token.GroupID, string(token.Name))
+
+	return &UserTokenResponse{
+		CreatedAt:              token.CreatedAt,
+		AccessedAt:             lastRequestAt,
+		Key:                    token.Key,
+		Name:                   token.Name,
+		GroupID:                token.GroupID,
+		Subnets:                token.Subnets,
+		Models:                 token.Models,
+		Status:                 token.Status,
+		ID:                     token.ID,
+		ExpiredAt:              token.ExpiredAt,
+		UsedAmount:             token.UsedAmount,
+		RequestCount:           token.RequestCount,
+		Quota:                  token.Quota,
+		PeriodQuota:            token.PeriodQuota,
+		PeriodType:             token.PeriodType,
+		PeriodLastUpdateTime:   token.PeriodLastUpdateTime,
+		PeriodLastUpdateAmount: token.PeriodLastUpdateAmount,
+	}
+}
+
+func buildUserTokenResponses(tokens []*model.Token) []*UserTokenResponse {
+	responses := make([]*UserTokenResponse, 0, len(tokens))
+	for _, token := range tokens {
+		if token == nil {
+			continue
+		}
+		responses = append(responses, buildUserTokenResponse(token))
+	}
+
+	return responses
 }
 
 func buildUserGroupOptionResponses(groups []*model.Group) ([]*UserGroupOptionResponse, error) {
@@ -279,7 +367,7 @@ func GetCurrentUserKeys(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, gin.H{
-		"keys":  buildTokenResponses(tokens),
+		"keys":  buildUserTokenResponses(tokens),
 		"total": total,
 	})
 }
@@ -364,7 +452,7 @@ func CreateCurrentUserKey(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, buildTokenResponse(token))
+	middleware.SuccessResponse(c, buildUserTokenResponse(token))
 }
 
 func DeleteCurrentUserKey(c *gin.Context) {
@@ -470,5 +558,5 @@ func UpdateCurrentUserKey(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, buildTokenResponse(token))
+	middleware.SuccessResponse(c, buildUserTokenResponse(token))
 }

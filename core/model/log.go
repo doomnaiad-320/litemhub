@@ -639,8 +639,111 @@ type GetGroupLogsResult struct {
 }
 
 type GetAppUserLogsResult struct {
-	GetLogsResult
-	TokenNames []string `json:"token_names,omitempty"`
+	Logs       []*AppUserLog `json:"logs"`
+	Total      int64         `json:"total"`
+	Models     []string      `json:"models,omitempty"`
+	Groups     []string      `json:"groups,omitempty"`
+	TokenNames []string      `json:"token_names,omitempty"`
+}
+
+type AppUserLog struct {
+	RequestDetail    *RequestDetail    `json:"request_detail,omitempty"`
+	RequestAt        time.Time         `json:"request_at"`
+	RetryAt          time.Time         `json:"retry_at,omitempty"`
+	TTFBMilliseconds ZeroNullInt64     `json:"ttfb_milliseconds,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	TokenName        string            `json:"token_name,omitempty"`
+	Endpoint         EmptyNullString   `json:"endpoint,omitempty"`
+	Content          EmptyNullString   `json:"content,omitempty"`
+	GroupID          string            `json:"group,omitempty"`
+	Model            string            `json:"model"`
+	RequestID        EmptyNullString   `json:"request_id"`
+	UpstreamID       EmptyNullString   `json:"upstream_id,omitempty"`
+	AsyncUsageStatus AsyncUsageStatus  `json:"async_usage_status,omitempty"`
+	ID               int               `json:"id"`
+	TokenID          int               `json:"token_id,omitempty"`
+	ChannelID        int               `json:"channel,omitempty"`
+	Code             int               `json:"code,omitempty"`
+	Mode             int               `json:"mode,omitempty"`
+	IP               EmptyNullString   `json:"ip,omitempty"`
+	RetryTimes       ZeroNullInt64     `json:"retry_times,omitempty"`
+	Price            Price             `json:"price,omitempty"`
+	Usage            Usage             `json:"usage,omitempty"`
+	Amount           Amount            `json:"amount,omitempty"`
+	ServiceTier      string            `json:"service_tier,omitempty"`
+	PromptCacheKey   EmptyNullString   `json:"prompt_cache_key,omitempty"`
+	User             EmptyNullString   `json:"user,omitempty"`
+	Metadata         map[string]string `json:"metadata,omitempty"`
+}
+
+func NewAppUserLog(log *Log) *AppUserLog {
+	if log == nil {
+		return nil
+	}
+
+	return &AppUserLog{
+		RequestDetail:    log.RequestDetail,
+		RequestAt:        log.RequestAt,
+		RetryAt:          log.RetryAt,
+		TTFBMilliseconds: log.TTFBMilliseconds,
+		CreatedAt:        log.CreatedAt,
+		TokenName:        log.TokenName,
+		Endpoint:         log.Endpoint,
+		Content:          log.Content,
+		GroupID:          log.GroupID,
+		Model:            log.Model,
+		RequestID:        log.RequestID,
+		UpstreamID:       log.UpstreamID,
+		AsyncUsageStatus: log.AsyncUsageStatus,
+		ID:               log.ID,
+		TokenID:          log.TokenID,
+		ChannelID:        log.ChannelID,
+		Code:             log.Code,
+		Mode:             log.Mode,
+		IP:               log.IP,
+		RetryTimes:       log.RetryTimes,
+		Price:            log.Price,
+		Usage:            log.Usage,
+		Amount:           log.Amount,
+		ServiceTier:      log.ServiceTier,
+		PromptCacheKey:   log.PromptCacheKey,
+		User:             log.User,
+		Metadata:         log.Metadata,
+	}
+}
+
+func NewAppUserLogs(logs []*Log) []*AppUserLog {
+	result := make([]*AppUserLog, 0, len(logs))
+	for _, log := range logs {
+		if log == nil {
+			continue
+		}
+		result = append(result, NewAppUserLog(log))
+	}
+
+	return result
+}
+
+func (l *AppUserLog) MarshalJSON() ([]byte, error) {
+	type Alias AppUserLog
+
+	a := &struct {
+		*Alias
+		CreatedAt  int64   `json:"created_at"`
+		RequestAt  int64   `json:"request_at"`
+		RetryAt    int64   `json:"retry_at,omitempty"`
+		UsedAmount float64 `json:"used_amount,omitempty"`
+	}{
+		Alias:      (*Alias)(l),
+		CreatedAt:  l.CreatedAt.UnixMilli(),
+		RequestAt:  l.RequestAt.UnixMilli(),
+		UsedAmount: l.Amount.UsedAmount,
+	}
+	if !l.RetryAt.IsZero() {
+		a.RetryAt = l.RetryAt.UnixMilli()
+	}
+
+	return sonic.Marshal(a)
 }
 
 func buildGetLogsQuery(
@@ -1173,17 +1276,11 @@ func GetAppUserLogs(
 		return nil, err
 	}
 
-	if err := attachAppUsersToLogs(logs); err != nil {
-		return nil, err
-	}
-
 	return &GetAppUserLogsResult{
-		GetLogsResult: GetLogsResult{
-			Logs:   logs,
-			Total:  total,
-			Groups: groups,
-			Models: models,
-		},
+		Logs:       NewAppUserLogs(logs),
+		Total:      total,
+		Groups:     groups,
+		Models:     models,
 		TokenNames: tokenNames,
 	}, nil
 }
