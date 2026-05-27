@@ -3,6 +3,9 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -193,4 +196,94 @@ func TestBuildFallbackChannelTestModelConfigInfersTypeFromMappedModelName(t *tes
 
 	require.Equal(t, "public-image-model", config.Model)
 	require.Equal(t, mode.ImagesGenerations, config.Type)
+}
+
+func TestOpenAICompatibleChatCompletionsURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		channel *model.Channel
+		want    string
+	}{
+		{
+			name: "appends v1 before chat completions",
+			channel: &model.Channel{
+				Type:    model.ChannelTypeAnthropic,
+				BaseURL: "https://proxy.example.com/api",
+			},
+			want: "https://proxy.example.com/api/v1/chat/completions",
+		},
+		{
+			name: "keeps existing v1 base",
+			channel: &model.Channel{
+				Type:    model.ChannelTypeOpenAI,
+				BaseURL: "https://proxy.example.com/v1",
+			},
+			want: "https://proxy.example.com/v1/chat/completions",
+		},
+		{
+			name: "uses gemini openai compatible official endpoint",
+			channel: &model.Channel{
+				Type:    model.ChannelTypeGoogleGemini,
+				BaseURL: "https://generativelanguage.googleapis.com",
+			},
+			want: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := openAICompatibleChatCompletionsURL(tt.channel)
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestSingleModelUsesOpenAICompatibleChatForGeminiModel(t *testing.T) {
+	requestedPath := ""
+	requestedAuth := ""
+	requestedModel := ""
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		requestedAuth = r.Header.Get("Authorization")
+
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		requestedModel, _ = body["model"].(string)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl-test","choices":[]}`))
+	}))
+	defer server.Close()
+
+	mc := &model.ModelCaches{
+		ModelConfig: testModelConfigCache{
+			"public-gemini": {
+				Model: "public-gemini",
+				Type:  mode.Gemini,
+			},
+		},
+	}
+	channel := &model.Channel{
+		Type:    model.ChannelTypeGoogleGemini,
+		Key:     "test-key",
+		BaseURL: server.URL,
+		ModelMapping: map[string]string{
+			"public-gemini": "upstream-gemini",
+		},
+	}
+
+	result, err := testSingleModel(mc, channel, "public-gemini", false)
+
+	require.NoError(t, err)
+	require.True(t, result.Success)
+	require.Equal(t, http.StatusOK, result.Code)
+	require.Equal(t, mode.ChatCompletions, result.Mode)
+	require.Equal(t, "public-gemini", result.Model)
+	require.Equal(t, "upstream-gemini", result.ActualModel)
+	require.Equal(t, "/v1/chat/completions", requestedPath)
+	require.Equal(t, "Bearer test-key", requestedAuth)
+	require.Equal(t, "upstream-gemini", requestedModel)
 }

@@ -102,6 +102,210 @@ func buildFallbackChannelTestModelConfig(channel *model.Channel, modelName strin
 	}
 }
 
+func shouldUseOpenAICompatibleChatTest(channel *model.Channel, modelType mode.Mode) bool {
+	switch modelType {
+	case mode.Gemini, mode.Anthropic:
+		return true
+	case mode.ChatCompletions, mode.Responses:
+		if channel == nil {
+			return false
+		}
+
+		switch channel.Type {
+		case model.ChannelTypeOpenAI,
+			model.ChannelTypeGoogleGemini,
+			model.ChannelTypeGoogleGeminiOpenAI,
+			model.ChannelTypeAnthropic:
+			return true
+		default:
+			return false
+		}
+	default:
+		return false
+	}
+}
+
+func channelDefaultBaseURL(channelType model.ChannelType) (string, error) {
+	a, ok := adaptors.GetAdaptor(channelType)
+	if !ok {
+		return "", errors.New("adaptor not found")
+	}
+
+	return strings.TrimRight(strings.TrimSpace(a.DefaultBaseURL()), "/"), nil
+}
+
+func geminiOpenAICompatibleDefaultBaseURL() string {
+	if baseURL, err := channelDefaultBaseURL(model.ChannelTypeGoogleGeminiOpenAI); err == nil {
+		return baseURL
+	}
+
+	return "https://generativelanguage.googleapis.com/v1beta/openai"
+}
+
+func hasOpenAICompatibleVersionPath(baseURL string) bool {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return strings.HasSuffix(strings.TrimRight(strings.ToLower(baseURL), "/"), "/v1") ||
+			strings.HasSuffix(strings.TrimRight(strings.ToLower(baseURL), "/"), "/v1beta/openai")
+	}
+
+	path := strings.TrimRight(strings.ToLower(parsed.EscapedPath()), "/")
+	return strings.HasSuffix(path, "/v1") ||
+		strings.HasSuffix(path, "/v1beta/openai") ||
+		strings.HasSuffix(path, "/openai")
+}
+
+func ensureOpenAICompatibleV1BaseURL(baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" || hasOpenAICompatibleVersionPath(baseURL) {
+		return baseURL
+	}
+
+	return baseURL + "/v1"
+}
+
+func openAICompatibleChatBaseURL(channel *model.Channel) (string, error) {
+	if channel == nil {
+		return "", errors.New("channel is required")
+	}
+
+	baseURL := strings.TrimRight(strings.TrimSpace(channel.BaseURL), "/")
+	if baseURL == "" {
+		var err error
+		baseURL, err = channelDefaultBaseURL(channel.Type)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if channel.Type == model.ChannelTypeGoogleGemini {
+		parsed, err := url.Parse(baseURL)
+		if baseURL == "" ||
+			(err == nil &&
+				strings.EqualFold(parsed.Host, "generativelanguage.googleapis.com") &&
+				!strings.Contains(strings.ToLower(parsed.EscapedPath()), "/openai")) {
+			return geminiOpenAICompatibleDefaultBaseURL(), nil
+		}
+	}
+
+	baseURL = ensureOpenAICompatibleV1BaseURL(baseURL)
+	if baseURL == "" {
+		return "", errors.New("base_url is required")
+	}
+
+	return baseURL, nil
+}
+
+func openAICompatibleChatCompletionsURL(channel *model.Channel) (string, error) {
+	baseURL, err := openAICompatibleChatBaseURL(channel)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.HasSuffix(strings.TrimRight(strings.ToLower(baseURL), "/"), "/chat/completions") {
+		return strings.TrimRight(baseURL, "/"), nil
+	}
+
+	return url.JoinPath(baseURL, "/chat/completions")
+}
+
+func saveChannelTestResult(
+	channel *model.Channel,
+	ct *model.ChannelTest,
+	saveToDB bool,
+) (*model.ChannelTest, error) {
+	if saveToDB && channel.ID != 0 {
+		return channel.UpdateModelTest(
+			ct.TestAt,
+			ct.Model,
+			ct.ActualModel,
+			ct.Mode,
+			ct.Took,
+			ct.Success,
+			ct.Response,
+			ct.Code,
+		)
+	}
+
+	return ct, nil
+}
+
+func testSingleModelViaOpenAICompatibleChat(
+	channel *model.Channel,
+	originModel string,
+	modelConfig model.ModelConfig,
+	saveToDB bool,
+) (*model.ChannelTest, error) {
+	testMeta := meta.NewMeta(
+		channel,
+		mode.ChatCompletions,
+		originModel,
+		modelConfig,
+		meta.WithRequestID(channelTestRequestID),
+	)
+	testMeta.RequestTimeout = modelConfig.RequestTimeout()
+
+	body, err := utils.BuildChatCompletionRequest(testMeta.ActualModel)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint, err := openAICompatibleChatCompletionsURL(channel)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		endpoint,
+		body,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+channel.Key)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := utils.DoRequestWithMeta(req, testMeta)
+	if err != nil {
+		return saveChannelTestResult(channel, &model.ChannelTest{
+			TestAt:      testMeta.RequestAt,
+			Model:       testMeta.OriginModel,
+			ActualModel: testMeta.ActualModel,
+			Mode:        testMeta.Mode,
+			Took:        time.Since(testMeta.RequestAt).Seconds(),
+			Success:     false,
+			Response:    err.Error(),
+			Code:        0,
+			ChannelName: channel.Name,
+			ChannelType: channel.Type,
+			ChannelID:   channel.ID,
+		}, saveToDB)
+	}
+	defer resp.Body.Close()
+
+	respBytes, _ := io.ReadAll(resp.Body)
+	respStr := conv.BytesToString(respBytes)
+	success := resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices
+
+	return saveChannelTestResult(channel, &model.ChannelTest{
+		TestAt:      testMeta.RequestAt,
+		Model:       testMeta.OriginModel,
+		ActualModel: testMeta.ActualModel,
+		Mode:        testMeta.Mode,
+		Took:        time.Since(testMeta.RequestAt).Seconds(),
+		Success:     success,
+		Response:    respStr,
+		Code:        resp.StatusCode,
+		ChannelName: channel.Name,
+		ChannelType: channel.Type,
+		ChannelID:   channel.ID,
+	}, saveToDB)
+}
+
 // testSingleModel tests a single model in the channel
 // If saveToDB is true, the test result will be saved to database
 func testSingleModel(
@@ -124,17 +328,6 @@ func testSingleModel(
 		}
 	}
 
-	if modelConfig.Type != mode.Unknown {
-		a, ok := adaptors.GetAdaptor(channel.Type)
-		if !ok {
-			return nil, errors.New("adaptor not found")
-		}
-
-		if !a.SupportMode(meta.NewMeta(channel, modelConfig.Type, modelName, modelConfig)) {
-			return nil, fmt.Errorf("%s not supported by adaptor", modelConfig.Type)
-		}
-	}
-
 	if modelConfig.ExcludeFromTests {
 		return &model.ChannelTest{
 			TestAt:      time.Now(),
@@ -147,6 +340,21 @@ func testSingleModel(
 			ChannelType: channel.Type,
 			ChannelID:   channel.ID,
 		}, nil
+	}
+
+	if shouldUseOpenAICompatibleChatTest(channel, modelConfig.Type) {
+		return testSingleModelViaOpenAICompatibleChat(channel, originModel, modelConfig, saveToDB)
+	}
+
+	if modelConfig.Type != mode.Unknown {
+		a, ok := adaptors.GetAdaptor(channel.Type)
+		if !ok {
+			return nil, errors.New("adaptor not found")
+		}
+
+		if !a.SupportMode(meta.NewMeta(channel, modelConfig.Type, modelName, modelConfig)) {
+			return nil, fmt.Errorf("%s not supported by adaptor", modelConfig.Type)
+		}
 	}
 
 	body, m, err := utils.BuildRequest(modelConfig)
@@ -208,21 +416,7 @@ func testSingleModel(
 		ChannelID:   channel.ID,
 	}
 
-	// Only save to database for saved channels (not preview tests)
-	if saveToDB && channel.ID != 0 {
-		return channel.UpdateModelTest(
-			testMeta.RequestAt,
-			testMeta.OriginModel,
-			testMeta.ActualModel,
-			testMeta.Mode,
-			time.Since(testMeta.RequestAt).Seconds(),
-			success,
-			respStr,
-			code,
-		)
-	}
-
-	return ct, nil
+	return saveChannelTestResult(channel, ct, saveToDB)
 }
 
 // TestChannel godoc
