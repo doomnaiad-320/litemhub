@@ -228,6 +228,19 @@ export function ChannelForm({
         setDiscoveredSearch('')
     }
 
+    const handleChannelTypeChange = (nextType: number, currentType: number) => {
+        if (!nextType || nextType === currentType) {
+            return
+        }
+
+        form.setValue('type', nextType, {
+            shouldDirty: true,
+            shouldValidate: true,
+        })
+        clearDiscoveredModels()
+        setConfigsError(null)
+    }
+
     // 防止意外的表单提交
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && e.target !== e.currentTarget) {
@@ -895,12 +908,7 @@ export function ChannelForm({
                                                 if (channelName) {
                                                     const channelType = getKeyByName(channelName)
                                                     if (channelType) {
-                                                        field.onChange(Number(channelType))
-                                                        form.setValue('models', [])
-                                                        form.setValue('model_mapping', {})
-                                                        clearDiscoveredModels()
-                                                        setUseDefaultModels(true)
-                                                        form.setValue('useDefaultModels', true)
+                                                        handleChannelTypeChange(Number(channelType), field.value)
                                                     }
                                                 }
                                             }}
