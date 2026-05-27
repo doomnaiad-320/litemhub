@@ -78,6 +78,68 @@ func TestUpdateDuluPayDiscountCodeDiscountOption(t *testing.T) {
 	require.Equal(t, "0.1", option.Value)
 }
 
+func TestUpdateDuluPayDiscountCodeDiscountOptionIsNotOverriddenByEnv(t *testing.T) {
+	t.Setenv("DULUPAY_DISCOUNT_CODE_DISCOUNT", "0")
+
+	oldDB := model.DB
+	oldDiscount := config.GetDuluPayDiscountCodeDiscount()
+
+	db, err := model.OpenSQLite(filepath.Join(t.TempDir(), "option_discount_code_env_test.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Option{}))
+
+	model.DB = db
+	config.SetDuluPayDiscountCodeDiscount(0)
+	t.Cleanup(func() {
+		model.DB = oldDB
+		config.SetDuluPayDiscountCodeDiscount(oldDiscount)
+
+		sqlDB, err := db.DB()
+		require.NoError(t, err)
+		require.NoError(t, sqlDB.Close())
+	})
+
+	require.NoError(t, model.InitOption2DB())
+	require.NoError(t, model.UpdateOption("DuluPayDiscountCodeDiscount", "0.2"))
+	require.Equal(t, 0.2, config.GetDuluPayDiscountCodeDiscount())
+
+	option, err := model.GetOption("DuluPayDiscountCodeDiscount")
+	require.NoError(t, err)
+	require.Equal(t, "0.2", option.Value)
+}
+
+func TestInitOptionSanitizesInvalidPersistedDuluPayDiscountCodeDiscount(t *testing.T) {
+	oldDB := model.DB
+	oldDiscount := config.GetDuluPayDiscountCodeDiscount()
+
+	db, err := model.OpenSQLite(filepath.Join(t.TempDir(), "option_discount_code_init_test.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Option{}))
+
+	model.DB = db
+	config.SetDuluPayDiscountCodeDiscount(0)
+	t.Cleanup(func() {
+		model.DB = oldDB
+		config.SetDuluPayDiscountCodeDiscount(oldDiscount)
+
+		sqlDB, err := db.DB()
+		require.NoError(t, err)
+		require.NoError(t, sqlDB.Close())
+	})
+
+	require.NoError(t, db.Save(&model.Option{
+		Key:   "DuluPayDiscountCodeDiscount",
+		Value: "1",
+	}).Error)
+
+	require.NoError(t, model.InitOption2DB())
+	require.Equal(t, 0.0, config.GetDuluPayDiscountCodeDiscount())
+
+	option, err := model.GetOption("DuluPayDiscountCodeDiscount")
+	require.NoError(t, err)
+	require.Equal(t, "0", option.Value)
+}
+
 func TestUpdateDuluPayDiscountCodeDiscountOptionRejectsInvalidValue(t *testing.T) {
 	oldDiscount := config.GetDuluPayDiscountCodeDiscount()
 	config.SetDuluPayDiscountCodeDiscount(0)

@@ -303,7 +303,6 @@ func GetDuluPayRechargeDiscount() float64 {
 }
 
 func SetDuluPayRechargeDiscount(discount float64) {
-	discount = env.Float64("DULUPAY_RECHARGE_DISCOUNT", discount)
 	if discount <= 0 || discount > 1 {
 		discount = 1
 	}
@@ -316,7 +315,6 @@ func GetDuluPayDiscountCodeDiscount() float64 {
 }
 
 func SetDuluPayDiscountCodeDiscount(discount float64) {
-	discount = env.Float64("DULUPAY_DISCOUNT_CODE_DISCOUNT", discount)
 	if discount < 0 || discount >= 1 {
 		discount = 0
 	}
@@ -329,7 +327,6 @@ func GetDuluPayRechargeRebateRatio() float64 {
 }
 
 func SetDuluPayRechargeRebateRatio(ratio float64) {
-	ratio = env.Float64("DULUPAY_RECHARGE_REBATE_RATIO", ratio)
 	if ratio < 0 || ratio > 1 {
 		ratio = 0
 	}

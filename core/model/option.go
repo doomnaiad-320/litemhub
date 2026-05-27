@@ -163,6 +163,28 @@ func storeOptionMap() error {
 	return nil
 }
 
+func normalizeInitOptionValue(key, value string) (string, bool) {
+	switch key {
+	case "DuluPayRechargeDiscount":
+		discount, err := strconv.ParseFloat(value, 64)
+		if err != nil || discount <= 0 || discount > 1 {
+			return "1", true
+		}
+	case "DuluPayDiscountCodeDiscount":
+		discount, err := strconv.ParseFloat(value, 64)
+		if err != nil || discount < 0 || discount >= 1 {
+			return "0", true
+		}
+	case "DuluPayRechargeRebateRatio":
+		ratio, err := strconv.ParseFloat(value, 64)
+		if err != nil || ratio < 0 || ratio > 1 {
+			return "0", true
+		}
+	}
+
+	return value, false
+}
+
 func loadOptionsFromDatabase(isInit bool) error {
 	// First, load options from YAML config if available
 	yamlOptions := make(map[string]string)
@@ -180,9 +202,28 @@ func loadOptionsFromDatabase(isInit bool) error {
 	}
 
 	for _, option := range options {
+		fromYAML := false
 		// Skip if already loaded from YAML
 		if v, ok := yamlOptions[option.Key]; ok {
 			option.Value = v
+			fromYAML = true
+		}
+
+		if isInit && !fromYAML {
+			normalizedValue, changed := normalizeInitOptionValue(option.Key, option.Value)
+			if changed {
+				log.Warnf(
+					"invalid persisted option: %s, value: %s, reset to: %s",
+					option.Key,
+					option.Value,
+					normalizedValue,
+				)
+				option.Value = normalizedValue
+
+				if err := saveOption(option.Key, option.Value); err != nil {
+					return err
+				}
+			}
 		}
 
 		err := updateOption(option.Key, option.Value, isInit)
