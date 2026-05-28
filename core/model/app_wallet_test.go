@@ -648,6 +648,18 @@ func TestResolveAppRechargeRebateExplicitDiscountCodeOverridesDirectReferral(t *
 	})
 }
 
+func TestResolveAppRechargeRebateRejectsOwnDiscountCode(t *testing.T) {
+	withTestAppWalletDB(t, func() {
+		payer := createTestAppUserWithEmail(t, "self-discount-payer@example.com")
+		code, err := model.GetOrCreateAppUserDiscountCode(payer.ID)
+		require.NoError(t, err)
+
+		resolution, err := model.ResolveAppRechargeRebate(payer.ID, code.Code, 0.1)
+		require.ErrorIs(t, err, model.ErrAppRechargeSelfDiscountCode)
+		require.Nil(t, resolution)
+	})
+}
+
 func TestGetAppReferralRecordsIncludesExplicitDiscountCodeRebates(t *testing.T) {
 	withTestAppWalletDB(t, func() {
 		referrer := createTestAppUserWithEmail(t, "explicit-record-referrer@example.com")
