@@ -66,6 +66,7 @@ const formatAccessedAt = (timestamp: number, neverLabel: string): string => {
 }
 
 const normalizeModelName = (modelName: string) => modelName.trim()
+const channelModelTestConcurrency = 5
 
 export function ChannelTable() {
     const { t } = useTranslation()
@@ -87,8 +88,9 @@ export function ChannelTable() {
     const [channelTestResults, setChannelTestResults] = useState<ChannelTestResult[]>([])
     const [testModelDialogOpen, setTestModelDialogOpen] = useState(false)
     const [testModelOptions, setTestModelOptions] = useState<string[]>([])
-    const [selectedTestModel, setSelectedTestModel] = useState('')
+    const [selectedTestModels, setSelectedTestModels] = useState<string[]>([])
     const [pendingTestChannel, setPendingTestChannel] = useState<Channel | null>(null)
+    const channelTestRunIdRef = useRef(0)
     const [testModelSourceLabel, setTestModelSourceLabel] = useState('')
     const [defaultModelsDialogOpen, setDefaultModelsDialogOpen] = useState(false)
     const [searchInput, setSearchInput] = useState('')
@@ -414,17 +416,17 @@ export function ChannelTable() {
         setIsTestAll(false)
         setPendingTestChannel(channel)
         setTestModelOptions(modelOptions)
-        setSelectedTestModel(
-            modelOptions.includes(selectedTestModel)
-                ? selectedTestModel
-                : modelOptions[0]
-        )
+        setSelectedTestModels((current) => {
+            const available = new Set(modelOptions)
+            const stillAvailable = current.filter((model) => available.has(model))
+            return stillAvailable.length > 0 ? stillAvailable : modelOptions
+        })
         setTestModelSourceLabel(usingDefaultModels ? '默认模型' : '渠道模型')
         setTestModelDialogOpen(true)
-    }, [getChannelSingleTestModels, selectedTestModel])
+    }, [getChannelSingleTestModels])
 
-    const handleConfirmSelectedTestModel = useCallback(async () => {
-        if (!pendingTestChannel || !selectedTestModel) {
+    const handleConfirmSelectedTestModels = useCallback(async () => {
+        if (!pendingTestChannel || selectedTestModels.length === 0) {
             toast.error('请先选择要测试的模型')
             return
         }
@@ -433,18 +435,83 @@ export function ChannelTable() {
         setTestModelDialogOpen(false)
         setTestDialogOpen(true)
         setIsTestingChannel(true)
+        const runId = channelTestRunIdRef.current + 1
+        channelTestRunIdRef.current = runId
 
         try {
-            const result = await channelApi.testChannelModel(pendingTestChannel.id, selectedTestModel)
+            const orderedResults: Array<ChannelTestResult | undefined> = new Array(selectedTestModels.length)
+            const completedResults: ChannelTestResult[] = []
+            let nextIndex = 0
+            const isCurrentRun = () => channelTestRunIdRef.current === runId
+            const publishResult = (index: number, result: ChannelTestResult) => {
+                orderedResults[index] = result
+                completedResults.push(result)
+                if (isCurrentRun()) {
+                    setChannelTestResults(orderedResults.filter((item): item is ChannelTestResult => Boolean(item)))
+                }
+            }
 
-            setChannelTestResults([result])
-            if (result.success && result.data?.success) {
-                toast.success('渠道测试成功')
-            } else {
-                const message = result.message || result.data?.response?.slice(0, 200) || '测试失败'
-                toast.error(`测试失败: ${message}`)
+            const worker = async () => {
+                for (;;) {
+                    if (!isCurrentRun()) {
+                        return
+                    }
+
+                    const currentIndex = nextIndex
+                    nextIndex += 1
+
+                    const model = selectedTestModels[currentIndex]
+                    if (!model) {
+                        return
+                    }
+
+                    try {
+                        const result = await channelApi.testChannelModel(pendingTestChannel.id, model)
+                        publishResult(currentIndex, result)
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : '测试请求失败'
+                        const result: ChannelTestResult = {
+                            success: false,
+                            message,
+                            data: {
+                                test_at: new Date().toISOString(),
+                                model,
+                                actual_model: model,
+                                response: message,
+                                channel_name: pendingTestChannel.name,
+                                channel_type: pendingTestChannel.type,
+                                channel_id: pendingTestChannel.id,
+                                took: 0,
+                                success: false,
+                                mode: '',
+                                code: 0,
+                            },
+                        }
+                        publishResult(currentIndex, result)
+                    }
+                }
+            }
+
+            const workers = Array.from(
+                { length: Math.min(channelModelTestConcurrency, selectedTestModels.length) },
+                () => worker()
+            )
+            await Promise.all(workers)
+
+            if (!isCurrentRun()) {
+                return
+            }
+
+            const failedTests = completedResults.filter(result => !result.success || !result.data?.success)
+            if (failedTests.length === 0 && completedResults.length > 0) {
+                toast.success(`渠道测试全部通过 (${completedResults.length})`)
+            } else if (failedTests.length > 0) {
+                toast.warning(`部分模型测试失败 (${failedTests.length}/${completedResults.length})`)
             }
         } catch (error) {
+            if (channelTestRunIdRef.current !== runId) {
+                return
+            }
             const message = error instanceof Error ? error.message : '测试请求失败'
             toast.error(message)
             setChannelTestResults([{
@@ -452,9 +519,11 @@ export function ChannelTable() {
                 message,
             }])
         } finally {
-            setIsTestingChannel(false)
+            if (channelTestRunIdRef.current === runId) {
+                setIsTestingChannel(false)
+            }
         }
-    }, [pendingTestChannel, selectedTestModel])
+    }, [pendingTestChannel, selectedTestModels])
 
     // 可点击单元格样式
     const clickableCell = 'cursor-pointer hover:text-primary hover:underline underline-offset-4 transition-colors'
@@ -1059,9 +1128,9 @@ export function ChannelTable() {
                 open={testModelDialogOpen}
                 onOpenChange={setTestModelDialogOpen}
                 models={testModelOptions}
-                selectedModel={selectedTestModel}
-                onSelectedModelChange={setSelectedTestModel}
-                onConfirm={handleConfirmSelectedTestModel}
+                selectedModels={selectedTestModels}
+                onSelectedModelsChange={setSelectedTestModels}
+                onConfirm={handleConfirmSelectedTestModels}
                 isTesting={isTestingChannel}
                 sourceLabel={testModelSourceLabel}
             />
@@ -1106,6 +1175,8 @@ export function ChannelTable() {
                         cancelTestAll()
                         clearTestAllResults()
                     } else {
+                        channelTestRunIdRef.current += 1
+                        setIsTestingChannel(false)
                         setChannelTestResults([])
                     }
                     setTestDialogOpen(false)

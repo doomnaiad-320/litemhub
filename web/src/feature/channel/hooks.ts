@@ -311,7 +311,7 @@ export const useTestChannelPreviewAll = () => {
         const cancel = channelApi.testChannelPreviewAllStream(
             data,
             (result) => {
-                setResults(prev => [result, ...prev])
+                setResults(prev => [...prev, result])
             },
             () => {
                 setIsTesting(false)

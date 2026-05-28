@@ -10,15 +10,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Check, FlaskConical, Loader2, Search } from 'lucide-react'
+import { FlaskConical, Loader2, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ChannelModelTestSelectorDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     models: string[]
-    selectedModel: string
-    onSelectedModelChange: (model: string) => void
+    selectedModels: string[]
+    onSelectedModelsChange: (models: string[]) => void
     onConfirm: () => void
     isTesting?: boolean
     title?: string
@@ -29,8 +29,8 @@ export function ChannelModelTestSelectorDialog({
     open,
     onOpenChange,
     models,
-    selectedModel,
-    onSelectedModelChange,
+    selectedModels,
+    onSelectedModelsChange,
     onConfirm,
     isTesting = false,
     title = '选择测试模型',
@@ -59,6 +59,11 @@ export function ChannelModelTestSelectorDialog({
         return normalizedModels.filter((model) => model.toLowerCase().includes(keyword))
     }, [normalizedModels, search])
 
+    const selectedModelSet = useMemo(() => new Set(selectedModels), [selectedModels])
+    const selectedCount = normalizedModels.filter((model) => selectedModelSet.has(model)).length
+    const filteredSelectedCount = filteredModels.filter((model) => selectedModelSet.has(model)).length
+    const allFilteredSelected = filteredModels.length > 0 && filteredSelectedCount === filteredModels.length
+
     useEffect(() => {
         if (open) {
             setSearch('')
@@ -70,6 +75,30 @@ export function ChannelModelTestSelectorDialog({
             return
         }
         onOpenChange(nextOpen)
+    }
+
+    const commitSelectedModels = (nextSelectedSet: Set<string>) => {
+        onSelectedModelsChange(normalizedModels.filter((model) => nextSelectedSet.has(model)))
+    }
+
+    const toggleModel = (model: string, checked: boolean) => {
+        const nextSelectedSet = new Set(selectedModels)
+        if (checked) {
+            nextSelectedSet.add(model)
+        } else {
+            nextSelectedSet.delete(model)
+        }
+        commitSelectedModels(nextSelectedSet)
+    }
+
+    const toggleFilteredModels = () => {
+        const nextSelectedSet = new Set(selectedModels)
+        if (allFilteredSelected) {
+            filteredModels.forEach((model) => nextSelectedSet.delete(model))
+        } else {
+            filteredModels.forEach((model) => nextSelectedSet.add(model))
+        }
+        commitSelectedModels(nextSelectedSet)
     }
 
     return (
@@ -88,7 +117,7 @@ export function ChannelModelTestSelectorDialog({
                         ) : null}
                     </div>
                     <DialogDescription className="sr-only">
-                        选择一个模型进行渠道连通性测试
+                        选择一个或多个模型进行渠道连通性测试
                     </DialogDescription>
                 </DialogHeader>
 
@@ -103,31 +132,49 @@ export function ChannelModelTestSelectorDialog({
                         />
                     </div>
 
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm text-muted-foreground">
+                            已选择 {selectedCount} 个模型
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleFilteredModels}
+                            disabled={filteredModels.length === 0 || isTesting}
+                        >
+                            {allFilteredSelected ? '取消当前结果' : '选择当前结果'}
+                        </Button>
+                    </div>
+
                     <div className="max-h-[360px] overflow-y-auto rounded-md border p-1">
                         {filteredModels.length > 0 ? (
                             <div className="space-y-1">
                                 {filteredModels.map((model) => {
-                                    const isSelected = model === selectedModel
+                                    const isSelected = selectedModelSet.has(model)
                                     return (
-                                        <button
+                                        <label
                                             key={model}
-                                            type="button"
-                                            aria-pressed={isSelected}
                                             className={cn(
-                                                "flex h-9 w-full items-center justify-between gap-3 rounded-md px-3 text-left text-sm transition-colors",
+                                                "flex h-9 w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 text-left text-sm transition-colors",
                                                 "hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 isSelected && "bg-primary/10 text-primary"
                                             )}
                                             title={model}
-                                            onClick={() => onSelectedModelChange(model)}
                                         >
-                                            <span className="min-w-0 truncate font-mono text-xs">
-                                                {model}
+                                            <span className="flex min-w-0 items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 shrink-0"
+                                                    checked={isSelected}
+                                                    disabled={isTesting}
+                                                    onChange={(event) => toggleModel(model, event.target.checked)}
+                                                />
+                                                <span className="min-w-0 truncate font-mono text-xs">
+                                                    {model}
+                                                </span>
                                             </span>
-                                            {isSelected ? (
-                                                <Check className="h-4 w-4 shrink-0" />
-                                            ) : null}
-                                        </button>
+                                        </label>
                                     )
                                 })}
                             </div>
@@ -151,7 +198,7 @@ export function ChannelModelTestSelectorDialog({
                     <Button
                         type="button"
                         onClick={onConfirm}
-                        disabled={!selectedModel || isTesting}
+                        disabled={selectedCount === 0 || isTesting}
                         className="gap-2"
                     >
                         {isTesting ? (
@@ -159,7 +206,7 @@ export function ChannelModelTestSelectorDialog({
                         ) : (
                             <FlaskConical className="h-4 w-4" />
                         )}
-                        测试
+                        {selectedCount > 0 ? `测试 ${selectedCount} 个` : '测试'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

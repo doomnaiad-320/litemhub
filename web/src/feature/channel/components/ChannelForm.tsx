@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { channelCreateSchema } from '@/validation/channel'
-import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannelPreview, useChannelDefaultModels, useDiscoverChannelModels } from '../hooks'
+import { useChannelTypeMetas, useCreateChannel, useUpdateChannel, useUpdateChannelStatus, useTestChannelPreviewAll, useChannelDefaultModels, useDiscoverChannelModels } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
 import { useGroups } from '@/feature/group/hooks'
 import { useTranslation } from 'react-i18next'
@@ -43,7 +43,7 @@ import { DefaultModelsDialog } from './DefaultModelsDialog'
 import { ChannelConfigEditor } from './ChannelConfigEditor'
 import { useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import { getChannelModelMetric } from '@/utils/runtime-metrics'
-import { ChannelTestPayload, ChannelTestResult } from '@/api/channel'
+import { ChannelTestAllPayload } from '@/api/channel'
 import { ChannelModelTestSelectorDialog } from './ChannelModelTestSelectorDialog'
 
 const normalizeModelName = (modelName: string) => modelName.trim()
@@ -149,16 +149,18 @@ export function ChannelForm({
     const { updateStatus, isLoading: isStatusUpdating } = useUpdateChannelStatus()
 
     const {
-        testChannelPreview,
+        testChannelPreviewAll,
+        cancelTest: cancelPreviewChannelTest,
         isTesting: isPreviewChannelTesting,
-    } = useTestChannelPreview()
-    const [previewChannelTestResults, setPreviewChannelTestResults] = useState<ChannelTestResult[]>([])
+        results: previewChannelTestResults,
+        clearResults: clearPreviewChannelTestResults,
+    } = useTestChannelPreviewAll()
 
     const [testDialogOpen, setTestDialogOpen] = useState(false)
     const [testModelDialogOpen, setTestModelDialogOpen] = useState(false)
     const [testModelOptions, setTestModelOptions] = useState<string[]>([])
-    const [selectedTestModel, setSelectedTestModel] = useState('')
-    const [pendingTestPayload, setPendingTestPayload] = useState<Omit<ChannelTestPayload, 'model'> | null>(null)
+    const [selectedTestModels, setSelectedTestModels] = useState<string[]>([])
+    const [pendingTestPayload, setPendingTestPayload] = useState<Omit<ChannelTestAllPayload, 'models'> | null>(null)
     const [testModelSourceLabel, setTestModelSourceLabel] = useState('')
 
     useEffect(() => {
@@ -518,34 +520,35 @@ export function ChannelForm({
             configs: parsedConfigs
         })
         setTestModelOptions(selectableModels)
-        setSelectedTestModel(
-            selectableModels.includes(selectedTestModel)
-                ? selectedTestModel
-                : selectableModels[0]
-        )
+        setSelectedTestModels((current) => {
+            const available = new Set(selectableModels)
+            const stillAvailable = current.filter((model) => available.has(model))
+            return stillAvailable.length > 0 ? stillAvailable : selectableModels
+        })
         setTestModelSourceLabel(effectiveUseDefault ? '默认模型' : '渠道模型')
         setTestModelDialogOpen(true)
     }
 
-    const handleConfirmSelectedTestModel = async () => {
-        if (!pendingTestPayload || !selectedTestModel) {
+    const handleConfirmSelectedTestModels = async () => {
+        if (!pendingTestPayload || selectedTestModels.length === 0) {
             toast.error('请先选择要测试的模型')
             return
         }
 
-        setPreviewChannelTestResults([])
+        clearPreviewChannelTestResults()
         setTestModelDialogOpen(false)
         setTestDialogOpen(true)
 
-        const result = await testChannelPreview({
+        testChannelPreviewAll({
             ...pendingTestPayload,
-            model: selectedTestModel,
+            models: selectedTestModels,
         })
-        setPreviewChannelTestResults(result ? [result] : [])
     }
 
     // 处理取消测试
     const handleCancelTest = () => {
+        cancelPreviewChannelTest()
+        clearPreviewChannelTestResults()
         setTestDialogOpen(false)
     }
 
@@ -1491,9 +1494,9 @@ export function ChannelForm({
                     open={testModelDialogOpen}
                     onOpenChange={setTestModelDialogOpen}
                     models={testModelOptions}
-                    selectedModel={selectedTestModel}
-                    onSelectedModelChange={setSelectedTestModel}
-                    onConfirm={handleConfirmSelectedTestModel}
+                    selectedModels={selectedTestModels}
+                    onSelectedModelsChange={setSelectedTestModels}
+                    onConfirm={handleConfirmSelectedTestModels}
                     isTesting={isTesting}
                     sourceLabel={testModelSourceLabel}
                 />
