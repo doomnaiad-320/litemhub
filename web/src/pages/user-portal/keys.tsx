@@ -710,12 +710,12 @@ export default function UserPortalKeysPage() {
             </div>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-lg grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0">
                     <DialogHeader className="border-b border-border/60 bg-muted/30 px-6 py-5">
                         <DialogTitle className="text-xl">{t('portal.keys.createTitle')}</DialogTitle>
                         <DialogDescription>{t('portal.keys.createDescription')}</DialogDescription>
                     </DialogHeader>
-                    <div className="px-6 py-6">
+                    <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-6">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                                 <FormField
@@ -880,12 +880,12 @@ export default function UserPortalKeysPage() {
             </Dialog>
 
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-lg grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0">
                     <DialogHeader className="border-b border-border/60 bg-muted/30 px-6 py-5">
                         <DialogTitle className="text-xl">{t('portal.keys.editTitle')}</DialogTitle>
                         <DialogDescription>{t('portal.keys.editDescription')}</DialogDescription>
                     </DialogHeader>
-                    <div className="px-6 py-6">
+                    <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-6">
                         <Form {...editForm}>
                             <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-5">
                                 <FormField
