@@ -127,6 +127,7 @@ export interface LogStats {
   total_count: number
   success_count: number
   error_count: number
+  rpm: number
   used_amount: number
   input_tokens: number
   output_tokens: number

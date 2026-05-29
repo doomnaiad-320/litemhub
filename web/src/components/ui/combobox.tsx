@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
     Popover,
     PopoverContent,
@@ -21,6 +22,7 @@ interface ComboboxProps {
     emptyText?: string
     disabled?: boolean
     className?: string
+    searchPlaceholder?: string
 }
 
 export function Combobox({
@@ -31,13 +33,34 @@ export function Combobox({
     emptyText = 'No results',
     disabled = false,
     className,
+    searchPlaceholder = 'Search...',
 }: ComboboxProps) {
     const [open, setOpen] = useState(false)
+    const [search, setSearch] = useState('')
 
-    const selectedLabel = options.find(o => o.value === value)?.label
+    const selectedLabel = options.find(o => o.value === value)?.label || value
+    const normalizedSearch = search.trim().toLowerCase()
+    const filteredOptions = useMemo(() => {
+        if (!normalizedSearch) return options
+
+        return options
+            .filter(option => option.label.toLowerCase().includes(normalizedSearch))
+            .sort((a, b) => {
+                const aStartsWith = a.label.toLowerCase().startsWith(normalizedSearch)
+                const bStartsWith = b.label.toLowerCase().startsWith(normalizedSearch)
+                if (aStartsWith === bStartsWith) return a.label.localeCompare(b.label)
+                return aStartsWith ? -1 : 1
+            })
+    }, [normalizedSearch, options])
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover
+            open={open}
+            onOpenChange={(nextOpen) => {
+                setOpen(nextOpen)
+                if (!nextOpen) setSearch('')
+            }}
+        >
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -62,11 +85,20 @@ export function Combobox({
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <div className="border-b border-border p-2">
+                    <Input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder={searchPlaceholder}
+                        className="h-8"
+                        autoFocus
+                    />
+                </div>
                 <div className="max-h-60 overflow-auto p-1">
-                    {options.length === 0 ? (
+                    {filteredOptions.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
                     ) : (
-                        options.map((option) => (
+                        filteredOptions.map((option) => (
                             <div
                                 key={option.value}
                                 className={cn(
@@ -76,6 +108,7 @@ export function Combobox({
                                 onClick={() => {
                                     onValueChange(option.value === value ? '' : option.value)
                                     setOpen(false)
+                                    setSearch('')
                                 }}
                             >
                                 <Check className={cn('mr-2 h-4 w-4', value === option.value ? 'opacity-100' : 'opacity-0')} />

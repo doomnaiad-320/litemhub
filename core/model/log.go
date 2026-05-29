@@ -625,6 +625,7 @@ type LogStats struct {
 	TotalCount          int64   `json:"total_count"`
 	SuccessCount        int64   `json:"success_count"`
 	ErrorCount          int64   `json:"error_count"`
+	RPM                 float64 `json:"rpm"`
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens"`
 	OutputTokens        int64   `json:"output_tokens"`
@@ -837,7 +838,7 @@ func applyLogUserFilter(tx *gorm.DB, user string) *gorm.DB {
 	users := make([]*AppUser, 0)
 	if err := DB.
 		Select("id").
-		Where("email LIKE ? OR phone LIKE ?", likeUser, likeUser).
+		Where("username LIKE ? OR email LIKE ? OR phone LIKE ?", likeUser, likeUser, likeUser).
 		Find(&users).Error; err == nil {
 		seen := make(map[int]struct{}, len(userIDs)+len(users))
 		for _, id := range userIDs {
@@ -862,7 +863,39 @@ func applyLogUserFilter(tx *gorm.DB, user string) *gorm.DB {
 	return tx.Where(conditions)
 }
 
-func scanLogStats(tx *gorm.DB) (*LogStats, error) {
+func logStatsRPM(totalCount int64, startTimestamp, endTimestamp time.Time) float64 {
+	if totalCount <= 0 ||
+		startTimestamp.IsZero() ||
+		endTimestamp.IsZero() ||
+		!endTimestamp.After(startTimestamp) {
+		return 0
+	}
+
+	minutes := endTimestamp.Sub(startTimestamp).Minutes()
+	if minutes <= 0 {
+		return 0
+	}
+
+	return float64(totalCount) / minutes
+}
+
+func inferLogStatsWindow(tx *gorm.DB) (time.Time, time.Time, error) {
+	var window struct {
+		MinCreatedAt time.Time `gorm:"column:min_created_at"`
+		MaxCreatedAt time.Time `gorm:"column:max_created_at"`
+	}
+
+	err := tx.Select("MIN(created_at) AS min_created_at, MAX(created_at) AS max_created_at").
+		Scan(&window).
+		Error
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	return window.MinCreatedAt, window.MaxCreatedAt, nil
+}
+
+func scanLogStats(tx *gorm.DB, startTimestamp, endTimestamp time.Time) (*LogStats, error) {
 	stats := &LogStats{}
 	durationSQL := "EXTRACT(EPOCH FROM (created_at - request_at)) * 1000"
 	if common.UsingSQLite {
@@ -880,8 +913,21 @@ func scanLogStats(tx *gorm.DB) (*LogStats, error) {
 			"COALESCE(AVG(" + durationSQL + "), 0) AS average_milliseconds, " +
 			"COALESCE(AVG(ttfb_milliseconds), 0) AS average_ttfb_milliseconds",
 	).Scan(stats).Error
+	if err != nil {
+		return nil, err
+	}
 
-	return stats, err
+	if startTimestamp.IsZero() || endTimestamp.IsZero() {
+		var err error
+		startTimestamp, endTimestamp, err = inferLogStatsWindow(tx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	stats.RPM = logStatsRPM(stats.TotalCount, startTimestamp, endTimestamp)
+
+	return stats, nil
 }
 
 func getLogs(
@@ -1322,7 +1368,7 @@ func GetAppUserLogStats(
 		codeType,
 		code,
 		user,
-	))
+	), startTimestamp, endTimestamp)
 }
 
 func GetLogs(
@@ -1815,7 +1861,7 @@ func buildSearchLogsQuery(
 	}
 
 	if user != "" {
-		tx = tx.Where("user = ?", user)
+		tx = applyLogUserFilter(tx, user)
 	}
 
 	// Handle keyword search for zero value fields
@@ -1997,7 +2043,7 @@ func GetLogStats(
 		code,
 		ip,
 		user,
-	))
+	), startTimestamp, endTimestamp)
 }
 
 func SearchLogs(

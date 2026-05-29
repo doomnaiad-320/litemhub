@@ -12,8 +12,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { DateRangePicker } from '@/components/common/DateRangePicker'
-import { TimezoneInput } from '@/components/common/TimezoneInput'
 import { ChannelLabel } from '@/components/common/ChannelLabel'
 import type { LogFilters as LogFiltersType } from '@/types/log'
 import { channelApi } from '@/api/channel'
@@ -81,47 +81,34 @@ export function LogFilters({
     const [model, setModel] = useState('')
     const [tokenName, setTokenName] = useState(defaultTokenName)
     const [channel, setChannel] = useState('')
-    const [keyword, setKeyword] = useState('')
     const [user, setUser] = useState('')
-    const [requestID, setRequestID] = useState('')
-    const [statusCode, setStatusCode] = useState('')
     const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange())
     const [codeType, setCodeType] = useState<'all' | 'success' | 'error'>('all')
-    const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE)
 
     const buildFilters = useCallback((): LogFiltersType => {
         const effectiveModel = model === '__all__' ? '' : model
         const effectiveTokenName = tokenName === '__all__' ? '' : tokenName
         const effectiveChannel = channel === '__all__' ? '' : channel
-        const effectiveTimezone = timezone.trim() || DEFAULT_TIMEZONE
 
         const filters: LogFiltersType = {
             model: effectiveModel.trim() || undefined,
             token_name: effectiveTokenName.trim() || undefined,
             channel: effectiveChannel ? parseInt(effectiveChannel) : undefined,
-            keyword: keyword.trim() || undefined,
             user: user.trim() || undefined,
-            request_id: requestID.trim() || undefined,
-            code: statusCode.trim() ? Number(statusCode.trim()) : undefined,
             code_type: codeType,
-            page: 1,
-            per_page: 10,
-            timezone: effectiveTimezone,
         }
 
         if (dateRange?.from) {
-            filters.start_timestamp = zonedBoundaryToUnixMs(dateRange.from, effectiveTimezone, false)
+            filters.start_timestamp = zonedBoundaryToUnixMs(dateRange.from, DEFAULT_TIMEZONE, false)
         }
         if (dateRange?.to) {
-            filters.end_timestamp = zonedBoundaryToUnixMs(dateRange.to, effectiveTimezone, true)
+            filters.end_timestamp = zonedBoundaryToUnixMs(dateRange.to, DEFAULT_TIMEZONE, true)
         }
 
         return filters
-    }, [model, tokenName, channel, keyword, user, requestID, statusCode, dateRange, codeType, timezone])
+    }, [model, tokenName, channel, user, dateRange, codeType])
 
-    // Auto-refresh on filter change (skip initial mount), debounce keyword input
-    const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-    const prevKeywordRef = useRef(keyword)
+    // Auto-refresh on filter change (skip initial mount)
     const isFirstRender = useRef(true)
 
     useEffect(() => {
@@ -129,16 +116,7 @@ export function LogFilters({
             isFirstRender.current = false
             return
         }
-        // If only keyword changed, debounce
-        if (prevKeywordRef.current !== keyword) {
-            prevKeywordRef.current = keyword
-            clearTimeout(debounceRef.current)
-            debounceRef.current = setTimeout(() => {
-                onFiltersChange(buildFilters())
-            }, 500)
-            return () => clearTimeout(debounceRef.current)
-        }
-        // Otherwise fire immediately
+
         onFiltersChange(buildFilters())
     }, [buildFilters]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -146,13 +124,9 @@ export function LogFilters({
         setModel('')
         setTokenName('')
         setChannel('')
-        setKeyword('')
         setUser('')
-        setRequestID('')
-        setStatusCode('')
         setDateRange(getDefaultDateRange())
         setCodeType('all')
-        setTimezone(DEFAULT_TIMEZONE)
     }
 
     const showChannel = !!availableChannels && availableChannels.length > 0
@@ -182,17 +156,16 @@ export function LogFilters({
     // Model filter
     const modelFilter = (
         <div className="w-44 flex-shrink-0">
-            <Select value={model} onValueChange={setModel} disabled={loading}>
-                <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t('log.filters.modelPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="__all__">{t('log.filters.statusAll')}</SelectItem>
-                    {(availableModels || []).map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            <Combobox
+                options={(availableModels || []).map((m) => ({ value: m, label: m }))}
+                value={model}
+                onValueChange={setModel}
+                placeholder={t('log.filters.modelPlaceholder')}
+                emptyText={t('common.noResult')}
+                searchPlaceholder={t('log.filters.modelPlaceholder')}
+                disabled={loading}
+                className="h-9"
+            />
         </div>
     )
 
@@ -254,48 +227,11 @@ export function LogFilters({
                     />
                 </div>
 
-                <TimezoneInput
-                    value={timezone}
-                    onChange={setTimezone}
-                    disabled={loading}
-                />
-
-                {/* Keyword search */}
-                <div className="w-40 flex-shrink-0">
-                    <Input
-                        placeholder={t('common.search')}
-                        value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
-                        disabled={loading}
-                        className="h-9"
-                    />
-                </div>
-
                 <div className="w-44 flex-shrink-0">
                     <Input
                         placeholder={t('log.filters.userPlaceholder')}
                         value={user}
                         onChange={(e) => setUser(e.target.value)}
-                        disabled={loading}
-                        className="h-9"
-                    />
-                </div>
-
-                <div className="w-44 flex-shrink-0">
-                    <Input
-                        placeholder={t('log.filters.requestIdPlaceholder')}
-                        value={requestID}
-                        onChange={(e) => setRequestID(e.target.value)}
-                        disabled={loading}
-                        className="h-9"
-                    />
-                </div>
-
-                <div className="w-28 flex-shrink-0">
-                    <Input
-                        placeholder={t('log.filters.codePlaceholder')}
-                        value={statusCode}
-                        onChange={(e) => setStatusCode(e.target.value.replace(/\D/g, ''))}
                         disabled={loading}
                         className="h-9"
                     />

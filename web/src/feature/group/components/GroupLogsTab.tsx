@@ -29,7 +29,6 @@ export function GroupLogsTab({ groupId, initialTokenName }: GroupLogsTabProps) {
             code_type: 'all',
             page: 1,
             per_page: 10,
-            timezone: DEFAULT_TIMEZONE,
             start_timestamp: zonedBoundaryToUnixMs(oneDayAgo, DEFAULT_TIMEZONE, false),
             end_timestamp: zonedBoundaryToUnixMs(today, DEFAULT_TIMEZONE, true),
         }
@@ -48,7 +47,11 @@ export function GroupLogsTab({ groupId, initialTokenName }: GroupLogsTabProps) {
     })
 
     const handleFiltersChange = (newFilters: LogFiltersType) => {
-        setFilters(newFilters)
+        setFilters(prev => ({
+            ...newFilters,
+            page: 1,
+            per_page: prev.per_page || 10,
+        }))
     }
 
     const handlePageChange = (page: number) => {

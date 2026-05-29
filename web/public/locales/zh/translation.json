@@ -761,12 +761,12 @@
       "tokens": "总 Token",
       "outputTokens": "输出 Token",
       "avgDuration": "平均耗时",
-      "avgTtfb": "平均 TTFB",
+      "rpm": "RPM",
       "success": "成功",
       "failedDetail": "非 200 状态",
       "usedAmountDetail": "当前检索范围",
       "avgDurationDetail": "创建时间 - 请求时间",
-      "avgTtfbDetail": "首字节平均耗时"
+      "rpmDetail": "当前筛选范围内的平均每分钟请求数"
     },
     "export": {
       "trigger": "导出 CSV",

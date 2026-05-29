@@ -129,6 +129,95 @@ func TestGetLogStatsAggregatesFilteredLogs(t *testing.T) {
 		require.EqualValues(t, 50, stats.OutputTokens)
 		require.EqualValues(t, 180, stats.TotalTokens)
 		require.InDelta(t, 1500, stats.AverageMilliseconds, 1)
+		require.InDelta(t, float64(2)/120, stats.RPM, 0.0001)
+	})
+}
+
+func TestSearchLogsFiltersByAppUserUsername(t *testing.T) {
+	withTestLogStatsDB(t, func() {
+		now := time.Date(2026, 5, 29, 12, 0, 0, 0, time.UTC)
+		user := &model.AppUser{
+			Username:     model.EmptyNullString("alice-user"),
+			Email:        model.EmptyNullString("alice@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		otherUser := &model.AppUser{
+			Username:     model.EmptyNullString("bob-user"),
+			Email:        model.EmptyNullString("bob@example.com"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		require.NoError(t, model.DB.Create(user).Error)
+		require.NoError(t, model.DB.Create(otherUser).Error)
+
+		logs := []*model.Log{
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_alice"),
+				GroupID:     "default",
+				Model:       "gpt-4.1",
+				OwnerUserID: user.ID,
+				Code:        200,
+			},
+			{
+				CreatedAt:   now,
+				RequestAt:   now.Add(-time.Second),
+				RequestID:   model.EmptyNullString("req_bob"),
+				GroupID:     "default",
+				Model:       "gpt-4.1",
+				OwnerUserID: otherUser.ID,
+				Code:        200,
+			},
+		}
+		require.NoError(t, model.LogDB.Create(logs).Error)
+
+		result, err := model.SearchLogs(
+			"",
+			"",
+			"",
+			"",
+			0,
+			"",
+			"",
+			now.Add(-time.Hour),
+			now.Add(time.Hour),
+			0,
+			"id-asc",
+			model.CodeTypeAll,
+			0,
+			false,
+			"",
+			"alice",
+			1,
+			10,
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, result.Total)
+		require.Len(t, result.Logs, 1)
+		require.Equal(t, "req_alice", string(result.Logs[0].RequestID))
+		require.Equal(t, "alice-user", result.Logs[0].AppUser.Username)
+
+		stats, err := model.GetLogStats(
+			"",
+			"",
+			"",
+			"",
+			0,
+			"",
+			"",
+			now.Add(-time.Hour),
+			now.Add(time.Hour),
+			0,
+			model.CodeTypeAll,
+			0,
+			"",
+			"alice",
+		)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, stats.TotalCount)
+		require.EqualValues(t, 1, stats.SuccessCount)
 	})
 }
 
@@ -368,6 +457,7 @@ func TestGetAppUserLogStatsAppliesPortalScopeAndFilters(t *testing.T) {
 		require.EqualValues(t, 60, stats.OutputTokens)
 		require.EqualValues(t, 185, stats.TotalTokens)
 		require.InDelta(t, 1500, stats.AverageMilliseconds, 1)
+		require.InDelta(t, float64(2)/180, stats.RPM, 0.0001)
 	})
 }
 
@@ -410,6 +500,7 @@ func withTestLogStatsDB(t *testing.T, fn func()) {
 		&model.Token{},
 		&model.Log{},
 		&model.RequestDetail{},
+		&model.Summary{},
 	))
 
 	model.DB = db

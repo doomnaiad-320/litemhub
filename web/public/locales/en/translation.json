@@ -773,12 +773,12 @@
       "tokens": "Total Tokens",
       "outputTokens": "Output Tokens",
       "avgDuration": "Avg Duration",
-      "avgTtfb": "Avg TTFB",
+      "rpm": "RPM",
       "success": "Success",
       "failedDetail": "Non-200 responses",
       "usedAmountDetail": "Current result scope",
       "avgDurationDetail": "Created time - request time",
-      "avgTtfbDetail": "Average first byte time"
+      "rpmDetail": "Average requests per minute in the current filter range"
     },
     "export": {
       "trigger": "Export CSV",

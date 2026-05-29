@@ -1,4 +1,4 @@
-import { Activity, CircleCheck, CircleX, Clock3, Coins, Gauge, Timer, Zap } from 'lucide-react'
+import { Activity, CircleCheck, CircleX, Coins, Gauge, GaugeCircle, Timer, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { LogStats } from '@/types/log'
@@ -11,6 +11,12 @@ interface LogStatsCardsProps {
 const formatCount = (value?: number) => Number(value || 0).toLocaleString()
 const formatMoney = (value?: number) => `$${Number(value || 0).toFixed(4)}`
 const formatMs = (value?: number) => `${Math.round(Number(value || 0)).toLocaleString()}ms`
+const formatRpm = (value?: number) => {
+    const rpm = Number(value || 0)
+    if (rpm >= 100) return Math.round(rpm).toLocaleString()
+    if (rpm >= 10) return rpm.toFixed(1)
+    return rpm.toFixed(2)
+}
 
 export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
     const { t: rawT } = useTranslation()
@@ -62,10 +68,10 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
             detail: t('log.stats.avgDurationDetail'),
         },
         {
-            key: 'avgTtfb',
-            icon: Clock3,
-            value: formatMs(stats?.average_ttfb_milliseconds),
-            detail: t('log.stats.avgTtfbDetail'),
+            key: 'rpm',
+            icon: GaugeCircle,
+            value: formatRpm(stats?.rpm),
+            detail: t('log.stats.rpmDetail'),
         },
     ]
 
