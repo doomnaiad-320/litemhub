@@ -174,6 +174,10 @@ func migrateDB() error {
 		return err
 	}
 
+	if err := migrateTokenIndexes(DB); err != nil {
+		return err
+	}
+
 	if err := CleanupAppWalletConsumptionLogs(); err != nil {
 		return err
 	}

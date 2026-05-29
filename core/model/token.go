@@ -19,6 +19,8 @@ const (
 	ErrTokenNotFound = "token"
 )
 
+var ErrTokenNameExists = errors.New("token name already exists in this group")
+
 const (
 	PeriodTypeDaily   = "daily"
 	PeriodTypeWeekly  = "weekly"
@@ -34,8 +36,8 @@ type Token struct {
 	CreatedAt   time.Time       `json:"created_at"`
 	Group       *Group          `json:"-"          gorm:"foreignKey:GroupID"`
 	Key         string          `json:"key"        gorm:"type:char(48);uniqueIndex"`
-	Name        EmptyNullString `json:"name"       gorm:"size:32;index;uniqueIndex:idx_group_name;not null"`
-	GroupID     string          `json:"group"      gorm:"size:64;index;uniqueIndex:idx_group_name"`
+	Name        EmptyNullString `json:"name"       gorm:"size:32;index;not null"`
+	GroupID     string          `json:"group"      gorm:"size:64;index"`
 	Subnets     []string        `json:"subnets"    gorm:"serializer:fastjson;type:text"`
 	Models      []string        `json:"models"     gorm:"serializer:fastjson;type:text"`
 	Status      int             `json:"status"     gorm:"default:1;index"`
@@ -210,9 +212,15 @@ func InsertToken(token *Token, autoCreateGroup, ignoreExist bool) error {
 			}
 		}
 
+		if token.OwnerUserID == 0 && !ignoreExist {
+			if err := validateAdminTokenNameAvailable(tx, 0, token.GroupID, token.Name); err != nil {
+				return err
+			}
+		}
+
 		if ignoreExist {
 			return tx.
-				Where("group_id = ? and name = ?", token.GroupID, token.Name).
+				Where("owner_user_id = ? and group_id = ? and name = ?", token.OwnerUserID, token.GroupID, token.Name).
 				FirstOrCreate(token).Error
 		}
 
@@ -223,10 +231,47 @@ func InsertToken(token *Token, autoCreateGroup, ignoreExist bool) error {
 			if ignoreExist {
 				return nil
 			}
-			return errors.New("token name already exists in this group")
+			return ErrTokenNameExists
 		}
 
 		return err
+	}
+
+	return nil
+}
+
+func migrateTokenIndexes(db *gorm.DB) error {
+	if db == nil {
+		return nil
+	}
+
+	if db.Migrator().HasIndex(&Token{}, "idx_group_name") {
+		if err := db.Migrator().DropIndex(&Token{}, "idx_group_name"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAdminTokenNameAvailable(tx *gorm.DB, id int, groupID string, name EmptyNullString) error {
+	if tx == nil || groupID == "" || name == "" {
+		return nil
+	}
+
+	var count int64
+	query := tx.Model(&Token{}).
+		Where("owner_user_id = ? AND group_id = ? AND name = ?", 0, groupID, name)
+	if id != 0 {
+		query = query.Where("id != ?", id)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return ErrTokenNameExists
 	}
 
 	return nil
@@ -788,6 +833,12 @@ func UpdateToken(id int, update UpdateTokenRequest) (token *Token, err error) {
 		return nil, errors.New("empty update request")
 	}
 
+	if update.Name != nil && *update.Name != "" {
+		if err := validateAdminTokenNameAvailable(DB, id, currentToken.GroupID, token.Name); err != nil {
+			return nil, err
+		}
+	}
+
 	result := DB.
 		Select(selects).
 		Where("id = ? AND owner_user_id = ?", id, 0).
@@ -795,7 +846,7 @@ func UpdateToken(id int, update UpdateTokenRequest) (token *Token, err error) {
 		Updates(token)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return nil, errors.New("token name already exists in this group")
+			return nil, ErrTokenNameExists
 		}
 	}
 
@@ -891,6 +942,12 @@ func UpdateGroupToken(
 		return nil, errors.New("empty update request")
 	}
 
+	if update.Name != nil && *update.Name != "" {
+		if err := validateAdminTokenNameAvailable(DB, id, group, token.Name); err != nil {
+			return nil, err
+		}
+	}
+
 	result := DB.
 		Select(selects).
 		Where("id = ? and group_id = ? AND owner_user_id = ?", id, group, 0).
@@ -898,7 +955,7 @@ func UpdateGroupToken(
 		Updates(token)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return nil, errors.New("token name already exists in this group")
+			return nil, ErrTokenNameExists
 		}
 	}
 
@@ -1095,6 +1152,15 @@ func UpdateTokenName(id int, name string) (err error) {
 		}
 	}()
 
+	currentToken, err := GetTokenByID(id)
+	if err != nil {
+		return err
+	}
+
+	if err := validateAdminTokenNameAvailable(DB, id, currentToken.GroupID, EmptyNullString(name)); err != nil {
+		return err
+	}
+
 	result := DB.
 		Model(token).
 		Clauses(clause.Returning{
@@ -1105,7 +1171,7 @@ func UpdateTokenName(id int, name string) (err error) {
 		Where("id = ? AND owner_user_id = ?", id, 0).
 		Update("name", name)
 	if result.Error != nil && errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-		return errors.New("token name already exists in this group")
+		return ErrTokenNameExists
 	}
 
 	return HandleUpdateResult(result, ErrTokenNotFound)
@@ -1121,6 +1187,10 @@ func UpdateGroupTokenName(group string, id int, name string) (err error) {
 		}
 	}()
 
+	if err := validateAdminTokenNameAvailable(DB, id, group, EmptyNullString(name)); err != nil {
+		return err
+	}
+
 	result := DB.
 		Model(token).
 		Clauses(clause.Returning{
@@ -1131,7 +1201,7 @@ func UpdateGroupTokenName(group string, id int, name string) (err error) {
 		Where("id = ? and group_id = ? AND owner_user_id = ?", id, group, 0).
 		Update("name", name)
 	if result.Error != nil && errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-		return errors.New("token name already exists in this group")
+		return ErrTokenNameExists
 	}
 
 	return HandleUpdateResult(result, ErrTokenNotFound)
