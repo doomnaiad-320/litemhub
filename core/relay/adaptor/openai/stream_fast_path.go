@@ -20,7 +20,6 @@ import (
 
 func shouldUseChatCompletionsStreamFastPath(
 	meta *meta.Meta,
-	cfg Config,
 	preHandler PreHandler,
 ) bool {
 	if preHandler != nil {
@@ -35,7 +34,7 @@ func shouldUseChatCompletionsStreamFastPath(
 		return enabled
 	}
 
-	return cfg.ChatCompletionsStreamFastPath
+	return false
 }
 
 func ChatCompletionsStreamFastPathHandler(

@@ -143,6 +143,11 @@ const KNOWN_CONFIG_KEYS = new Set([
     'support_voices',
 ])
 
+const BEHAVIOR_CONFIG_KEYS = new Set([
+    'chat_completions_stream_fast_path',
+    'disable_precise_token_count',
+])
+
 const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES)
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 
@@ -718,7 +723,10 @@ export function ModelForm({
                 }
 
                 if (typeof value === 'boolean') {
-                    if (value) {
+                    if (
+                        value ||
+                        (configFieldVisibility.showPerformance && BEHAVIOR_CONFIG_KEYS.has(key))
+                    ) {
                         nextConfig[key] = value
                     }
                     continue

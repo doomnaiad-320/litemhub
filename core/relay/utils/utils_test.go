@@ -141,6 +141,10 @@ func TestLoadHTTPClientReuse(t *testing.T) {
 }
 
 func TestLoadHTTPClientTransportDefaults(t *testing.T) {
+	t.Setenv("HTTP_TRANSPORT_MAX_IDLE_CONNS", "")
+	t.Setenv("HTTP_TRANSPORT_MAX_IDLE_CONNS_PER_HOST", "")
+	t.Setenv("HTTP_TRANSPORT_FORCE_ATTEMPT_HTTP2", "")
+
 	convey.Convey("LoadHTTPClient transport defaults", t, func() {
 		client, err := utils.LoadHTTPClientE(2*time.Second, "")
 		convey.So(err, convey.ShouldBeNil)

@@ -415,7 +415,7 @@ func DoResponse(
 		} else {
 			if utils.IsStreamResponse(resp) {
 				if meta.Mode == mode.ChatCompletions &&
-					shouldUseChatCompletionsStreamFastPath(meta, cfg, streamPreHandler) {
+					shouldUseChatCompletionsStreamFastPath(meta, streamPreHandler) {
 					result, err = ChatCompletionsStreamFastPathHandler(meta, c, resp)
 				} else {
 					result, err = StreamHandler(meta, c, resp, streamPreHandler)

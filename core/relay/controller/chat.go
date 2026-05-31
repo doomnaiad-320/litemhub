@@ -39,6 +39,10 @@ func modelTokenCountThreshold(modelConfig model.ModelConfig) int64 {
 		model.ModelConfigFuzzyTokenThresholdKey,
 	)
 	if ok {
+		if threshold < 0 {
+			return 0
+		}
+
 		return int64(threshold)
 	}
 
