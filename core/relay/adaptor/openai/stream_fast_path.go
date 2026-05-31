@@ -18,6 +18,14 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+type chatCompletionsStreamFastPathPolicy string
+
+const (
+	chatCompletionsStreamFastPathPolicyAuto chatCompletionsStreamFastPathPolicy = "auto"
+	chatCompletionsStreamFastPathPolicyOn   chatCompletionsStreamFastPathPolicy = "on"
+	chatCompletionsStreamFastPathPolicyOff  chatCompletionsStreamFastPathPolicy = "off"
+)
+
 func shouldUseChatCompletionsStreamFastPath(
 	meta *meta.Meta,
 	preHandler PreHandler,
@@ -26,15 +34,53 @@ func shouldUseChatCompletionsStreamFastPath(
 		return false
 	}
 
+	switch chatCompletionsStreamFastPathPolicyForMeta(meta) {
+	case chatCompletionsStreamFastPathPolicyOff:
+		return false
+	case chatCompletionsStreamFastPathPolicyAuto, chatCompletionsStreamFastPathPolicyOn:
+		return true
+	default:
+		return false
+	}
+}
+
+func chatCompletionsStreamFastPathPolicyForMeta(
+	meta *meta.Meta,
+) chatCompletionsStreamFastPathPolicy {
+	if meta == nil {
+		return chatCompletionsStreamFastPathPolicyAuto
+	}
+
+	policy, ok := coremodel.GetModelConfigString(
+		meta.ModelConfig.Config,
+		coremodel.ModelConfigChatCompletionsStreamFastPathKey,
+	)
+	if ok {
+		switch strings.ToLower(strings.TrimSpace(policy)) {
+		case "", string(chatCompletionsStreamFastPathPolicyAuto):
+			return chatCompletionsStreamFastPathPolicyAuto
+		case string(chatCompletionsStreamFastPathPolicyOn):
+			return chatCompletionsStreamFastPathPolicyOn
+		case string(chatCompletionsStreamFastPathPolicyOff):
+			return chatCompletionsStreamFastPathPolicyOff
+		default:
+			return chatCompletionsStreamFastPathPolicyAuto
+		}
+	}
+
 	enabled, ok := coremodel.GetModelConfigBool(
 		meta.ModelConfig.Config,
 		coremodel.ModelConfigChatCompletionsStreamFastPathKey,
 	)
 	if ok {
-		return enabled
+		if enabled {
+			return chatCompletionsStreamFastPathPolicyOn
+		}
+
+		return chatCompletionsStreamFastPathPolicyOff
 	}
 
-	return false
+	return chatCompletionsStreamFastPathPolicyAuto
 }
 
 func ChatCompletionsStreamFastPathHandler(

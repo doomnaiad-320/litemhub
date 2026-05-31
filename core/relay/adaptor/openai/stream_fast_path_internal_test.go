@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldUseChatCompletionsStreamFastPathRequiresModelOptIn(t *testing.T) {
-	assert.False(t, shouldUseChatCompletionsStreamFastPath(
+func TestShouldUseChatCompletionsStreamFastPathPolicy(t *testing.T) {
+	assert.True(t, shouldUseChatCompletionsStreamFastPath(
 		&meta.Meta{},
 		nil,
 	))
@@ -19,7 +19,29 @@ func TestShouldUseChatCompletionsStreamFastPathRequiresModelOptIn(t *testing.T) 
 		&meta.Meta{
 			ModelConfig: model.ModelConfig{
 				Config: map[model.ModelConfigKey]any{
-					model.ModelConfigChatCompletionsStreamFastPathKey: false,
+					model.ModelConfigChatCompletionsStreamFastPathKey: "off",
+				},
+			},
+		},
+		nil,
+	))
+
+	assert.True(t, shouldUseChatCompletionsStreamFastPath(
+		&meta.Meta{
+			ModelConfig: model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigChatCompletionsStreamFastPathKey: "auto",
+				},
+			},
+		},
+		nil,
+	))
+
+	assert.True(t, shouldUseChatCompletionsStreamFastPath(
+		&meta.Meta{
+			ModelConfig: model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigChatCompletionsStreamFastPathKey: "on",
 				},
 			},
 		},
@@ -31,6 +53,17 @@ func TestShouldUseChatCompletionsStreamFastPathRequiresModelOptIn(t *testing.T) 
 			ModelConfig: model.ModelConfig{
 				Config: map[model.ModelConfigKey]any{
 					model.ModelConfigChatCompletionsStreamFastPathKey: true,
+				},
+			},
+		},
+		nil,
+	))
+
+	assert.False(t, shouldUseChatCompletionsStreamFastPath(
+		&meta.Meta{
+			ModelConfig: model.ModelConfig{
+				Config: map[model.ModelConfigKey]any{
+					model.ModelConfigChatCompletionsStreamFastPathKey: false,
 				},
 			},
 		},

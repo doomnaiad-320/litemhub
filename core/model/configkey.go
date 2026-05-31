@@ -170,6 +170,20 @@ func GetModelConfigStringSlice(config map[ModelConfigKey]any, key ModelConfigKey
 	return nil, false
 }
 
+func GetModelConfigString(config map[ModelConfigKey]any, key ModelConfigKey) (string, bool) {
+	v, ok := config[key]
+	if !ok {
+		return "", false
+	}
+
+	s, ok := v.(string)
+	if !ok {
+		return "", false
+	}
+
+	return s, true
+}
+
 func GetModelConfigBool(config map[ModelConfigKey]any, key ModelConfigKey) (bool, bool) {
 	if v, ok := config[key].(bool); ok {
 		return v, true

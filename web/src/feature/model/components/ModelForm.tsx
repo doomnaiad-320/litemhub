@@ -144,9 +144,17 @@ const KNOWN_CONFIG_KEYS = new Set([
 ])
 
 const BEHAVIOR_CONFIG_KEYS = new Set([
-    'chat_completions_stream_fast_path',
     'disable_precise_token_count',
 ])
+
+const normalizeStreamFastPathPolicy = (
+    value: ModelConfigDetail['chat_completions_stream_fast_path'],
+) => {
+    if (value === true) return 'on'
+    if (value === false) return 'off'
+    if (value === 'on' || value === 'off' || value === 'auto') return value
+    return 'auto'
+}
 
 const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES)
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
@@ -248,7 +256,9 @@ export function ModelForm({
                 tool_choice: defaultValues.config?.tool_choice ?? false,
                 coder: defaultValues.config?.coder ?? false,
                 limited_time_free: defaultValues.config?.limited_time_free ?? false,
-                chat_completions_stream_fast_path: defaultValues.config?.chat_completions_stream_fast_path ?? false,
+                chat_completions_stream_fast_path: normalizeStreamFastPathPolicy(
+                    defaultValues.config?.chat_completions_stream_fast_path,
+                ),
                 fuzzy_token_threshold: defaultValues.config?.fuzzy_token_threshold,
                 disable_precise_token_count: defaultValues.config?.disable_precise_token_count ?? false,
                 support_formats: defaultValues.config?.support_formats,
@@ -714,6 +724,13 @@ export function ModelForm({
             }
 
             for (const [key, value] of Object.entries(config)) {
+                if (
+                    key === 'chat_completions_stream_fast_path' &&
+                    !configFieldVisibility.showPerformance
+                ) {
+                    continue
+                }
+
                 if (Array.isArray(value)) {
                     const trimmed = value.map((item) => String(item).trim()).filter(Boolean)
                     if (trimmed.length > 0) {
@@ -733,7 +750,7 @@ export function ModelForm({
                 }
 
                 if (typeof value === 'string') {
-                    if (value !== '') {
+                    if (String(value).trim() !== '') {
                         nextConfig[key] = value
                     }
                     continue
@@ -1352,17 +1369,25 @@ export function ModelForm({
                                         control={form.control}
                                         name="config.chat_completions_stream_fast_path"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <div className="space-y-1">
-                                                    <FormLabel>{t("model.dialog.config.streamFastPath")}</FormLabel>
-                                                    <FormDescription>{t("model.dialog.config.streamFastPathDescription")}</FormDescription>
-                                                </div>
+                                            <FormItem>
+                                                <FormLabel>{t("model.dialog.config.streamFastPath")}</FormLabel>
                                                 <FormControl>
-                                                    <Switch
-                                                        checked={field.value ?? false}
-                                                        onCheckedChange={field.onChange}
-                                                    />
+                                                    <Select
+                                                        value={String(field.value || 'auto')}
+                                                        onValueChange={field.onChange}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="auto">{t("model.dialog.config.streamFastPathAuto")}</SelectItem>
+                                                            <SelectItem value="on">{t("model.dialog.config.streamFastPathOn")}</SelectItem>
+                                                            <SelectItem value="off">{t("model.dialog.config.streamFastPathOff")}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </FormControl>
+                                                <FormDescription>{t("model.dialog.config.streamFastPathDescription")}</FormDescription>
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />

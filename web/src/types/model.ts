@@ -7,7 +7,7 @@ export interface ModelConfigDetail {
     tool_choice?: boolean
     coder?: boolean
     limited_time_free?: boolean
-    chat_completions_stream_fast_path?: boolean
+    chat_completions_stream_fast_path?: 'auto' | 'on' | 'off' | boolean
     fuzzy_token_threshold?: number
     disable_precise_token_count?: boolean
     support_formats?: string[]

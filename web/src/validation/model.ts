@@ -155,7 +155,10 @@ const modelConfigSchema = z.object({
     tool_choice: z.boolean().optional(),
     coder: z.boolean().optional(),
     limited_time_free: z.boolean().optional(),
-    chat_completions_stream_fast_path: z.boolean().optional(),
+    chat_completions_stream_fast_path: z.union([
+        z.enum(['auto', 'on', 'off']),
+        z.boolean(),
+    ]).optional(),
     fuzzy_token_threshold: z.number().nonnegative('Fuzzy token threshold must be a non-negative number').optional(),
     disable_precise_token_count: z.boolean().optional(),
     support_formats: z.array(z.string()).optional(),
