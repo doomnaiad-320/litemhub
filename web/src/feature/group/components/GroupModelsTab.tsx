@@ -33,7 +33,7 @@ interface GroupModelsTabProps {
 export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
     const { t } = useTranslation()
     const [searchKeyword, setSearchKeyword] = useState('')
-    const [ownerFilter, setOwnerFilter] = useState('')
+    const [categoryFilter, setCategoryFilter] = useState('')
 
     const { data: models, isLoading, error } = useQuery({
         queryKey: ['groupModels', groupId],
@@ -41,21 +41,21 @@ export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
         enabled: !!groupId,
     })
 
-    const ownerOptions = useMemo(() => {
+    const categoryOptions = useMemo(() => {
         if (!models) return []
-        const ownerSet = new Set<string>()
-        let hasEmptyOwner = false
+        const categorySet = new Set<string>()
+        let hasEmptyCategory = false
 
         for (const model of models) {
-            if (model.owner) {
-                ownerSet.add(model.owner)
+            if (model.category) {
+                categorySet.add(model.category)
             } else {
-                hasEmptyOwner = true
+                hasEmptyCategory = true
             }
         }
 
-        const options = [...ownerSet].sort((a, b) => a.localeCompare(b))
-        if (hasEmptyOwner) {
+        const options = [...categorySet].sort((a, b) => a.localeCompare(b))
+        if (hasEmptyCategory) {
             options.push('__empty__')
         }
         return options
@@ -67,16 +67,17 @@ export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
         if (searchKeyword) {
             const keyword = searchKeyword.toLowerCase()
             filtered = filtered.filter(m =>
-                m.model.toLowerCase().includes(keyword) || (m.owner || '').toLowerCase().includes(keyword)
+                m.model.toLowerCase().includes(keyword) ||
+                (m.category || '').toLowerCase().includes(keyword)
             )
         }
-        if (ownerFilter === '__empty__') {
-            filtered = filtered.filter((model) => !model.owner)
-        } else if (ownerFilter && ownerFilter !== '__all__') {
-            filtered = filtered.filter((model) => model.owner === ownerFilter)
+        if (categoryFilter === '__empty__') {
+            filtered = filtered.filter((model) => !model.category)
+        } else if (categoryFilter && categoryFilter !== '__all__') {
+            filtered = filtered.filter((model) => model.category === categoryFilter)
         }
         return filtered
-    }, [models, searchKeyword, ownerFilter])
+    }, [models, searchKeyword, categoryFilter])
     const { data: runtimeMetrics } = useGroupModelMetrics(groupId, !!groupId && filteredModels.length > 0)
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
@@ -125,15 +126,15 @@ export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
                     />
                 </div>
                 <div className="w-44">
-                    <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                         <SelectTrigger className="h-9">
-                            <SelectValue placeholder={t('model.ownerFilterPlaceholder')} />
+                            <SelectValue placeholder={t('model.categoryFilterPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="__all__">{t('model.allOwners')}</SelectItem>
-                            {ownerOptions.map((owner) => (
-                                <SelectItem key={owner} value={owner}>
-                                    {owner === '__empty__' ? t('model.emptyOwner') : owner}
+                            <SelectItem value="__all__">{t('model.allCategories')}</SelectItem>
+                            {categoryOptions.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                    {category === '__empty__' ? t('model.emptyCategory') : category}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -146,7 +147,7 @@ export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
                     <TableHeader>
                         <TableRow>
                             <TableHead>{t('group.models.model')}</TableHead>
-                            <TableHead>{t('model.owner')}</TableHead>
+                            <TableHead>{t('model.category')}</TableHead>
                             <TableHead>{t('group.models.type')}</TableHead>
                             <TableHead>{t('common.runtime')}</TableHead>
                             <TableHead>{t('group.models.rpm')}</TableHead>
@@ -170,8 +171,8 @@ export function GroupModelsTab({ groupId }: GroupModelsTabProps) {
                                     </button>
                                 </TableCell>
                                 <TableCell>
-                                    {model.owner || (
-                                        <span className="text-muted-foreground text-sm">{t('model.emptyOwner')}</span>
+                                    {model.category || (
+                                        <span className="text-muted-foreground text-sm">{t('model.emptyCategory')}</span>
                                     )}
                                 </TableCell>
                                 <TableCell>

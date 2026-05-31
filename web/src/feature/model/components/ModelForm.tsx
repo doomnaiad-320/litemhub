@@ -79,6 +79,7 @@ const MANAGED_MODEL_KEYS = new Set([
     'config',
     'description',
     'owner',
+    'category',
     'type',
     'rpm',
 	'tpm',
@@ -156,6 +157,7 @@ interface ModelFormProps {
         description?: string
         config?: ModelConfig['config']
         owner?: string
+        category?: string
         type: number
         exclude_from_tests?: boolean
         rpm?: number
@@ -184,6 +186,7 @@ export function ModelForm({
     defaultValues = {
         model: '',
         owner: '',
+        category: '',
         type: 1,
     },
 }: ModelFormProps) {
@@ -241,6 +244,7 @@ export function ModelForm({
                 support_voices: defaultValues.config?.support_voices,
             },
             owner: defaultValues.owner ?? '',
+            category: defaultValues.category ?? '',
             type: defaultValues.type || 1,
             rpm: defaultValues.rpm,
             tpm: defaultValues.tpm,
@@ -730,6 +734,7 @@ export function ModelForm({
             ...(data.description?.trim() && { description: data.description.trim() }),
             ...(cleanedConfig && { config: cleanedConfig }),
             owner: data.owner ?? '',
+            category: data.category ?? '',
             type: Number(data.type),
             ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
             ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
@@ -758,6 +763,7 @@ export function ModelForm({
                 ...(data.description?.trim() && { description: data.description.trim() }),
                 ...(cleanedConfig && { config: cleanedConfig }),
                 owner: data.owner ?? '',
+                category: data.category ?? '',
                 type: Number(data.type),
                 ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
                 ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
@@ -867,6 +873,25 @@ export function ModelForm({
                                     />
                                 </FormControl>
                                 <FormDescription>{t("model.dialog.descriptionDescription")}</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.category")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        placeholder={t("model.dialog.categoryPlaceholder")}
+                                        {...field}
+                                        value={field.value ?? ''}
+                                    />
+                                </FormControl>
+                                <FormDescription>{t("model.dialog.categoryDescription")}</FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}

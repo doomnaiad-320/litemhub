@@ -11,6 +11,7 @@ export interface PublicModelHealth {
 export interface PublicModel {
   model: string;
   provider: string;
+  category?: string;
   capabilities: string[];
   available_groups: string[];
   available_group_multipliers?: Record<string, number>;

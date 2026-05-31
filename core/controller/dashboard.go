@@ -310,6 +310,7 @@ type GroupModel struct {
 	Config    map[model.ModelConfigKey]any `json:"config,omitempty"`
 	Model     string                       `json:"model"`
 	Owner     model.ModelOwner             `json:"owner"`
+	Category  string                       `json:"category,omitempty"`
 	Type      mode.Mode                    `json:"type"`
 	RPM       int64                        `json:"rpm,omitempty"`
 	TPM       int64                        `json:"tpm,omitempty"`
@@ -345,6 +346,7 @@ func NewGroupModel(mc model.ModelConfig) GroupModel {
 		Config:             mc.Config,
 		Model:              mc.Model,
 		Owner:              mc.Owner,
+		Category:           mc.Category,
 		Type:               mc.Type,
 		RPM:                mc.RPM,
 		TPM:                mc.TPM,

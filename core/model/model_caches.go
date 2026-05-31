@@ -325,6 +325,13 @@ func SortModelConfigsFunc(i, j ModelConfig) int {
 		return 1
 	}
 
+	if i.Category != j.Category {
+		if natural.Less(i.Category, j.Category) {
+			return -1
+		}
+		return 1
+	}
+
 	if i.Type != j.Type {
 		if i.Type < j.Type {
 			return -1

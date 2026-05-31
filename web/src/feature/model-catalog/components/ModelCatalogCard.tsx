@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
 
 export interface ModelCatalogCardData {
   capabilities: string[];
+  category?: string;
   contextLength?: number;
   description?: string;
   healthScore?: number;
   inputPrice?: string | null;
   model: string;
   outputPrice?: string | null;
-  provider: string;
 }
 
 interface ModelCatalogCardProps {
@@ -102,14 +102,6 @@ export function ModelCatalogCard({
       onClick={onOpen}
       onKeyDown={handleKeyDown}
     >
-      {/*
-      <div className="mb-[5px] flex items-start gap-3">
-        <Badge className="inline-flex items-center justify-center border text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent [a&]:hover:bg-primary/90 rounded-full bg-[#1456f0] px-3 py-1 text-white hover:bg-[#1456f0]">
-          {model.provider}
-        </Badge>
-      </div>
-      */}
-
       <div className="flex min-w-0 items-start gap-1.5">
         <button
           type="button"
@@ -154,6 +146,11 @@ export function ModelCatalogCard({
       </p>
 
       <div className="mt-[17px] flex flex-wrap gap-1.5 text-[10px] sm:mt-[25px]">
+        {model.category && (
+          <Badge className="max-w-full rounded-full border-[#dbe4ff] bg-[#eef4ff] px-2.5 py-1 text-[10px] font-medium text-[#1456f0] shadow-none hover:bg-[#eef4ff] dark:border-[#60a5fa]/20 dark:bg-[#60a5fa]/10 dark:text-[#93c5fd]">
+            <span className="max-w-[160px] truncate">{model.category}</span>
+          </Badge>
+        )}
         <Badge className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] shadow-none hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white/70">
           {contextLabel} {formatContextLength(model.contextLength)}
         </Badge>

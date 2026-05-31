@@ -37,6 +37,7 @@ type PublicModelPriceResponse struct {
 type PublicModelResponse struct {
 	Model                     string                               `json:"model"`
 	Provider                  string                               `json:"provider"`
+	Category                  string                               `json:"category,omitempty"`
 	Capabilities              []string                             `json:"capabilities"`
 	AvailableGroups           []string                             `json:"available_groups"`
 	AvailableGroupMultipliers map[string]float64                   `json:"available_group_multipliers,omitempty"`
@@ -211,6 +212,7 @@ func buildPublicModelResponse(modelName string, detail *UserGroupModelDetailResp
 	response := &PublicModelResponse{
 		Model:                     modelName,
 		Provider:                  inferPublicModelProvider(modelName),
+		Category:                  strings.TrimSpace(config.Category),
 		Capabilities:              inferPublicModelCapabilities(modelName, config),
 		AvailableGroupMultipliers: make(map[string]float64),
 		Price:                     publicModelPriceFromModelPrice(config.Price),

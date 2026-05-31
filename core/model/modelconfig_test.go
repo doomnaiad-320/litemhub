@@ -283,6 +283,69 @@ func TestCreateMissingModelConfigs(t *testing.T) {
 	}
 }
 
+func TestSearchModelConfigsFiltersAndSearchesCategory(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "search-model-config.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.ModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate model config: %v", err)
+	}
+
+	configs := []model.ModelConfig{
+		{
+			Model:    "vendor-a/gpt-4o",
+			Owner:    model.ModelOwnerOpenAI,
+			Category: "gpt-4o",
+			Type:     mode.ChatCompletions,
+		},
+		{
+			Model:    "vendor-b/gpt-4o",
+			Owner:    model.ModelOwnerOpenAI,
+			Category: "gpt-4o",
+			Type:     mode.ChatCompletions,
+		},
+		{
+			Model:    "vendor-a/claude-sonnet",
+			Owner:    model.ModelOwnerAnthropic,
+			Category: "claude-sonnet",
+			Type:     mode.Anthropic,
+		},
+	}
+	if err := testDB.Create(&configs).Error; err != nil {
+		t.Fatalf("failed to create model configs: %v", err)
+	}
+
+	filtered, total, err := model.SearchModelConfigs("", 1, 10, "", "", "gpt-4o")
+	if err != nil {
+		t.Fatalf("expected category filter to succeed, got error: %v", err)
+	}
+	if total != 2 || len(filtered) != 2 {
+		t.Fatalf("expected 2 category filtered configs, got total=%d len=%d", total, len(filtered))
+	}
+
+	searched, total, err := model.SearchModelConfigs("sonnet", 1, 10, "", "", "")
+	if err != nil {
+		t.Fatalf("expected category keyword search to succeed, got error: %v", err)
+	}
+	if total != 1 || len(searched) != 1 || searched[0].Category != "claude-sonnet" {
+		t.Fatalf("expected category keyword search to find claude-sonnet, got total=%d configs=%#v", total, searched)
+	}
+}
+
 func TestModelConfigBeforeSaveClearsUnsupportedStreamTimeout(t *testing.T) {
 	cfg := &model.ModelConfig{
 		Model: "test-embedding",
@@ -335,9 +398,10 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 	}
 
 	expected := model.ModelConfig{
-		Model: "provider:model:v1",
-		Owner: "owner",
-		Type:  mode.ChatCompletions,
+		Model:    "provider:model:v1",
+		Owner:    "owner",
+		Category: "provider:model",
+		Type:     mode.ChatCompletions,
 		Config: map[model.ModelConfigKey]any{
 			model.ModelConfigSupportFormatsKey: []string{"json", "text"},
 		},
@@ -367,6 +431,10 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 
 	if got.Model != expected.Model {
 		t.Fatalf("expected model %q, got %q", expected.Model, got.Model)
+	}
+
+	if got.Category != expected.Category {
+		t.Fatalf("expected category %q, got %q", expected.Category, got.Category)
 	}
 
 	if got.Plugin["cache"]["enable"] != true {

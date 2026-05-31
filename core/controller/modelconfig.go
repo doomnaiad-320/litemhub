@@ -97,6 +97,7 @@ func GetModelConfigsByModelsContains(c *gin.Context) {
 //	@Param			keyword		query		string	false	"Keyword"
 //	@Param			model		query		string	false	"Model name"
 //	@Param			owner		query		string	false	"Owner"
+//	@Param			category	query		string	false	"Category"
 //	@Param			page		query		int		false	"Page"
 //	@Param			per_page	query		int		false	"Per page"
 //	@Success		200			{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
@@ -106,6 +107,7 @@ func SearchModelConfigs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	_model := c.Query("model")
 	owner := c.Query("owner")
+	category := c.Query("category")
 
 	configs, total, err := model.SearchModelConfigs(
 		keyword,
@@ -113,6 +115,7 @@ func SearchModelConfigs(c *gin.Context) {
 		perPage,
 		_model,
 		model.ModelOwner(owner),
+		category,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())

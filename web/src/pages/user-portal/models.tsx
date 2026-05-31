@@ -1,6 +1,6 @@
 import {
-  Building2,
   ChevronDown,
+  Folder,
   Layers3,
   RotateCcw,
   Search,
@@ -62,9 +62,11 @@ import {
   formatTokenPriceValue,
   hasPriceData,
   inferCapabilities,
-  inferProvider,
   sortCapabilities,
 } from "@/lib/model-catalog";
+
+const ALL_VALUE = "__all__";
+const EMPTY_CATEGORY_VALUE = "__empty__";
 
 interface ModelAccessGroup {
   availableSets: string[];
@@ -79,11 +81,11 @@ interface ModelAccessGroup {
 interface ModelCardItem {
   accessGroups: ModelAccessGroup[];
   capabilities: string[];
+  category?: string;
   contextLength?: number;
   description?: string;
   healthScore?: number;
   model: string;
-  provider: string;
   publicModel?: PublicModel;
 }
 
@@ -289,13 +291,15 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
+const getItemCategory = (item: ModelCardItem) => item.category?.trim() || "";
+
 export default function UserPortalModelsPage() {
   const { t: rawT } = useTranslation();
   const t = rawT as (key: string, options?: Record<string, unknown>) => string;
   const [keyword, setKeyword] = useState("");
-  const [capabilityFilter, setCapabilityFilter] = useState("__all__");
-  const [providerFilter, setProviderFilter] = useState("__all__");
-  const [groupFilter, setGroupFilter] = useState("__all__");
+  const [capabilityFilter, setCapabilityFilter] = useState(ALL_VALUE);
+  const [categoryFilter, setCategoryFilter] = useState(ALL_VALUE);
+  const [groupFilter, setGroupFilter] = useState(ALL_VALUE);
   const [selectedModel, setSelectedModel] = useState<ModelCardItem | null>(
     null,
   );
@@ -334,19 +338,23 @@ export default function UserPortalModelsPage() {
 
       group.models.forEach((model) => {
         const publicModel = publicModelMap.get(model.toLowerCase());
+        const modelDetail = modelDetailMap.get(model.toLowerCase());
         const current = groupedModels.get(model) || {
           model,
           capabilities: publicModel?.capabilities?.length
             ? publicModel.capabilities
             : inferCapabilities(model),
+          category: publicModel?.category || modelDetail?.category,
           contextLength: publicModel?.context_length,
           description: publicModel?.description,
           healthScore: publicModel?.health?.health_percent,
-          provider: publicModel?.provider || inferProvider(model),
           publicModel,
           accessGroups: [],
         };
-        const modelDetail = modelDetailMap.get(model.toLowerCase());
+
+        if (!current.category && modelDetail?.category) {
+          current.category = modelDetail.category;
+        }
 
         current.accessGroups.push({
           group: group.group,
@@ -378,13 +386,14 @@ export default function UserPortalModelsPage() {
       .sort((left, right) => left.model.localeCompare(right.model));
   }, [groups, publicModelMap]);
 
-  const providerOptions = useMemo(
-    () =>
-      Array.from(new Set(modelCards.map((item) => item.provider))).sort(
-        (left, right) => left.localeCompare(right),
-      ),
-    [modelCards],
-  );
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(
+      new Set(modelCards.map(getItemCategory).filter(Boolean)),
+    ).sort((left, right) => left.localeCompare(right));
+    const hasEmptyCategory = modelCards.some((item) => !getItemCategory(item));
+
+    return hasEmptyCategory ? [...categories, EMPTY_CATEGORY_VALUE] : categories;
+  }, [modelCards]);
 
   const capabilityOptions = useMemo(
     () =>
@@ -424,7 +433,7 @@ export default function UserPortalModelsPage() {
   };
 
   const getPreviewAccessGroup = (item: ModelCardItem) => {
-    if (groupFilter === "__all__") {
+    if (groupFilter === ALL_VALUE) {
       return getBaseAccessGroup(item);
     }
 
@@ -593,18 +602,23 @@ export default function UserPortalModelsPage() {
       .map((item) => ({
         ...item,
         accessGroups:
-          groupFilter === "__all__"
+          groupFilter === ALL_VALUE
             ? item.accessGroups
             : item.accessGroups.filter((group) => group.group === groupFilter),
       }))
       .filter((item) => item.accessGroups.length > 0)
+      .filter((item) => {
+        if (categoryFilter === ALL_VALUE) {
+          return true;
+        }
+        if (categoryFilter === EMPTY_CATEGORY_VALUE) {
+          return !getItemCategory(item);
+        }
+        return getItemCategory(item) === categoryFilter;
+      })
       .filter(
         (item) =>
-          providerFilter === "__all__" || item.provider === providerFilter,
-      )
-      .filter(
-        (item) =>
-          capabilityFilter === "__all__" ||
+          capabilityFilter === ALL_VALUE ||
           item.capabilities.includes(capabilityFilter),
       )
       .filter((item) => {
@@ -614,7 +628,7 @@ export default function UserPortalModelsPage() {
 
         return (
           item.model.toLowerCase().includes(normalizedKeyword) ||
-          item.provider.toLowerCase().includes(normalizedKeyword) ||
+          getItemCategory(item).toLowerCase().includes(normalizedKeyword) ||
           item.capabilities.some(
             (capability) =>
               capability.toLowerCase().includes(normalizedKeyword) ||
@@ -631,18 +645,18 @@ export default function UserPortalModelsPage() {
           )
         );
       });
-  }, [capabilityFilter, groupFilter, keyword, modelCards, providerFilter, t]);
+  }, [capabilityFilter, categoryFilter, groupFilter, keyword, modelCards, t]);
 
   const hasActiveFilters =
     keyword.trim().length > 0 ||
-    capabilityFilter !== "__all__" ||
-    providerFilter !== "__all__" ||
-    groupFilter !== "__all__";
+    capabilityFilter !== ALL_VALUE ||
+    categoryFilter !== ALL_VALUE ||
+    groupFilter !== ALL_VALUE;
   const resetFilters = () => {
     setKeyword("");
-    setCapabilityFilter("__all__");
-    setProviderFilter("__all__");
-    setGroupFilter("__all__");
+    setCapabilityFilter(ALL_VALUE);
+    setCategoryFilter(ALL_VALUE);
+    setGroupFilter(ALL_VALUE);
   };
 
   const openModelDetails = (item: ModelCardItem) => {
@@ -663,10 +677,10 @@ export default function UserPortalModelsPage() {
         <div className="divide-y divide-border/50 overflow-hidden rounded-md bg-muted/20 dark:bg-white/[0.02]">
           <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
             <div className="text-sm text-muted-foreground">
-              {t("portal.models.providerFilter")}
+              {t("portal.models.categoryFilter")}
             </div>
             <div className="min-w-0 text-right text-sm font-medium text-foreground sm:text-left">
-              {model.provider}
+              {getItemCategory(model) || t("portal.models.uncategorized")}
             </div>
           </div>
           <div className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3 px-3.5 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:px-4">
@@ -868,15 +882,17 @@ export default function UserPortalModelsPage() {
 
           <div className="flex items-center gap-2 sm:hidden">
             <div className="min-w-0 flex-1">
-              <Select value={providerFilter} onValueChange={setProviderFilter}>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="h-10 rounded-md border-border bg-background text-sm shadow-none">
-                  <SelectValue placeholder={t("portal.models.providerFilter")} />
+                  <SelectValue placeholder={t("portal.models.categoryFilter")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t("common.all")}</SelectItem>
-                  {providerOptions.map((provider) => (
-                    <SelectItem key={provider} value={provider}>
-                      {provider}
+                  <SelectItem value={ALL_VALUE}>{t("common.all")}</SelectItem>
+                  {categoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category === EMPTY_CATEGORY_VALUE
+                        ? t("portal.models.uncategorized")
+                        : category}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -890,7 +906,7 @@ export default function UserPortalModelsPage() {
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t("common.all")}</SelectItem>
+                  <SelectItem value={ALL_VALUE}>{t("common.all")}</SelectItem>
                   {groupItems.map((group) => (
                     <SelectItem key={group.group} value={group.group}>
                       {group.group}
@@ -903,22 +919,24 @@ export default function UserPortalModelsPage() {
 
           <div className="hidden space-y-5 sm:block">
             <FilterSection
-              icon={Building2}
-              label={t("portal.models.providerFilter")}
+              icon={Folder}
+              label={t("portal.models.categoryFilter")}
             >
               <FilterChip
-                active={providerFilter === "__all__"}
-                onClick={() => setProviderFilter("__all__")}
+                active={categoryFilter === ALL_VALUE}
+                onClick={() => setCategoryFilter(ALL_VALUE)}
               >
                 {t("common.all")}
               </FilterChip>
-              {providerOptions.map((provider) => (
+              {categoryOptions.map((category) => (
                 <FilterChip
-                  key={provider}
-                  active={providerFilter === provider}
-                  onClick={() => setProviderFilter(provider)}
+                  key={category}
+                  active={categoryFilter === category}
+                  onClick={() => setCategoryFilter(category)}
                 >
-                  {provider}
+                  {category === EMPTY_CATEGORY_VALUE
+                    ? t("portal.models.uncategorized")
+                    : category}
                 </FilterChip>
               ))}
             </FilterSection>
@@ -928,8 +946,8 @@ export default function UserPortalModelsPage() {
               label={t("portal.models.capabilities")}
             >
               <FilterChip
-                active={capabilityFilter === "__all__"}
-                onClick={() => setCapabilityFilter("__all__")}
+                active={capabilityFilter === ALL_VALUE}
+                onClick={() => setCapabilityFilter(ALL_VALUE)}
               >
                 {t("common.all")}
               </FilterChip>
@@ -949,8 +967,8 @@ export default function UserPortalModelsPage() {
               label={t("portal.models.groupFilterLabel")}
             >
               <FilterChip
-                active={groupFilter === "__all__"}
-                onClick={() => setGroupFilter("__all__")}
+                active={groupFilter === ALL_VALUE}
+                onClick={() => setGroupFilter(ALL_VALUE)}
               >
                 {t("common.all")}
               </FilterChip>
@@ -1042,7 +1060,8 @@ export default function UserPortalModelsPage() {
                 inputPrice: getPreviewInputPrice(item),
                 model: item.model,
                 outputPrice: getPreviewOutputPrice(item),
-                provider: item.provider,
+                category:
+                  getItemCategory(item) || t("portal.models.uncategorized"),
               }}
               onCopy={copyModelId}
               onOpen={() => openModelDetails(item)}

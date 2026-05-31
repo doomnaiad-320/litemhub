@@ -45,6 +45,7 @@ export function ModelDialog({
             ...model,
             model: mode === 'create' ? '' : model.model,
             owner: model.owner ?? '',
+            category: model.category ?? '',
             type: model.type,
             timeout: model.timeout_config?.request_timeout,
             stream_timeout: model.timeout_config?.stream_request_timeout,
@@ -54,6 +55,7 @@ export function ModelDialog({
         : {
             model: '',
             owner: '',
+            category: '',
             type: 1
         }, [mode, model])
 

@@ -76,7 +76,7 @@ export function ModelTable() {
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [ownerFilter, setOwnerFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   // API Doc drawer state
   const [apiDocOpen, setApiDocOpen] = useState(false);
@@ -102,46 +102,50 @@ export function ModelTable() {
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase();
       filtered = filtered.filter(m =>
-        m.model.toLowerCase().includes(keyword) || (m.owner || '').toLowerCase().includes(keyword)
+        m.model.toLowerCase().includes(keyword) ||
+        (m.category || '').toLowerCase().includes(keyword)
       );
     }
-    if (ownerFilter === '__all__') {
+    if (categoryFilter === '__all__') {
       // no-op
-    } else if (ownerFilter === '__empty__') {
-      filtered = filtered.filter((m) => !m.owner);
-    } else if (ownerFilter) {
-      filtered = filtered.filter((m) => (m.owner || '') === ownerFilter);
+    } else if (categoryFilter === '__empty__') {
+      filtered = filtered.filter((m) => !m.category);
+    } else if (categoryFilter) {
+      filtered = filtered.filter((m) => (m.category || '') === categoryFilter);
     }
     return [...filtered].sort((a, b) => {
-      if (a.type === b.type) {
-        return a.model.localeCompare(b.model);
+      if ((a.category || '') !== (b.category || '')) {
+        return (a.category || '').localeCompare(b.category || '');
       }
-      return a.type - b.type;
+      if (a.type !== b.type) {
+        return a.type - b.type;
+      }
+      return a.model.localeCompare(b.model);
     });
-  }, [models, searchKeyword, ownerFilter]);
+  }, [models, searchKeyword, categoryFilter]);
 
-  const ownerOptions = useMemo(() => {
+  const categoryOptions = useMemo(() => {
     if (!models) {
       return [];
     }
 
-    const ownerSet = new Set<string>();
-    let hasEmptyOwner = false;
+    const categorySet = new Set<string>();
+    let hasEmptyCategory = false;
 
     for (const model of models) {
-      if (model.owner) {
-        ownerSet.add(model.owner);
+      if (model.category) {
+        categorySet.add(model.category);
       } else {
-        hasEmptyOwner = true;
+        hasEmptyCategory = true;
       }
     }
 
-    const options = [...ownerSet]
+    const options = [...categorySet]
       .sort((a, b) => a.localeCompare(b))
-      .map((owner) => ({ value: owner, label: owner }));
+      .map((category) => ({ value: category, label: category }));
 
-    if (hasEmptyOwner) {
-      options.push({ value: '__empty__', label: t("model.emptyOwner") });
+    if (hasEmptyCategory) {
+      options.push({ value: '__empty__', label: t("model.emptyCategory") });
     }
 
     return options;
@@ -233,17 +237,17 @@ export function ModelTable() {
       ),
     },
     {
-      accessorKey: "owner",
+      accessorKey: "category",
       header: () => (
-        <div className="font-medium py-3.5">{t("model.owner")}</div>
+        <div className="font-medium py-3.5">{t("model.category")}</div>
       ),
       cell: ({ row }) => (
         <div
           className="font-medium cursor-pointer hover:text-primary transition-colors"
           onClick={() => openUpdateDialog(row.original)}
         >
-          {row.original.owner || (
-            <span className="text-muted-foreground">{t("model.emptyOwner")}</span>
+          {row.original.category || (
+            <span className="text-muted-foreground">{t("model.emptyCategory")}</span>
           )}
         </div>
       ),
@@ -687,13 +691,13 @@ export function ModelTable() {
               />
             </div>
             <div className="w-44">
-              <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder={t("model.ownerFilterPlaceholder")} />
+                  <SelectValue placeholder={t("model.categoryFilterPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t("model.allOwners")}</SelectItem>
-                  {ownerOptions.map((option) => (
+                  <SelectItem value="__all__">{t("model.allCategories")}</SelectItem>
+                  {categoryOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

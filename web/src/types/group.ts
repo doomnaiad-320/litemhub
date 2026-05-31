@@ -125,6 +125,7 @@ export interface GroupDashboardModel {
     config?: Record<string, unknown>
     model: string
     owner: string
+    category?: string
     type: number
     rpm?: number
     tpm?: number

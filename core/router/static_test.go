@@ -49,6 +49,26 @@ func TestSetStaticFileRouter_DisableWebRoot(t *testing.T) {
 
 			convey.So(recorder.Code, convey.ShouldEqual, http.StatusOK)
 			convey.So(recorder.Body.String(), convey.ShouldContainSubstring, "console.log('ok');")
+			convey.So(
+				recorder.Header().Get("Cache-Control"),
+				convey.ShouldEqual,
+				"public, max-age=31536000, immutable",
+			)
+		})
+
+		convey.Convey("should not fallback missing hashed assets to SPA index", func() {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/assets/missing.js",
+				nil,
+			)
+
+			router.ServeHTTP(recorder, req)
+
+			convey.So(recorder.Code, convey.ShouldEqual, http.StatusNotFound)
+			convey.So(recorder.Body.String(), convey.ShouldNotContainSubstring, "test-spa")
 		})
 
 		convey.Convey("should keep SPA fallback accessible", func() {
@@ -64,6 +84,11 @@ func TestSetStaticFileRouter_DisableWebRoot(t *testing.T) {
 
 			convey.So(recorder.Code, convey.ShouldEqual, http.StatusOK)
 			convey.So(recorder.Body.String(), convey.ShouldContainSubstring, "test-spa")
+			convey.So(
+				recorder.Header().Get("Cache-Control"),
+				convey.ShouldEqual,
+				"no-cache, must-revalidate",
+			)
 		})
 
 		convey.Convey("should inject public models SEO metadata into SPA fallback", func() {

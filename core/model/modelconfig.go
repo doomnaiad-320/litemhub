@@ -35,6 +35,7 @@ type ModelConfig struct {
 	Model            string                    `gorm:"size:128;primaryKey"           json:"model"                        yaml:"model,omitempty"`
 	Description      string                    `gorm:"type:text"                     json:"description,omitempty"          yaml:"description,omitempty"`
 	Owner            ModelOwner                `gorm:"type:varchar(32);index"        json:"owner"                        yaml:"owner,omitempty"`
+	Category         string                    `gorm:"size:64;index"                 json:"category,omitempty"             yaml:"category,omitempty"`
 	Type             mode.Mode                 `                                     json:"type"                         yaml:"type,omitempty"`
 	ExcludeFromTests bool                      `                                     json:"exclude_from_tests,omitempty" yaml:"exclude_from_tests,omitempty"`
 	RPM              int64                     `                                     json:"rpm,omitempty"                yaml:"rpm,omitempty"`
@@ -347,8 +348,9 @@ func SearchModelConfigs(
 	page, perPage int,
 	model string,
 	owner ModelOwner,
+	category string,
 ) (configs []ModelConfig, total int64, err error) {
-	tx := DB.Model(&ModelConfig{}).Where("model LIKE ?", "%"+keyword+"%")
+	tx := DB.Model(&ModelConfig{})
 	if model != "" {
 		tx = tx.Where("model = ?", model)
 	}
@@ -357,35 +359,28 @@ func SearchModelConfigs(
 		tx = tx.Where("owner = ?", owner)
 	}
 
+	if category != "" {
+		tx = tx.Where("category = ?", category)
+	}
+
 	if keyword != "" {
-		var (
-			conditions []string
-			values     []any
-		)
-
-		if model == "" {
-			if !common.UsingSQLite {
-				conditions = append(conditions, "model ILIKE ?")
-			} else {
-				conditions = append(conditions, "model LIKE ?")
-			}
-
-			values = append(values, "%"+keyword+"%")
+		var conditions []string
+		values := make([]any, 0, 3)
+		likeOperator := "LIKE"
+		if !common.UsingSQLite {
+			likeOperator = "ILIKE"
 		}
 
-		if owner != "" {
-			if !common.UsingSQLite {
-				conditions = append(conditions, "owner ILIKE ?")
-			} else {
-				conditions = append(conditions, "owner LIKE ?")
-			}
+		conditions = append(conditions, "model "+likeOperator+" ?")
+		values = append(values, "%"+keyword+"%")
 
-			values = append(values, "%"+string(owner)+"%")
-		}
+		conditions = append(conditions, "owner "+likeOperator+" ?")
+		values = append(values, "%"+keyword+"%")
 
-		if len(conditions) > 0 {
-			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
-		}
+		conditions = append(conditions, "category "+likeOperator+" ?")
+		values = append(values, "%"+keyword+"%")
+
+		tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
 	}
 
 	err = tx.Count(&total).Error

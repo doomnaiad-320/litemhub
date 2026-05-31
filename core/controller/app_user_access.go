@@ -34,6 +34,7 @@ type UpdateAppUserKeyRequest struct {
 
 type UserGroupModelDetailResponse struct {
 	Model              string                        `json:"model"`
+	Category           string                        `json:"category,omitempty"`
 	Price              model.Price                   `json:"price,omitempty"`
 	ImagePrices        map[string]float64            `json:"image_prices,omitempty"`
 	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
@@ -215,6 +216,7 @@ func buildUserGroupModelDetails(groupCache *model.GroupCache, models []string) (
 
 		modelDetails = append(modelDetails, &UserGroupModelDetailResponse{
 			Model:              modelName,
+			Category:           strings.TrimSpace(config.Category),
 			Price:              config.Price.ApplyMultiplier(multiplier),
 			ImagePrices:        applyPriceMultiplierToImagePrices(config.ImagePrices, multiplier),
 			ImageQualityPrices: applyPriceMultiplierToImageQualityPrices(config.ImageQualityPrices, multiplier),

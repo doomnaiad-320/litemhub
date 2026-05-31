@@ -50,6 +50,7 @@ func SetStaticFileRouter(router *gin.Engine) {
 		".woff",
 		".woff2",
 	})))
+	router.Use(frontendCacheControlMiddleware())
 
 	if config.DisableWeb {
 		router.GET("/", renderWebRootRedirectPage)
@@ -127,9 +128,39 @@ func checkNoRouteNotFound(req *http.Request) bool {
 	return false
 }
 
+func frontendCacheControlMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if !checkNoRouteNotFound(ctx.Request) {
+			setFrontendCacheControl(ctx.Writer.Header(), ctx.Request.URL.Path)
+		}
+
+		ctx.Next()
+	}
+}
+
+func setFrontendCacheControl(header http.Header, requestPath string) {
+	if strings.HasPrefix(requestPath, "/assets/") {
+		header.Set("Cache-Control", "public, max-age=31536000, immutable")
+		return
+	}
+
+	header.Set("Cache-Control", "no-cache, must-revalidate")
+	header.Set("Pragma", "no-cache")
+	header.Set("Expires", "0")
+}
+
+func isFrontendStaticAssetPath(path string) bool {
+	return strings.HasPrefix(path, "/assets/") ||
+		strings.HasPrefix(path, "/locales/") ||
+		path == "/logo.svg" ||
+		path == "/favicon.ico" ||
+		path == "/og-image.png"
+}
+
 func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
-		if checkNoRouteNotFound(ctx.Request) {
+		if checkNoRouteNotFound(ctx.Request) ||
+			isFrontendStaticAssetPath(ctx.Request.URL.Path) {
 			http.NotFound(ctx.Writer, ctx.Request)
 			return
 		}
@@ -149,7 +180,8 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	fileServer := http.StripPrefix("/", http.FileServer(fs))
 
 	return func(c *gin.Context) {
-		if checkNoRouteNotFound(c.Request) {
+		if checkNoRouteNotFound(c.Request) ||
+			isFrontendStaticAssetPath(c.Request.URL.Path) {
 			http.NotFound(c.Writer, c.Request)
 			return
 		}

@@ -5,6 +5,7 @@ import { AlertCircle, Home, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { motion } from 'motion/react'
+import { isChunkLoadError, reloadOnceForChunkLoadError } from '@/utils/chunk-load'
 
 interface Props {
     children?: ReactNode
@@ -23,6 +24,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
     static getDerivedStateFromError(error: Error): State {
         return { hasError: true, error }
+    }
+
+    componentDidCatch(error: Error) {
+        if (isChunkLoadError(error)) {
+            reloadOnceForChunkLoadError()
+        }
     }
 
     render() {

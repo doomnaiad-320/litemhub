@@ -67,6 +67,7 @@ export interface ModelConfig {
     model: string
     description?: string
     owner?: string
+    category?: string
     image_batch_size?: number
     type: number
     exclude_from_tests?: boolean
@@ -172,6 +173,7 @@ export interface ModelCreateRequest {
     description?: string
     config?: ModelConfigDetail
     owner?: string
+    category?: string
     type: number
     exclude_from_tests?: boolean
     rpm?: number

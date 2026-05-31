@@ -42,8 +42,9 @@ import {
 } from "@/lib/model-catalog";
 
 const ALL_VALUE = "__all__";
+const EMPTY_CATEGORY_VALUE = "__empty__";
 const FEATURED_CAPABILITIES = ["reasoning", "vision", "tools", "json", "embedding", "coding"];
-const FEATURED_PROVIDERS_LIMIT = 8;
+const FEATURED_CATEGORIES_LIMIT = 8;
 const MODEL_TYPE_FILTERS = ["video", "image", "llm"] as const;
 const MODEL_SORT_FILTERS = ["latest", "popular", "priceAsc", "priceDesc"] as const;
 
@@ -52,7 +53,7 @@ type ModelSortFilter = (typeof MODEL_SORT_FILTERS)[number];
 
 interface StatItem {
   icon: LucideIcon;
-  key: "models" | "providers" | "capabilities" | "groups";
+  key: "models" | "categories" | "capabilities" | "groups";
   value: number;
 }
 
@@ -151,6 +152,8 @@ const isModelType = (model: PublicModel, type: ModelTypeFilter) => {
   return !capabilities.includes("video") && !capabilities.includes("image");
 };
 
+const getModelCategory = (model: PublicModel) => model.category?.trim() || "";
+
 const updateMetaTag = (selector: string, attribute: "content" | "href", value: string) => {
   const element = document.head.querySelector(selector);
   if (element) {
@@ -178,7 +181,7 @@ export default function PublicModelsPage() {
   const { data, isLoading, isError } = usePublicModels();
   const [keyword, setKeyword] = useState("");
   const [modelTypeFilter, setModelTypeFilter] = useState<ModelTypeFilter>("llm");
-  const [providerFilter, setProviderFilter] = useState(ALL_VALUE);
+  const [categoryFilter, setCategoryFilter] = useState(ALL_VALUE);
   const [capabilityFilter, setCapabilityFilter] = useState(ALL_VALUE);
   const [sortBy, setSortBy] = useState<ModelSortFilter>("latest");
 
@@ -217,13 +220,14 @@ export default function PublicModelsPage() {
     });
   }, [models, t, i18n.resolvedLanguage]);
 
-  const providerOptions = useMemo(
-    () =>
-      Array.from(new Set(models.map((model) => model.provider))).sort((left, right) =>
-        left.localeCompare(right),
-      ),
-    [models],
-  );
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(
+      new Set(models.map(getModelCategory).filter(Boolean)),
+    ).sort((left, right) => left.localeCompare(right));
+    const hasEmptyCategory = models.some((model) => !getModelCategory(model));
+
+    return hasEmptyCategory ? [...categories, EMPTY_CATEGORY_VALUE] : categories;
+  }, [models]);
 
   const capabilityOptions = useMemo(
     () =>
@@ -256,23 +260,35 @@ export default function PublicModelsPage() {
     [capabilityOptions, modelTypeFilter, models],
   );
 
-  const visibleProviderOptions = useMemo(
+  const visibleCategoryOptions = useMemo(
     () =>
-      providerOptions
-        .filter((provider) =>
+      categoryOptions
+        .filter((category) =>
           models.some(
-            (model) => model.provider === provider && isModelType(model, modelTypeFilter),
+            (model) =>
+              isModelType(model, modelTypeFilter) &&
+              (category === EMPTY_CATEGORY_VALUE
+                ? !getModelCategory(model)
+                : getModelCategory(model) === category),
           ),
         )
-        .slice(0, FEATURED_PROVIDERS_LIMIT),
-    [modelTypeFilter, models, providerOptions],
+        .slice(0, FEATURED_CATEGORIES_LIMIT),
+    [categoryOptions, modelTypeFilter, models],
   );
 
   const filteredModels = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     const filtered = models
       .filter((model) => isModelType(model, modelTypeFilter))
-      .filter((model) => providerFilter === ALL_VALUE || model.provider === providerFilter)
+      .filter((model) => {
+        if (categoryFilter === ALL_VALUE) {
+          return true;
+        }
+        if (categoryFilter === EMPTY_CATEGORY_VALUE) {
+          return !getModelCategory(model);
+        }
+        return getModelCategory(model) === categoryFilter;
+      })
       .filter(
         (model) =>
           capabilityFilter === ALL_VALUE ||
@@ -285,7 +301,7 @@ export default function PublicModelsPage() {
 
         return (
           model.model.toLowerCase().includes(normalizedKeyword) ||
-          model.provider.toLowerCase().includes(normalizedKeyword) ||
+          getModelCategory(model).toLowerCase().includes(normalizedKeyword) ||
           (model.description || "").toLowerCase().includes(normalizedKeyword) ||
           (model.capabilities || []).some((capability) =>
             t(`portal.models.capability.${capability}`)
@@ -311,16 +327,16 @@ export default function PublicModelsPage() {
           return getModelRecency(right) - getModelRecency(left) || compareModelName(left, right);
       }
     });
-  }, [capabilityFilter, keyword, modelTypeFilter, models, providerFilter, sortBy, t]);
+  }, [capabilityFilter, categoryFilter, keyword, modelTypeFilter, models, sortBy, t]);
 
   const stats = useMemo(
     () => ({
       models: models.length,
-      providers: providerOptions.length,
+      categories: categoryOptions.length,
       capabilities: capabilityOptions.length,
       groups: new Set(models.flatMap((model) => model.available_groups || [])).size,
     }),
-    [capabilityOptions.length, models, providerOptions.length],
+    [capabilityOptions.length, categoryOptions.length, models],
   );
 
   const copyModelId = async (model: string) => {
@@ -335,7 +351,7 @@ export default function PublicModelsPage() {
   const clearFilters = () => {
     setKeyword("");
     setModelTypeFilter("llm");
-    setProviderFilter(ALL_VALUE);
+    setCategoryFilter(ALL_VALUE);
     setCapabilityFilter(ALL_VALUE);
     setSortBy("latest");
   };
@@ -343,7 +359,7 @@ export default function PublicModelsPage() {
   const hasActiveFilters =
     keyword.trim().length > 0 ||
     modelTypeFilter !== "llm" ||
-    providerFilter !== ALL_VALUE ||
+    categoryFilter !== ALL_VALUE ||
     capabilityFilter !== ALL_VALUE ||
     sortBy !== "latest";
 
@@ -388,7 +404,7 @@ export default function PublicModelsPage() {
             <div className="grid grid-cols-4 gap-1.5 rounded-[16px] border border-[#f2f3f5] bg-[#fbfbfc] p-2 dark:border-white/10 dark:bg-white/[0.03] sm:grid-cols-2 sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0 sm:dark:bg-transparent">
               {([
                 { key: "models", value: stats.models, icon: Database },
-                { key: "providers", value: stats.providers, icon: Layers3 },
+                { key: "categories", value: stats.categories, icon: Layers3 },
                 { key: "capabilities", value: stats.capabilities, icon: SlidersHorizontal },
                 { key: "groups", value: stats.groups, icon: CheckCircle2 },
               ] satisfies StatItem[]).map(({ key, value, icon: Icon }) => (
@@ -431,7 +447,7 @@ export default function PublicModelsPage() {
                       onClick={() => {
                         setModelTypeFilter(type);
                         setCapabilityFilter(ALL_VALUE);
-                        setProviderFilter(ALL_VALUE);
+                        setCategoryFilter(ALL_VALUE);
                       }}
                     >
                       <span>{t(`publicModels.typeMenu.${type}`)}</span>
@@ -487,16 +503,19 @@ export default function PublicModelsPage() {
             <div className="grid gap-3 p-3 lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-5 lg:p-5">
               <aside className="space-y-3 lg:space-y-5 lg:pr-5">
                 <FilterPillGroup
-                  label={t("publicModels.provider")}
+                  label={t("publicModels.category")}
                   options={[
-                    { value: ALL_VALUE, label: t("publicModels.allProviders") },
-                    ...visibleProviderOptions.map((provider) => ({
-                      value: provider,
-                      label: provider,
+                    { value: ALL_VALUE, label: t("publicModels.allCategories") },
+                    ...visibleCategoryOptions.map((category) => ({
+                      value: category,
+                      label:
+                        category === EMPTY_CATEGORY_VALUE
+                          ? t("publicModels.uncategorized")
+                          : category,
                     })),
                   ]}
-                  value={providerFilter}
-                  onChange={setProviderFilter}
+                  value={categoryFilter}
+                  onChange={setCategoryFilter}
                 />
 
                 <FilterPillGroup
@@ -568,7 +587,9 @@ export default function PublicModelsPage() {
                             model,
                             t("publicModels.perRequestUnit"),
                           ),
-                          provider: model.provider,
+                          category:
+                            getModelCategory(model) ||
+                            t("publicModels.uncategorized"),
                         }}
                         onCopy={copyModelId}
                         onOpen={() => navigate(getPublicModelDetailPath(model.model))}

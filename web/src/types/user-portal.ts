@@ -167,6 +167,7 @@ export interface UserPortalModelLogStatsResponse {
 
 export interface UserPortalGroupModelOption {
     model: string
+    category?: string
     price?: ModelPrice
     image_prices?: Record<string, number>
     image_quality_prices?: Record<string, Record<string, number>>
