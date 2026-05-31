@@ -136,6 +136,9 @@ const KNOWN_CONFIG_KEYS = new Set([
     'tool_choice',
     'coder',
     'limited_time_free',
+    'chat_completions_stream_fast_path',
+    'fuzzy_token_threshold',
+    'disable_precise_token_count',
     'support_formats',
     'support_voices',
 ])
@@ -240,6 +243,9 @@ export function ModelForm({
                 tool_choice: defaultValues.config?.tool_choice ?? false,
                 coder: defaultValues.config?.coder ?? false,
                 limited_time_free: defaultValues.config?.limited_time_free ?? false,
+                chat_completions_stream_fast_path: defaultValues.config?.chat_completions_stream_fast_path ?? false,
+                fuzzy_token_threshold: defaultValues.config?.fuzzy_token_threshold,
+                disable_precise_token_count: defaultValues.config?.disable_precise_token_count ?? false,
                 support_formats: defaultValues.config?.support_formats,
                 support_voices: defaultValues.config?.support_voices,
             },
@@ -289,6 +295,7 @@ export function ModelForm({
                     showVision: false,
                     showCoder: false,
                     showLimitedTimeFree: true,
+                    showPerformance: false,
                     showSupportFormats: true,
                     showSupportVoices: true,
                 }
@@ -299,6 +306,7 @@ export function ModelForm({
                     showVision: false,
                     showCoder: false,
                     showLimitedTimeFree: true,
+                    showPerformance: false,
                     showSupportFormats: true,
                     showSupportVoices: false,
                 }
@@ -311,6 +319,7 @@ export function ModelForm({
                     showVision: watchedType === 3,
                     showCoder: false,
                     showLimitedTimeFree: true,
+                    showPerformance: false,
                     showSupportFormats: false,
                     showSupportVoices: false,
                 }
@@ -323,6 +332,7 @@ export function ModelForm({
                     showVision: true,
                     showCoder: false,
                     showLimitedTimeFree: true,
+                    showPerformance: true,
                     showSupportFormats: true,
                     showSupportVoices: false,
                 }
@@ -337,6 +347,7 @@ export function ModelForm({
                     showVision: true,
                     showCoder: true,
                     showLimitedTimeFree: true,
+                    showPerformance: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
                 }
@@ -1328,7 +1339,72 @@ export function ModelForm({
                                         )}
                                     />
                                 )}
+                                {configFieldVisibility.showPerformance && (
+                                    <FormField
+                                        control={form.control}
+                                        name="config.chat_completions_stream_fast_path"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                                <div className="space-y-1">
+                                                    <FormLabel>{t("model.dialog.config.streamFastPath")}</FormLabel>
+                                                    <FormDescription>{t("model.dialog.config.streamFastPathDescription")}</FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value ?? false}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+                                {configFieldVisibility.showPerformance && (
+                                    <FormField
+                                        control={form.control}
+                                        name="config.disable_precise_token_count"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                                <div className="space-y-1">
+                                                    <FormLabel>{t("model.dialog.config.disablePreciseTokenCount")}</FormLabel>
+                                                    <FormDescription>{t("model.dialog.config.disablePreciseTokenCountDescription")}</FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value ?? false}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
                             </div>
+
+                            {configFieldVisibility.showPerformance && (
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="config.fuzzy_token_threshold"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t("model.dialog.config.fuzzyTokenThreshold")}</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder={t("model.dialog.config.fuzzyTokenThresholdPlaceholder")}
+                                                        {...field}
+                                                        value={field.value ?? ''}
+                                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>{t("model.dialog.config.fuzzyTokenThresholdDescription")}</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
 
                             {configFieldVisibility.showSupportFormats && (
                                 <FormField

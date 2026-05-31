@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labring/aiproxy/core/common/env"
 	"github.com/patrickmn/go-cache"
 	xproxy "golang.org/x/net/proxy"
 )
@@ -18,6 +19,9 @@ import (
 const (
 	defaultHeaderTimeout = time.Minute * 15
 	tlsHandshakeTimeout  = time.Second * 5
+
+	defaultMaxIdleConns        = 500
+	defaultMaxIdleConnsPerHost = 100
 )
 
 var (
@@ -55,8 +59,33 @@ func defaultTransportTemplate() *http.Transport {
 	transport.DialContext = defaultDialer.DialContext
 	transport.ResponseHeaderTimeout = defaultHeaderTimeout
 	transport.TLSHandshakeTimeout = tlsHandshakeTimeout
+	transport.MaxIdleConns = httpTransportMaxIdleConns()
+	transport.MaxIdleConnsPerHost = httpTransportMaxIdleConnsPerHost()
+	transport.ForceAttemptHTTP2 = httpTransportForceAttemptHTTP2()
 
 	return transport
+}
+
+func httpTransportMaxIdleConns() int {
+	value := env.Int64("HTTP_TRANSPORT_MAX_IDLE_CONNS", defaultMaxIdleConns)
+	if value <= 0 {
+		return defaultMaxIdleConns
+	}
+
+	return int(value)
+}
+
+func httpTransportMaxIdleConnsPerHost() int {
+	value := env.Int64("HTTP_TRANSPORT_MAX_IDLE_CONNS_PER_HOST", defaultMaxIdleConnsPerHost)
+	if value <= 0 {
+		return defaultMaxIdleConnsPerHost
+	}
+
+	return int(value)
+}
+
+func httpTransportForceAttemptHTTP2() bool {
+	return env.Bool("HTTP_TRANSPORT_FORCE_ATTEMPT_HTTP2", true)
 }
 
 func normalizeTimeout(timeout time.Duration) time.Duration {

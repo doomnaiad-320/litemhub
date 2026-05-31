@@ -140,6 +140,19 @@ func TestLoadHTTPClientReuse(t *testing.T) {
 	})
 }
 
+func TestLoadHTTPClientTransportDefaults(t *testing.T) {
+	convey.Convey("LoadHTTPClient transport defaults", t, func() {
+		client, err := utils.LoadHTTPClientE(2*time.Second, "")
+		convey.So(err, convey.ShouldBeNil)
+
+		transport, ok := client.Transport.(*http.Transport)
+		convey.So(ok, convey.ShouldBeTrue)
+		convey.So(transport.MaxIdleConns, convey.ShouldEqual, 500)
+		convey.So(transport.MaxIdleConnsPerHost, convey.ShouldEqual, 100)
+		convey.So(transport.ForceAttemptHTTP2, convey.ShouldBeTrue)
+	})
+}
+
 func TestUnmarshalGeneralOpenAIRequest(t *testing.T) {
 	convey.Convey("UnmarshalGeneralOpenAIRequest", t, func() {
 		convey.Convey("should unmarshal valid request", func() {

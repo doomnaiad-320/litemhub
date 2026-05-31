@@ -385,14 +385,12 @@ func DoResponse(
 		var (
 			streamPreHandler  PreHandler
 			handlerPreHandler PreHandler
+			cfg               Config
 		)
 
 		if meta.Mode == mode.ChatCompletions {
 			var configErr error
-
-			streamPreHandler, handlerPreHandler, configErr = getChatCompletionResponsePreHandlers(
-				meta,
-			)
+			cfg, configErr = (&Adaptor{}).loadConfig(meta)
 			if configErr != nil {
 				return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
 					configErr,
@@ -400,6 +398,10 @@ func DoResponse(
 					http.StatusInternalServerError,
 				)
 			}
+
+			streamPreHandler, handlerPreHandler, _ = chatCompletionResponsePreHandlersFromConfig(
+				cfg,
+			)
 		}
 
 		// Check if model required Responses API conversion
@@ -412,7 +414,12 @@ func DoResponse(
 			}
 		} else {
 			if utils.IsStreamResponse(resp) {
-				result, err = StreamHandler(meta, c, resp, streamPreHandler)
+				if meta.Mode == mode.ChatCompletions &&
+					shouldUseChatCompletionsStreamFastPath(meta, cfg, streamPreHandler) {
+					result, err = ChatCompletionsStreamFastPathHandler(meta, c, resp)
+				} else {
+					result, err = StreamHandler(meta, c, resp, streamPreHandler)
+				}
 			} else {
 				result, err = Handler(meta, c, resp, handlerPreHandler)
 			}

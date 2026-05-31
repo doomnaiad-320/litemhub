@@ -15,17 +15,22 @@ import (
 const defaultMaxFuzzyTokenThreshold = 2048000
 
 func getTokenNum(tokenEncoder tokenizer.Codec, text string) int64 {
-	// Check fuzzy token threshold
-	threshold := config.GetFuzzyTokenThreshold()
+	return getTokenNumWithThreshold(tokenEncoder, text, config.GetFuzzyTokenThreshold())
+}
+
+func getTokenNumWithThreshold(tokenEncoder tokenizer.Codec, text string, threshold int64) int64 {
+	textLen := len(text)
+	if threshold < 0 {
+		return estimateTokenNumByTextLength(textLen)
+	}
+
 	if threshold == 0 || threshold > defaultMaxFuzzyTokenThreshold {
 		threshold = defaultMaxFuzzyTokenThreshold
 	}
 
-	textLen := len(text)
-
 	// If threshold is set and text length exceeds it, use fuzzy calculation
 	if threshold > 0 && int64(textLen) >= threshold {
-		return int64(textLen / 4)
+		return estimateTokenNumByTextLength(textLen)
 	}
 
 	// Otherwise, use precise token counting
@@ -33,13 +38,35 @@ func getTokenNum(tokenEncoder tokenizer.Codec, text string) int64 {
 	if err != nil {
 		log.Warnf("failed to count tokens: %v, fallback to length/4", err)
 		// Fallback to rough estimation if counting fails
-		return int64(textLen / 4)
+		return estimateTokenNumByTextLength(textLen)
 	}
 
 	return int64(count)
 }
 
+func estimateTokenNumByTextLength(textLen int) int64 {
+	if textLen == 0 {
+		return 0
+	}
+
+	tokenNum := int64(textLen / 4)
+	if tokenNum == 0 {
+		return 1
+	}
+
+	return tokenNum
+}
+
 func CountTokenMessages(messages []model.Message, model string, fetchImage bool) int64 {
+	return CountTokenMessagesWithThreshold(messages, model, fetchImage, config.GetFuzzyTokenThreshold())
+}
+
+func CountTokenMessagesWithThreshold(
+	messages []model.Message,
+	model string,
+	fetchImage bool,
+	threshold int64,
+) int64 {
 	tokenEncoder := intertiktoken.GetTokenEncoder(model)
 	// Reference:
 	// https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
@@ -119,7 +146,7 @@ func CountTokenMessages(messages []model.Message, model string, fetchImage bool)
 	}
 
 	if textBuilder.Len() > 0 {
-		tokenNum += getTokenNum(tokenEncoder, textBuilder.String())
+		tokenNum += getTokenNumWithThreshold(tokenEncoder, textBuilder.String(), threshold)
 	}
 
 	tokenNum += imageTokenCount

@@ -8,16 +8,19 @@ import (
 type ModelConfigKey string
 
 const (
-	ModelConfigMaxContextTokensKey ModelConfigKey = "max_context_tokens"
-	ModelConfigMaxInputTokensKey   ModelConfigKey = "max_input_tokens"
-	ModelConfigMaxOutputTokensKey  ModelConfigKey = "max_output_tokens"
-	ModelConfigVisionKey           ModelConfigKey = "vision"
-	ModelConfigToolChoiceKey       ModelConfigKey = "tool_choice"
-	ModelConfigSupportFormatsKey   ModelConfigKey = "support_formats"
-	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
-	ModelConfigImageSizes          ModelConfigKey = "image_sizes"
-	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
-	ModelConfigLimitedTimeFreeKey  ModelConfigKey = "limited_time_free"
+	ModelConfigMaxContextTokensKey              ModelConfigKey = "max_context_tokens"
+	ModelConfigMaxInputTokensKey                ModelConfigKey = "max_input_tokens"
+	ModelConfigMaxOutputTokensKey               ModelConfigKey = "max_output_tokens"
+	ModelConfigVisionKey                        ModelConfigKey = "vision"
+	ModelConfigToolChoiceKey                    ModelConfigKey = "tool_choice"
+	ModelConfigSupportFormatsKey                ModelConfigKey = "support_formats"
+	ModelConfigSupportVoicesKey                 ModelConfigKey = "support_voices"
+	ModelConfigImageSizes                       ModelConfigKey = "image_sizes"
+	ModelConfigImageQualitys                    ModelConfigKey = "image_qualitys"
+	ModelConfigLimitedTimeFreeKey               ModelConfigKey = "limited_time_free"
+	ModelConfigChatCompletionsStreamFastPathKey ModelConfigKey = "chat_completions_stream_fast_path"
+	ModelConfigFuzzyTokenThresholdKey           ModelConfigKey = "fuzzy_token_threshold"
+	ModelConfigDisablePreciseTokenCountKey      ModelConfigKey = "disable_precise_token_count"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)
