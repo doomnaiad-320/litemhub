@@ -13,7 +13,7 @@ require (
 	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0
 	github.com/labring/aiproxy/core v0.0.0-20260513041420-a70a89df6ddf
 	github.com/labring/aiproxy/openapi-mcp v0.0.0-20260513041420-a70a89df6ddf
-	github.com/mark3labs/mcp-go v0.54.0
+	github.com/mark3labs/mcp-go v0.54.1
 	github.com/stretchr/testify v1.11.1
 	github.com/temoto/robotstxt v1.1.2
 	golang.org/x/text v0.37.0
