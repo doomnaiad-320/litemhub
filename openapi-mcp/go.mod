@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/bytedance/sonic v1.15.1
 	github.com/getkin/kin-openapi v0.135.0
-	github.com/mark3labs/mcp-go v0.54.0
+	github.com/mark3labs/mcp-go v0.54.1
 )
 
 require (
