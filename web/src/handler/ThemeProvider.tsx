@@ -15,7 +15,9 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(() => {
         const storedTheme = localStorage.getItem(storageKey) as Theme | null
-        return storedTheme === "system" ? storedTheme : defaultTheme
+        return storedTheme === "dark" || storedTheme === "light" || storedTheme === "system"
+            ? storedTheme
+            : defaultTheme
     })
 
     useEffect(() => {

@@ -4,7 +4,7 @@ export function UserPortalMarketingHeader() {
   return (
     <PublicSiteHeader
       activeItem="home"
-      className="dark:border-white/10 dark:bg-[#080b12]/92"
+      className="dark:border-border dark:bg-background/92"
     />
   );
 }

@@ -36,6 +36,36 @@ func TestCreateAppUserTokenAllowsDuplicateNameInSameGroup(t *testing.T) {
 	})
 }
 
+func TestUpdateAppUserTokenByIDUpdatesName(t *testing.T) {
+	withTestTokenDB(t, func() {
+		user := &model.AppUser{
+			Username:     model.EmptyNullString("token-user"),
+			PasswordHash: "hashed-password",
+			Status:       model.AppUserStatusEnabled,
+		}
+		require.NoError(t, model.DB.Create(user).Error)
+		require.NoError(t, model.DB.Create(&model.Group{ID: "default", Status: model.GroupStatusEnabled}).Error)
+
+		token := &model.Token{
+			Name:    model.EmptyNullString("old-name"),
+			GroupID: "default",
+		}
+		require.NoError(t, model.CreateAppUserToken(user.ID, token))
+
+		newName := "new-name"
+		updated, err := model.UpdateAppUserTokenByID(user.ID, token.ID, model.UpdateAppUserTokenRequest{
+			GroupID: "default",
+			Name:    &newName,
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.EmptyNullString(newName), updated.Name)
+
+		reloaded, err := model.GetAppUserTokenByID(user.ID, token.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.EmptyNullString(newName), reloaded.Name)
+	})
+}
+
 func TestInsertTokenRejectsDuplicateAdminNameInSameGroup(t *testing.T) {
 	withTestTokenDB(t, func() {
 		require.NoError(t, model.DB.Create(&model.Group{ID: "default", Status: model.GroupStatusEnabled}).Error)

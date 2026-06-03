@@ -49,7 +49,7 @@ const formatContextLength = (value?: number) => {
 
 const getHealthToneClass = (score?: number) => {
   if (score == null) {
-    return "border-[#d8dce3] bg-[#f8fafc] text-[#6b7280] dark:border-white/10 dark:bg-white/5 dark:text-white/60";
+    return "border-[#d8dce3] bg-[#f8fafc] text-[#6b7280] dark:border-border dark:bg-muted dark:text-muted-foreground";
   }
 
   if (score >= 95) {
@@ -96,7 +96,7 @@ export function ModelCatalogCard({
       tabIndex={0}
       aria-label={ariaLabel}
       className={cn(
-        "group flex cursor-pointer flex-col rounded-[16px] bg-white p-3 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-white/5 dark:ring-white/10 sm:rounded-[20px] sm:p-[10px]",
+        "group flex cursor-pointer flex-col rounded-[16px] bg-white p-3 shadow-[rgba(0,0,0,0.08)_0px_4px_6px] ring-1 ring-[#f2f3f5] transition duration-200 hover:-translate-y-0.5 hover:shadow-[rgba(44,30,116,0.16)_0px_0px_15px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1456f0]/35 dark:bg-card dark:ring-border sm:rounded-[20px] sm:p-[10px]",
         className,
       )}
       onClick={onOpen}
@@ -105,7 +105,7 @@ export function ModelCatalogCard({
       <div className="flex min-w-0 items-start gap-1.5">
         <button
           type="button"
-          className="min-w-0 flex-1 break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-white sm:text-[18px]"
+          className="min-w-0 flex-1 break-words text-left font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[16px] font-normal leading-[1.25] text-[#18181b] transition hover:text-[#1456f0] dark:text-foreground dark:hover:text-primary sm:text-[18px]"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
@@ -115,7 +115,7 @@ export function ModelCatalogCard({
         </button>
         <button
           type="button"
-          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#8e8e93] transition hover:bg-[#f0f0f0] hover:text-[#18181b] active:scale-[0.96] dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#8e8e93] transition hover:bg-[#f0f0f0] hover:text-[#18181b] active:scale-[0.96] dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground"
           aria-label={copyAriaLabel}
           onClick={(event) => {
             event.stopPropagation();
@@ -126,22 +126,22 @@ export function ModelCatalogCard({
         </button>
       </div>
 
-      <div className="mt-[13px] flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-white/70">
+      <div className="mt-[13px] flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#45515e] dark:text-muted-foreground">
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className="text-[#8e8e93]">{inputLabel}</span>
-          <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+          <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-foreground">
             {model.inputPrice || freePriceLabel}
           </span>
         </span>
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className="text-[#8e8e93]">{outputLabel}</span>
-          <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-white">
+          <span className="truncate font-['Roboto',_'Helvetica_Neue',_Arial,_sans-serif] font-semibold text-[#18181b] dark:text-foreground">
             {model.outputPrice || "-"}
           </span>
         </span>
       </div>
 
-      <p className="mt-[13px] line-clamp-2 text-sm leading-[1.6] text-[#45515e] dark:text-white/70 sm:mt-[17px] sm:leading-[1.7]">
+      <p className="mt-[13px] line-clamp-2 text-sm leading-[1.6] text-[#45515e] dark:text-muted-foreground sm:mt-[17px] sm:leading-[1.7]">
         {model.description || defaultDescription}
       </p>
 
@@ -151,14 +151,14 @@ export function ModelCatalogCard({
             <span className="max-w-[160px] truncate">{model.category}</span>
           </Badge>
         )}
-        <Badge className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] shadow-none hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+        <Badge className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] shadow-none hover:bg-white dark:border-border dark:bg-muted dark:text-muted-foreground">
           {contextLabel} {formatContextLength(model.contextLength)}
         </Badge>
         {(model.capabilities || []).slice(0, 5).map((capability) => (
           <Badge
             key={capability}
             variant="outline"
-            className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] dark:border-white/10 dark:bg-white/5 dark:text-white/70"
+            className="rounded-full border-[#e5e7eb] bg-white px-2.5 py-1 text-[10px] font-normal text-[#45515e] dark:border-border dark:bg-muted dark:text-muted-foreground"
           >
             {capabilityLabel(capability)}
           </Badge>

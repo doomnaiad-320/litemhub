@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
@@ -10,8 +10,46 @@ import { LogTable } from '@/feature/log/components/LogTable'
 import { GroupDialog } from '@/feature/group/components/GroupDialog'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import type { LogFilters as LogFiltersType } from '@/types/log'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnixMs } from '@/utils/timezone'
+
+const LOG_PAGE_SIZE_STORAGE_KEY = 'aiproxy.log.pageSize'
+const LOG_AUTO_REFRESH_ENABLED_STORAGE_KEY = 'aiproxy.log.autoRefresh.enabled'
+const LOG_AUTO_REFRESH_INTERVAL_STORAGE_KEY = 'aiproxy.log.autoRefresh.interval'
+const DEFAULT_LOG_PAGE_SIZE = 20
+const LOG_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50]
+const AUTO_REFRESH_INTERVAL_OPTIONS = [10_000, 30_000, 60_000]
+const DEFAULT_AUTO_REFRESH_INTERVAL = 30_000
+
+function readStoredOption(key: string, options: number[], fallback: number) {
+    if (typeof window === 'undefined') {
+        return fallback
+    }
+
+    try {
+        const value = Number(window.localStorage.getItem(key))
+        return options.includes(value) ? value : fallback
+    } catch {
+        return fallback
+    }
+}
+
+function readStoredBoolean(key: string, fallback: boolean) {
+    if (typeof window === 'undefined') {
+        return fallback
+    }
+
+    try {
+        const value = window.localStorage.getItem(key)
+        if (value === 'true') return true
+        if (value === 'false') return false
+        return fallback
+    } catch {
+        return fallback
+    }
+}
 
 export default function LogPage() {
     const { t: rawT } = useTranslation()
@@ -25,13 +63,20 @@ export default function LogPage() {
         return {
             code_type: 'all',
             page: 1,
-            per_page: 10,
+            per_page: readStoredOption(LOG_PAGE_SIZE_STORAGE_KEY, LOG_PAGE_SIZE_OPTIONS, DEFAULT_LOG_PAGE_SIZE),
             start_timestamp: zonedBoundaryToUnixMs(oneDayAgo, DEFAULT_TIMEZONE, false),
             end_timestamp: zonedBoundaryToUnixMs(today, DEFAULT_TIMEZONE, true)
         }
     }
 
     const [filters, setFilters] = useState<LogFiltersType>(getDefaultFilters())
+    const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(() => readStoredBoolean(LOG_AUTO_REFRESH_ENABLED_STORAGE_KEY, false))
+    const [autoRefreshInterval, setAutoRefreshInterval] = useState(() => readStoredOption(
+        LOG_AUTO_REFRESH_INTERVAL_STORAGE_KEY,
+        AUTO_REFRESH_INTERVAL_OPTIONS,
+        DEFAULT_AUTO_REFRESH_INTERVAL
+    ))
+    const refetchInterval = autoRefreshEnabled ? autoRefreshInterval : false
 
     // GroupDialog 状态
     const [groupDialogOpen, setGroupDialogOpen] = useState(false)
@@ -44,13 +89,37 @@ export default function LogPage() {
         isFetching,
         error,
         refetch
-    } = useLogs(filters)
+    } = useLogs(filters, { refetchInterval })
     const {
         data: statsData,
         isLoading: isStatsLoading,
         isFetching: isStatsFetching,
         refetch: refetchStats,
-    } = useLogStats(filters)
+    } = useLogStats(filters, { refetchInterval })
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(LOG_PAGE_SIZE_STORAGE_KEY, String(filters.per_page || DEFAULT_LOG_PAGE_SIZE))
+        } catch {
+            // Ignore storage failures; the table still works for the current session.
+        }
+    }, [filters.per_page])
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(LOG_AUTO_REFRESH_ENABLED_STORAGE_KEY, String(autoRefreshEnabled))
+        } catch {
+            // Ignore storage failures; the control still works for the current session.
+        }
+    }, [autoRefreshEnabled])
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(LOG_AUTO_REFRESH_INTERVAL_STORAGE_KEY, String(autoRefreshInterval))
+        } catch {
+            // Ignore storage failures; the control still works for the current session.
+        }
+    }, [autoRefreshInterval])
 
     const handleFiltersChange = (newFilters: LogFiltersType) => {
         setFilters(prev => ({
@@ -66,6 +135,13 @@ export default function LogPage() {
 
     const handlePageSizeChange = (pageSize: number) => {
         setFilters(prev => ({ ...prev, per_page: pageSize, page: 1 }))
+    }
+
+    const handleAutoRefreshIntervalChange = (value: string) => {
+        const interval = Number(value)
+        if (AUTO_REFRESH_INTERVAL_OPTIONS.includes(interval)) {
+            setAutoRefreshInterval(interval)
+        }
     }
 
     const handleRetry = () => {
@@ -88,7 +164,35 @@ export default function LogPage() {
         <div className="h-full flex flex-col">
             <div className="flex-shrink-0 p-6 pb-2">
                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm">
+                            <Switch
+                                checked={autoRefreshEnabled}
+                                onCheckedChange={setAutoRefreshEnabled}
+                                aria-label={t('log.autoRefresh')}
+                            />
+                            <span className="whitespace-nowrap text-sm font-medium">{t('log.autoRefresh')}</span>
+                            <Select
+                                value={String(autoRefreshInterval)}
+                                onValueChange={handleAutoRefreshIntervalChange}
+                                disabled={!autoRefreshEnabled}
+                            >
+                                <SelectTrigger
+                                    size="sm"
+                                    className="h-7 w-[78px] border-0 bg-muted/70 px-2 shadow-none"
+                                    aria-label={t('log.autoRefreshInterval')}
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent align="end">
+                                    {AUTO_REFRESH_INTERVAL_OPTIONS.map((interval) => (
+                                        <SelectItem key={interval} value={String(interval)}>
+                                            {t(`log.autoRefreshOptions.${interval / 1000}s`)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <Button
                             type="button"
                             variant="outline"

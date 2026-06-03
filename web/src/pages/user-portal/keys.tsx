@@ -60,7 +60,8 @@ interface CreateKeyFormValues {
     expiredTime: string
 }
 
-interface UpdateKeyGroupFormValues {
+interface UpdateKeyFormValues {
+    name: string
     group: string
     models: string[]
     unlimitedQuota: boolean
@@ -401,7 +402,8 @@ export default function UserPortalKeysPage() {
         },
     })
 
-    const editSchema = useMemo((): z.ZodType<UpdateKeyGroupFormValues> => z.object({
+    const editSchema = useMemo((): z.ZodType<UpdateKeyFormValues> => z.object({
+        name: z.string().trim().min(1, t('portal.keys.nameRequired')),
         group: z.string().trim().min(1, t('portal.keys.groupRequired')),
         models: z.array(z.string()),
         unlimitedQuota: z.boolean(),
@@ -413,9 +415,10 @@ export default function UserPortalKeysPage() {
         message: t('portal.keys.quotaRequired'),
     }), [t])
 
-    const editForm = useForm<UpdateKeyGroupFormValues>({
+    const editForm = useForm<UpdateKeyFormValues>({
         resolver: zodResolver(editSchema),
         defaultValues: {
+            name: '',
             group: '',
             models: [],
             unlimitedQuota: true,
@@ -472,6 +475,7 @@ export default function UserPortalKeysPage() {
     const openEditDialog = (token: Token) => {
         setEditingKey(token)
         editForm.reset({
+            name: token.name,
             group: token.group,
             models: token.models || [],
             unlimitedQuota: !token.quota || token.quota <= 0,
@@ -482,7 +486,7 @@ export default function UserPortalKeysPage() {
         setEditDialogOpen(true)
     }
 
-    const onSubmitEdit = (values: UpdateKeyGroupFormValues) => {
+    const onSubmitEdit = (values: UpdateKeyFormValues) => {
         if (!editingKey) {
             return
         }
@@ -490,6 +494,7 @@ export default function UserPortalKeysPage() {
         updateKeyMutation.mutate({
             id: editingKey.id,
             data: {
+                name: values.name.trim(),
                 group: values.group,
                 models: values.models,
                 quota: values.unlimitedQuota ? 0 : (values.quota || 0),
@@ -888,6 +893,20 @@ export default function UserPortalKeysPage() {
                     <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-6">
                         <Form {...editForm}>
                             <form onSubmit={editForm.handleSubmit(onSubmitEdit)} className="space-y-5">
+                                <FormField
+                                    control={editForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('portal.keys.name')}</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} className="h-11 rounded-md" placeholder={t('portal.keys.namePlaceholder')} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
                                 <FormField
                                     control={editForm.control}
                                     name="group"

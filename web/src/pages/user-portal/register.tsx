@@ -36,7 +36,7 @@ interface UserPortalRegisterForm {
     confirmPassword: string
 }
 
-const authInputClassName = 'h-9 rounded-[8px] border-[#d9d9d9] bg-white px-3 text-sm text-[#151515] shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-visible:border-[#151515] focus-visible:ring-[#151515]/10 dark:border-white/10 dark:bg-[#15181c] dark:text-white dark:focus-visible:border-white dark:focus-visible:ring-white/10'
+const authInputClassName = 'h-9 rounded-[8px] border-[#d9d9d9] bg-white px-3 text-sm text-[#151515] shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-visible:border-[#151515] focus-visible:ring-[#151515]/10 dark:border-input dark:bg-muted dark:text-foreground dark:focus-visible:border-ring dark:focus-visible:ring-ring/20'
 
 export default function UserPortalRegisterPage() {
     const { t: rawT } = useTranslation()
@@ -200,10 +200,10 @@ export default function UserPortalRegisterPage() {
     return (
         <UserPortalAuthShell mode="register">
             <div className="mb-7 text-center">
-                <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[26px] font-semibold leading-tight text-[#151515] dark:text-white">
+                <h1 className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-[26px] font-semibold leading-tight text-[#151515] dark:text-foreground">
                     {t('portalAuth.registerTitle')}
                 </h1>
-                <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-white/55">
+                <p className="mt-2 text-base leading-6 text-[#6b6b6b] dark:text-muted-foreground">
                     {t('portalAuth.registerDescription')}
                 </p>
             </div>
@@ -219,7 +219,7 @@ export default function UserPortalRegisterPage() {
                         name="username"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-foreground">
                                     {t('portalAuth.username')}
                                 </FormLabel>
                                 <FormControl>
@@ -231,7 +231,7 @@ export default function UserPortalRegisterPage() {
                                         className={authInputClassName}
                                     />
                                 </FormControl>
-                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-muted-foreground">
                                     {t('portalAuth.usernameHint')}
                                 </FormDescription>
                                 <FormMessage />
@@ -244,7 +244,7 @@ export default function UserPortalRegisterPage() {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-foreground">
                                     {t('portalAuth.email')}
                                 </FormLabel>
                                 <div className="flex gap-2">
@@ -261,7 +261,7 @@ export default function UserPortalRegisterPage() {
                                         type="button"
                                         onClick={handleSendCode}
                                         disabled={!canSendCode}
-                                        className="h-9 shrink-0 rounded-[8px] bg-[#151515] px-3 text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px disabled:translate-y-0 dark:bg-white dark:text-[#111316] dark:hover:bg-white/90"
+                                        className="h-9 shrink-0 rounded-[8px] bg-[#151515] px-3 text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px disabled:translate-y-0 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
                                     >
                                         {sendCodeMutation.isPending ? (
                                             <>
@@ -281,7 +281,7 @@ export default function UserPortalRegisterPage() {
                                         )}
                                     </Button>
                                 </div>
-                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-muted-foreground">
                                     {t('portalAuth.registerEmailHint')}
                                 </FormDescription>
                                 <FormMessage />
@@ -294,7 +294,7 @@ export default function UserPortalRegisterPage() {
                         name="code"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-foreground">
                                     {t('portalAuth.verificationCode')}
                                 </FormLabel>
                                 <FormControl>
@@ -308,7 +308,7 @@ export default function UserPortalRegisterPage() {
                                         className={authInputClassName}
                                     />
                                 </FormControl>
-                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-white/40">
+                                <FormDescription className="text-xs text-[#7a7a7a] dark:text-muted-foreground">
                                     {t('portalAuth.codeHint')}
                                 </FormDescription>
                                 <FormMessage />
@@ -321,7 +321,7 @@ export default function UserPortalRegisterPage() {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-foreground">
                                     {t('portalAuth.password')}
                                 </FormLabel>
                                 <FormControl>
@@ -343,7 +343,7 @@ export default function UserPortalRegisterPage() {
                         name="confirmPassword"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-white/85">
+                                <FormLabel className="text-sm font-medium text-[#151515] dark:text-foreground">
                                     {t('portalAuth.confirmPassword')}
                                 </FormLabel>
                                 <FormControl>
@@ -368,7 +368,7 @@ export default function UserPortalRegisterPage() {
 
                     <Button
                         type="submit"
-                        className="mt-1 h-9 w-full rounded-[8px] bg-[#151515] text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px dark:bg-white dark:text-[#111316] dark:hover:bg-white/90"
+                        className="mt-1 h-9 w-full rounded-[8px] bg-[#151515] text-sm font-medium text-white shadow-none transition hover:bg-[#262626] active:translate-y-px dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
                         disabled={registerMutation.isPending}
                     >
                         {registerMutation.isPending ? (
@@ -386,9 +386,9 @@ export default function UserPortalRegisterPage() {
                 </form>
             </Form>
 
-            <div className="mt-7 text-center text-sm text-[#151515] dark:text-white/75">
+            <div className="mt-7 text-center text-sm text-[#151515] dark:text-muted-foreground">
                 {t('portalAuth.hasAccount')}
-                <Link to={ROUTES.USER_LOGIN} className="ml-1 underline underline-offset-2 hover:text-[#4b4b4b] dark:hover:text-white">
+                <Link to={ROUTES.USER_LOGIN} className="ml-1 underline underline-offset-2 hover:text-[#4b4b4b] dark:text-foreground dark:hover:text-[#f6c177]">
                     {t('portalAuth.toLogin')}
                 </Link>
             </div>

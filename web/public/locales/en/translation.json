@@ -14,6 +14,7 @@
     "log": "Logs",
     "doc": "Document",
     "github": "GitHub",
+    "theme": "Dark mode",
     "logout": "Logout"
   },
   "common": {
@@ -684,6 +685,13 @@
   },
   "log": {
     "title": "Log List",
+    "autoRefresh": "Auto refresh",
+    "autoRefreshInterval": "Auto refresh interval",
+    "autoRefreshOptions": {
+      "10s": "10s",
+      "30s": "30s",
+      "60s": "60s"
+    },
     "keyName": "Key Name",
     "model": "Model",
     "inputTokens": "Input Tokens",
@@ -1720,12 +1728,12 @@
       "allGroups": "All Groups",
       "create": "Create Key",
       "creating": "Creating...",
-      "update": "Update Group",
+      "update": "Update Key",
       "updating": "Updating...",
       "createTitle": "Create a New Key",
       "createDescription": "Create a new access key for the current user and bind it to a selected group.",
-      "editTitle": "Change Key Group",
-      "editDescription": "Move this key to another group. If the key already restricts models, the new group must still contain those models.",
+      "editTitle": "Edit Key",
+      "editDescription": "Update the key name, group, model limits, balance limit, and expiration.",
       "name": "Name",
       "group": "Group",
       "key": "Access Key",

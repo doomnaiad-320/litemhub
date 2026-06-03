@@ -5,7 +5,6 @@ import type { LogFilters } from '@/types/log'
 import type {
     UserPortalCreateKeyRequest,
     UserPortalEmailCodeRequest,
-    UserPortalEmailCodeResponse,
     UserPortalLoginRequest,
     UserPortalPlaygroundChatRequest,
     UserPortalRechargeRequest,
@@ -45,7 +44,7 @@ export const useUserPortalRegister = () => {
 export const useUserPortalSendRegisterEmailCode = () => {
     return useMutation({
         mutationFn: (data: UserPortalEmailCodeRequest) => userPortalApi.sendRegisterEmailCode(data),
-        onSuccess: (_response: UserPortalEmailCodeResponse) => {
+        onSuccess: () => {
             toast.success('验证码已发送')
         },
         onError: (error: unknown) => {
@@ -364,10 +363,10 @@ export const useUserPortalUpdateKey = () => {
         mutationFn: ({ id, data }: { id: number, data: UserPortalUpdateKeyRequest }) => userPortalApi.updateKey(id, data),
         onSuccess: () => {
             invalidatePortalQueries(queryClient)
-            toast.success('Key 分组已更新')
+            toast.success('Key 已更新')
         },
         onError: (error: unknown) => {
-            const message = error instanceof Error ? error.message : '更新 Key 分组失败'
+            const message = error instanceof Error ? error.message : '更新 Key 失败'
             toast.error(message)
         },
     })

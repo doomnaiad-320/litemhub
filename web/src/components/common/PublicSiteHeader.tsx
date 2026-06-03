@@ -36,8 +36,8 @@ export function PublicSiteHeader({
       className={cn(
         "sticky top-0 z-40 border-b backdrop-blur-xl",
         isDark
-          ? "border-[#1f2229] bg-[#0b0b0d]/92"
-          : "border-[#f2f3f5] bg-white/92 dark:border-white/10 dark:bg-[#111827]/92",
+          ? "border-border bg-background/92"
+          : "border-[#f2f3f5] bg-white/92 dark:border-border dark:bg-background/92",
         className,
       )}
     >
@@ -47,8 +47,8 @@ export function PublicSiteHeader({
             className={cn(
               "inline-flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border text-[13px] font-semibold",
               isDark
-                ? "border-[#2b2e36] bg-[#15171d] text-[#e7e8ee]"
-                : "border-transparent bg-[#181e25] text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:border-white/10 dark:bg-white dark:text-[#181e25]",
+                ? "border-border bg-primary text-primary-foreground"
+                : "border-transparent bg-[#181e25] text-white shadow-[rgba(44,30,116,0.16)_0px_0px_15px] dark:border-border dark:bg-primary dark:text-primary-foreground",
             )}
           >
             LM
@@ -56,7 +56,7 @@ export function PublicSiteHeader({
           <span
             className={cn(
               "text-[14px] font-semibold tracking-[-0.01em]",
-              isDark ? "text-[#e4e6ed]" : "text-[#18181b] dark:text-white",
+              isDark ? "text-foreground" : "text-[#18181b] dark:text-foreground",
             )}
           >
             LiteMHub
@@ -116,13 +116,13 @@ export function PublicSiteMenu({
       <div
         className={cn(
           "hidden items-center gap-[5px] border-l pl-[5px] sm:flex",
-          isDark ? "dark border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
+          isDark ? "dark border-border" : "border-[#e5e7eb] dark:border-border",
         )}
       >
         <LanguageSelector
           className={
             isDark
-              ? "border-[#2b2e36] bg-[#15171d] text-[#e4e6ed] hover:bg-[#1b1e25] dark:border-[#2b2e36] dark:bg-[#15171d] dark:hover:bg-[#1b1e25]"
+              ? "border-border bg-card text-foreground hover:bg-muted dark:border-border dark:bg-card dark:hover:bg-muted"
               : undefined
           }
           variant="minimal"
@@ -133,7 +133,7 @@ export function PublicSiteMenu({
         <div
           className={cn(
             "flex items-center gap-[5px] border-l pl-[5px]",
-            isDark ? "border-[#24262d]" : "border-[#e5e7eb] dark:border-white/10",
+            isDark ? "border-border" : "border-[#e5e7eb] dark:border-border",
           )}
         >
           <Button
@@ -141,8 +141,8 @@ export function PublicSiteMenu({
             className={cn(
               "h-[32px] rounded-[6px] px-3 text-[14px] font-semibold shadow-none",
               isDark
-                ? "bg-[#e7e8ee] text-[#111217] hover:bg-white"
-                : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-white dark:text-[#181e25] dark:hover:bg-white/90",
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-[#181e25] text-white hover:bg-[#111827] dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90",
             )}
           >
             <Link to={primaryTarget}>
@@ -172,12 +172,12 @@ function PublicHeaderLink({
   const className = cn(
     "whitespace-nowrap rounded-[6px] px-2 py-[7px] text-[13px] font-semibold leading-none transition sm:px-3 sm:text-[14px]",
     isDark
-      ? "text-[#818793] hover:bg-[#15171d] hover:text-[#e4e6ed]"
-      : "text-[#45515e] hover:bg-black/[0.05] hover:text-[#18181b] dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white",
+      ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+      : "text-[#45515e] hover:bg-black/[0.05] hover:text-[#18181b] dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground",
     active &&
       (isDark
-        ? "bg-[#15171d] text-[#e4e6ed]"
-        : "bg-black/[0.05] text-[#18181b] dark:bg-white/10 dark:text-white"),
+        ? "bg-muted text-foreground"
+        : "bg-black/[0.05] text-[#18181b] dark:bg-muted dark:text-foreground"),
   );
 
   if (isExternal || isDocumentRoute) {

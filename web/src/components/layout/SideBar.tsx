@@ -26,6 +26,7 @@ import { ROUTES } from "@/routes/constants"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/common/ThemeToggle"
 import useAuthStore from "@/store/auth"
 
 interface SidebarItem {
@@ -284,8 +285,33 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
                 </TooltipProvider>
             </div>
 
-            {/* Logout button */}
             <div className="relative z-10 border-t border-border p-4">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div
+                            className={cn(
+                                "mb-3 flex min-h-11 items-center rounded-md border border-border bg-background px-4 py-3 text-muted-foreground transition-colors",
+                                collapsed ? "justify-center px-2" : "justify-between",
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    "font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
+                                    collapsed ? "w-0 overflow-hidden opacity-0" : "w-auto opacity-100",
+                                )}
+                            >
+                                {t("sidebar.theme")}
+                            </span>
+                            <ThemeToggle
+                                className={cn(collapsed ? "space-x-0" : "ml-3")}
+                                showIcons={!collapsed}
+                            />
+                        </div>
+                    </TooltipTrigger>
+                    {collapsed && <TooltipContent side="right">{t("sidebar.theme")}</TooltipContent>}
+                </Tooltip>
+
+                {/* Logout button */}
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button

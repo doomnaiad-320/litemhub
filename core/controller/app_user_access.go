@@ -27,6 +27,7 @@ type CreateAppUserKeyRequest struct {
 
 type UpdateAppUserKeyRequest struct {
 	Group     string   `json:"group"`
+	Name      *string  `json:"name"`
 	Models    []string `json:"models"`
 	Quota     *float64 `json:"quota"`
 	ExpiredAt *int64   `json:"expired_at"`
@@ -499,6 +500,14 @@ func UpdateCurrentUserKey(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
 		return
 	}
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			middleware.ErrorResponse(c, http.StatusBadRequest, "name is required")
+			return
+		}
+		req.Name = &name
+	}
 	if req.Quota != nil && *req.Quota < 0 {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "quota must be greater than or equal to 0")
 		return
@@ -543,6 +552,7 @@ func UpdateCurrentUserKey(c *gin.Context) {
 
 	token, err := model.UpdateAppUserTokenByID(user.ID, id, model.UpdateAppUserTokenRequest{
 		GroupID:   req.Group,
+		Name:      req.Name,
 		Models:    &req.Models,
 		Quota:     req.Quota,
 		ExpiredAt: req.ExpiredAt,

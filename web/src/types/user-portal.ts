@@ -244,6 +244,7 @@ export interface UserPortalCreateKeyRequest {
 }
 
 export interface UserPortalUpdateKeyRequest {
+    name?: string
     group: string
     models?: string[]
     quota?: number

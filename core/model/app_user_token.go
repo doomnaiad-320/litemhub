@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -10,6 +11,7 @@ import (
 
 type UpdateAppUserTokenRequest struct {
 	GroupID   string
+	Name      *string
 	Models    *[]string
 	Quota     *float64
 	ExpiredAt *int64
@@ -146,6 +148,13 @@ func UpdateAppUserTokenByID(userID, id int, update UpdateAppUserTokenRequest) (t
 	if update.ExpiredAt != nil && *update.ExpiredAt < 0 {
 		return nil, errors.New("expired_at is invalid")
 	}
+	if update.Name != nil {
+		name := strings.TrimSpace(*update.Name)
+		if name == "" {
+			return nil, errors.New("name is empty")
+		}
+		update.Name = &name
+	}
 
 	token = &Token{ID: id}
 	defer func() {
@@ -158,6 +167,9 @@ func UpdateAppUserTokenByID(userID, id int, update UpdateAppUserTokenRequest) (t
 
 	updates := map[string]any{
 		"group_id": update.GroupID,
+	}
+	if update.Name != nil {
+		updates["name"] = EmptyNullString(*update.Name)
 	}
 	if update.Models != nil {
 		updates["models"] = *update.Models

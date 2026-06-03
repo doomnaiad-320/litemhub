@@ -5,12 +5,16 @@ import { LogFilters } from '@/types/log'
 
 export type LogDetailScope = 'admin' | 'user'
 
+interface LogQueryOptions {
+    refetchInterval?: number | false
+}
+
 // 获取日志数据
-export const useLogs = (filters?: LogFilters) => {
+export const useLogs = (filters?: LogFilters, options: LogQueryOptions = {}) => {
     const query = useQuery({
         queryKey: ['logs', filters],
         queryFn: () => logApi.getLogData(filters),
-        refetchInterval: false,
+        refetchInterval: options.refetchInterval ?? false,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
@@ -22,11 +26,11 @@ export const useLogs = (filters?: LogFilters) => {
     }
 }
 
-export const useLogStats = (filters?: LogFilters) => {
+export const useLogStats = (filters?: LogFilters, options: LogQueryOptions = {}) => {
     return useQuery({
         queryKey: ['logStats', filters],
         queryFn: () => logApi.getLogStats(filters),
-        refetchInterval: false,
+        refetchInterval: options.refetchInterval ?? false,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,

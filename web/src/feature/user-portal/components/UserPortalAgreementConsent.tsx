@@ -21,10 +21,10 @@ export function UserPortalAgreementConsent({
     return (
         <div
             className={cn(
-                'rounded-[8px] border bg-[#fbfbfc] p-3 transition dark:bg-white/[0.03]',
+                'rounded-[8px] border bg-[#fbfbfc] p-3 transition dark:bg-muted/60',
                 error
                     ? 'border-red-300 bg-red-50 dark:border-red-400/40 dark:bg-red-500/10'
-                    : 'border-[#f2f3f5] dark:border-white/10',
+                    : 'border-[#f2f3f5] dark:border-border',
             )}
         >
             <label className="flex cursor-pointer items-start gap-3 text-left">
@@ -33,12 +33,12 @@ export function UserPortalAgreementConsent({
                         type="checkbox"
                         checked={checked}
                         onChange={(event) => onCheckedChange(event.target.checked)}
-                        className="peer h-4 w-4 cursor-pointer appearance-none rounded-[4px] border border-[#d9d9d9] bg-white transition checked:border-[#151515] checked:bg-[#151515] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#151515]/15 dark:border-white/15 dark:bg-[#15181c] dark:checked:border-white dark:checked:bg-white dark:focus-visible:ring-white/20"
+                        className="peer h-4 w-4 cursor-pointer appearance-none rounded-[4px] border border-[#d9d9d9] bg-white transition checked:border-[#151515] checked:bg-[#151515] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#151515]/15 dark:border-input dark:bg-card dark:checked:border-primary dark:checked:bg-primary dark:focus-visible:ring-ring/20"
                         aria-invalid={error || undefined}
                     />
-                    <Check className="pointer-events-none absolute left-[2px] top-[2px] h-3 w-3 text-white opacity-0 transition peer-checked:opacity-100 dark:text-[#111316]" strokeWidth={3} />
+                    <Check className="pointer-events-none absolute left-[2px] top-[2px] h-3 w-3 text-white opacity-0 transition peer-checked:opacity-100 dark:text-primary-foreground" strokeWidth={3} />
                 </span>
-                <span className="text-xs leading-5 text-[#6f6f6f] dark:text-white/50">
+                <span className="text-xs leading-5 text-[#6f6f6f] dark:text-muted-foreground">
                     {t('portalAuth.agreementPrefix')}
                     <Link
                         to={ROUTES.PUBLIC_TERMS}

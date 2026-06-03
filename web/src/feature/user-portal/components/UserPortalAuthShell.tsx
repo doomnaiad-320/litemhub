@@ -14,20 +14,20 @@ export function UserPortalAuthShell({ mode, children }: UserPortalAuthShellProps
     const t = rawT as (key: string) => string
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] transition-colors duration-200 dark:bg-[#080b12] dark:text-white">
+        <div className="min-h-screen overflow-x-hidden bg-white font-['DM_Sans',_'Helvetica_Neue',_Arial,_sans-serif] text-[#222222] transition-colors duration-200 dark:bg-background dark:text-foreground">
             <UserPortalMarketingHeader />
 
-            <main className="relative flex min-h-[calc(100dvh-58px)] flex-col items-center justify-center overflow-hidden border-b border-[#f2f3f5] bg-white px-4 py-10 dark:border-white/10 dark:bg-[#080b12]">
-                <div className="pointer-events-none absolute right-[-10rem] top-[-16rem] h-[34rem] w-[34rem] rounded-full bg-[#1456f0]/10 blur-3xl dark:bg-[#3b82f6]/[0.08]" />
-                <div className="pointer-events-none absolute bottom-[-14rem] left-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#ea5ec1]/10 blur-3xl dark:bg-[#ea5ec1]/[0.06]" />
+            <main className="relative flex min-h-[calc(100dvh-58px)] flex-col items-center justify-center overflow-hidden border-b border-[#f2f3f5] bg-white px-4 py-10 dark:border-border dark:bg-background">
+                <div className="pointer-events-none absolute right-[-10rem] top-[-16rem] h-[34rem] w-[34rem] rounded-full bg-[#1456f0]/10 blur-3xl dark:bg-primary/10" />
+                <div className="pointer-events-none absolute bottom-[-14rem] left-[-10rem] h-[30rem] w-[30rem] rounded-full bg-[#ea5ec1]/10 blur-3xl dark:bg-[#f59e0b]/10" />
 
-                <div className="relative grid w-full max-w-[896px] overflow-hidden rounded-[13px] border border-[#d9d9d9] bg-white shadow-[rgba(36,36,36,0.04)_0px_12px_24px] dark:border-white/10 dark:bg-[#0b0f18] dark:shadow-none md:min-h-[572px] md:grid-cols-2">
-                    <section className="flex flex-col bg-white px-8 py-9 dark:bg-[#111316] sm:px-10 md:px-8 lg:px-10">
+                <div className="relative grid w-full max-w-[896px] overflow-hidden rounded-[13px] border border-[#d9d9d9] bg-white shadow-[rgba(36,36,36,0.04)_0px_12px_24px] dark:border-border dark:bg-card dark:shadow-none md:min-h-[572px] md:grid-cols-2">
+                    <section className="flex flex-col bg-white px-8 py-9 dark:bg-card sm:px-10 md:px-8 lg:px-10">
                         <div className="mx-auto mb-9 flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#151515] text-[12px] font-semibold text-white dark:bg-[#f4f4f5] dark:text-[#111316]">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#151515] text-[12px] font-semibold text-white dark:bg-primary dark:text-primary-foreground">
                                 LM
                             </span>
-                            <span className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold text-[#151515] dark:text-white">
+                            <span className="font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-xl font-semibold text-[#151515] dark:text-foreground">
                                 LiteMHub
                             </span>
                         </div>
@@ -37,17 +37,17 @@ export function UserPortalAuthShell({ mode, children }: UserPortalAuthShellProps
                         </div>
                     </section>
 
-                    <section className="hidden border-l border-[#d9d9d9] bg-[#e8e8e8] dark:border-white/10 dark:bg-[#1b1d21] md:block">
+                    <section className="hidden border-l border-[#d9d9d9] bg-[#e8e8e8] dark:border-border dark:bg-muted md:block">
                         <div className="relative flex h-full min-h-[572px] items-center justify-center overflow-hidden">
                             <AuthSideIllustration />
-                            <div className="absolute bottom-6 right-6 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-medium uppercase text-[#b5b5b5] dark:text-white/[0.18]">
+                            <div className="absolute bottom-6 right-6 font-['Outfit',_'Helvetica_Neue',_Arial,_sans-serif] text-xs font-medium uppercase text-[#b5b5b5] dark:text-muted-foreground/40">
                                 {mode === 'login' ? 'Sign in' : 'Create account'}
                             </div>
                         </div>
                     </section>
                 </div>
 
-                <p className="mt-6 text-center text-xs leading-6 text-[#6f6f6f] dark:text-white/40">
+                <p className="mt-6 text-center text-xs leading-6 text-[#6f6f6f] dark:text-muted-foreground">
                     {t('portalAuth.agreementNotice')}
                 </p>
             </main>
@@ -86,26 +86,26 @@ function AuthSideIllustration() {
                 </pattern>
             </defs>
 
-            <rect width="448" height="572" className="fill-[#e8e8e8] dark:fill-[#1b1d21]" />
+            <rect width="448" height="572" className="fill-[#e8e8e8] dark:fill-muted" />
             <rect width="448" height="572" fill="url(#auth-hero-glow)" />
-            <rect width="448" height="572" fill="url(#auth-hero-grid)" className="text-[#cfcfcf] dark:text-white/[0.05]" />
+            <rect width="448" height="572" fill="url(#auth-hero-grid)" className="text-[#cfcfcf] dark:text-muted-foreground/10" />
 
             <g opacity=".68">
-                <path d="M59 128C124 92 181 97 232 143C281 187 336 188 391 146" className="stroke-[#c6c6c6] dark:stroke-white/10" strokeWidth="1.2" />
-                <path d="M64 442C126 399 190 398 245 438C293 473 347 471 392 424" className="stroke-[#c6c6c6] dark:stroke-white/10" strokeWidth="1.2" />
+                <path d="M59 128C124 92 181 97 232 143C281 187 336 188 391 146" className="stroke-[#c6c6c6] dark:stroke-border" strokeWidth="1.2" />
+                <path d="M64 442C126 399 190 398 245 438C293 473 347 471 392 424" className="stroke-[#c6c6c6] dark:stroke-border" strokeWidth="1.2" />
             </g>
 
             <g filter="url(#auth-hero-shadow)">
-                <rect x="118" y="138" width="212" height="296" rx="24" className="fill-white dark:fill-[#202328]" />
-                <rect x="118.5" y="138.5" width="211" height="295" rx="23.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
+                <rect x="118" y="138" width="212" height="296" rx="24" className="fill-white dark:fill-card" />
+                <rect x="118.5" y="138.5" width="211" height="295" rx="23.5" className="stroke-[#d9d9d9] dark:stroke-border" />
 
                 <rect x="142" y="162" width="164" height="44" rx="12" fill="url(#auth-hero-blue)" />
                 <circle cx="165" cy="184" r="8" fill="white" fillOpacity=".92" />
                 <path d="M185 178H276M185 190H244" stroke="white" strokeOpacity=".78" strokeWidth="6" strokeLinecap="round" />
 
-                <path d="M224 224V259" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
-                <path d="M174 292H224H274" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
-                <path d="M174 292V332M274 292V332" className="stroke-[#b8c7dc] dark:stroke-white/20" strokeWidth="2" strokeLinecap="round" />
+                <path d="M224 224V259" className="stroke-[#b8c7dc] dark:stroke-muted-foreground/30" strokeWidth="2" strokeLinecap="round" />
+                <path d="M174 292H224H274" className="stroke-[#b8c7dc] dark:stroke-muted-foreground/30" strokeWidth="2" strokeLinecap="round" />
+                <path d="M174 292V332M274 292V332" className="stroke-[#b8c7dc] dark:stroke-muted-foreground/30" strokeWidth="2" strokeLinecap="round" />
 
                 <rect x="168" y="244" width="112" height="64" rx="18" fill="url(#auth-hero-pink)" />
                 <rect x="186" y="263" width="76" height="8" rx="4" fill="white" fillOpacity=".86" />
@@ -114,20 +114,20 @@ function AuthSideIllustration() {
                 <circle cx="174" cy="356" r="12" fill="#EA5EC1" />
                 <circle cx="274" cy="356" r="12" fill="#3DAEFF" />
 
-                <rect x="146" y="375" width="156" height="34" rx="12" className="fill-[#f4f7ff] dark:fill-white/[0.06]" />
-                <path d="M165 392H220M235 392H283" className="stroke-[#8e8e93] dark:stroke-white/35" strokeWidth="6" strokeLinecap="round" />
+                <rect x="146" y="375" width="156" height="34" rx="12" className="fill-[#f4f7ff] dark:fill-muted" />
+                <path d="M165 392H220M235 392H283" className="stroke-[#8e8e93] dark:stroke-muted-foreground/55" strokeWidth="6" strokeLinecap="round" />
             </g>
 
             <g>
-                <rect x="72" y="220" width="94" height="58" rx="16" className="fill-white dark:fill-[#202328]" />
-                <rect x="72.5" y="220.5" width="93" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
-                <path d="M94 242H137M94 258H124" className="stroke-[#45515e] dark:stroke-white/45" strokeWidth="6" strokeLinecap="round" />
+                <rect x="72" y="220" width="94" height="58" rx="16" className="fill-white dark:fill-card" />
+                <rect x="72.5" y="220.5" width="93" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-border" />
+                <path d="M94 242H137M94 258H124" className="stroke-[#45515e] dark:stroke-muted-foreground/60" strokeWidth="6" strokeLinecap="round" />
             </g>
 
             <g>
-                <rect x="286" y="326" width="92" height="58" rx="16" className="fill-white dark:fill-[#202328]" />
-                <rect x="286.5" y="326.5" width="91" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-white/10" />
-                <path d="M309 348H352M309 364H338" className="stroke-[#45515e] dark:stroke-white/45" strokeWidth="6" strokeLinecap="round" />
+                <rect x="286" y="326" width="92" height="58" rx="16" className="fill-white dark:fill-card" />
+                <rect x="286.5" y="326.5" width="91" height="57" rx="15.5" className="stroke-[#d9d9d9] dark:stroke-border" />
+                <path d="M309 348H352M309 364H338" className="stroke-[#45515e] dark:stroke-muted-foreground/60" strokeWidth="6" strokeLinecap="round" />
             </g>
 
             <path d="M166 249C189 239 194 231 207 207" className="stroke-[#1456f0] dark:stroke-[#60a5fa]" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 8" />
