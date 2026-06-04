@@ -40,10 +40,10 @@ export const CustomSelect = function <T>({
     })
 
     return (
-        <div className="w-full relative flex-1">
+        <div className="relative min-w-0 w-full flex-1">
             <div
                 className={cn(
-                    "h-8 w-full rounded-md border border-input flex items-center px-3",
+                    "h-8 w-full min-w-0 rounded-md border border-input flex items-center px-3",
                     "bg-background dark:bg-background",
                     "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
                     "hover:border-primary-300 dark:hover:border-primary"

@@ -121,12 +121,7 @@ func (c *ModelConfig) StreamRequestTimeout() time.Duration {
 }
 
 func (c *ModelConfig) SupportStreamTimeout() bool {
-	switch c.Type {
-	case mode.ChatCompletions, mode.Completions, mode.Anthropic, mode.Responses, mode.Gemini:
-		return true
-	default:
-		return false
-	}
+	return c.Type.SupportsStreamTimeout()
 }
 
 func timeoutSecond(second int64) time.Duration {

@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -213,6 +215,21 @@ func TestIsResponsesOnlyModel(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestIsResponsesOnlyModelUsesExplicitConfigOnly(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, openai.IsResponsesOnlyModel(&model.ModelConfig{
+		Type: mode.Responses,
+	}, "custom-responses-model"))
+
+	assert.True(t, openai.IsResponsesOnlyModel(&model.ModelConfig{
+		Type: mode.ChatCompletions,
+		Config: map[model.ModelConfigKey]any{
+			model.ModelConfigResponsesOnlyKey: true,
+		},
+	}, "custom-responses-model"))
 }
 
 func TestIsResponsesOnlyModelAny(t *testing.T) {

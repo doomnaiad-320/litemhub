@@ -398,6 +398,9 @@ func recordResult(
 	downstreamResult bool,
 	metadata map[string]string,
 ) {
+	metadata = withBillingMetadata(metadata, meta)
+	metadata = withRelayTimingMetadata(metadata, meta, result)
+
 	code := http.StatusOK
 
 	content := ""
@@ -475,6 +478,73 @@ func recordResult(
 	if asyncUsageStatus == model.AsyncUsageStatusPending {
 		saveAsyncUsageInfo(meta, price, result)
 	}
+}
+
+func withBillingMetadata(metadata map[string]string, meta *meta.Meta) map[string]string {
+	if meta == nil {
+		return metadata
+	}
+
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+
+	metadata["price_multiplier"] = strconv.FormatFloat(
+		meta.Token.GetPriceMultiplier(meta.Group),
+		'f',
+		-1,
+		64,
+	)
+
+	return metadata
+}
+
+func withRelayTimingMetadata(
+	metadata map[string]string,
+	meta *meta.Meta,
+	result *controller.HandleResult,
+) map[string]string {
+	if meta == nil || result == nil || result.BodyDetail == nil {
+		return metadata
+	}
+
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+
+	detail := result.BodyDetail
+	requestAt := meta.RequestAt
+	if requestAt.IsZero() {
+		return metadata
+	}
+
+	setMS := func(key string, at time.Time) {
+		if at.IsZero() {
+			return
+		}
+		ms := at.Sub(requestAt).Milliseconds()
+		if ms < 0 {
+			return
+		}
+		metadata[key] = strconv.FormatInt(ms, 10)
+	}
+
+	if detail.ConvertRequestMS >= 0 {
+		metadata["relay_convert_request_ms"] = strconv.FormatInt(detail.ConvertRequestMS, 10)
+	}
+	setMS("relay_upstream_header_ms", detail.UpstreamHeaderAt)
+	setMS("relay_first_chunk_ms", detail.FirstChunkAt)
+	setMS("relay_ttfb_ms", detail.FirstByteAt)
+	setMS("relay_total_ms", detail.FinishedAt)
+
+	metadata["relay_stream"] = strconv.FormatBool(detail.UpstreamStream)
+	metadata["relay_mode"] = meta.Mode.String()
+	metadata["relay_channel_type"] = strconv.Itoa(int(meta.Channel.Type))
+	if meta.Mode.IsChatLike() {
+		metadata["relay_chat_like"] = "true"
+	}
+
+	return metadata
 }
 
 func saveAsyncUsageInfo(

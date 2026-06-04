@@ -59,7 +59,7 @@ export const ConstructMappingComponent = function ({
             )
         }
         return (
-            <div className="max-w-[114px] overflow-x-auto whitespace-nowrap scrollbar-none">
+            <div className="min-w-0 flex-1 truncate" title={selectedItem}>
                 <span className="text-xs font-normal leading-4 tracking-[0.048px]">
                     {selectedItem}
                 </span>
@@ -169,7 +169,7 @@ export const ConstructMappingComponent = function ({
             </Label>
 
             {mapKeyValuePairs.map((row, index) => (
-                <div key={`${index}-${row.key}`} className="flex gap-2 w-full items-center">
+                <div key={`${index}-${row.key}`} className="flex min-w-0 gap-2 w-full items-center">
                     <CustomSelect<string>
                         listItems={mapKeys.filter((key) => !getSelectedMapKeys(index).has(key))}
                         initSelectedItem={row.key !== '' && row.key ? row.key : undefined}

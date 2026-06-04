@@ -21,6 +21,7 @@ const (
 	ModelConfigChatCompletionsStreamFastPathKey ModelConfigKey = "chat_completions_stream_fast_path"
 	ModelConfigFuzzyTokenThresholdKey           ModelConfigKey = "fuzzy_token_threshold"
 	ModelConfigDisablePreciseTokenCountKey      ModelConfigKey = "disable_precise_token_count"
+	ModelConfigResponsesOnlyKey                 ModelConfigKey = "responses_only"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)

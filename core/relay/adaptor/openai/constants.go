@@ -258,9 +258,8 @@ var responsesOnlyModels = map[string]struct{}{
 	"gpt-5-pro":         {},
 }
 
-// IsResponsesOnlyModel checks if a model only supports the Responses API
-// First parameter is the model config, used to check Type field if model name check fails
-// Second parameter is the model name, checked first for quick lookup
+// IsResponsesOnlyModel checks if a model only supports the Responses API.
+// Model type is a capability category, so it must not implicitly force upstream protocol conversion.
 func IsResponsesOnlyModel(modelConfig *model.ModelConfig, modelName string) bool {
 	// First, check model name for quick lookup
 	if _, ok := responsesOnlyModels[modelName]; ok {
@@ -272,14 +271,11 @@ func IsResponsesOnlyModel(modelConfig *model.ModelConfig, modelName string) bool
 		return true
 	}
 
-	// If model config is provided, check if Type is any Responses-related mode
 	if modelConfig != nil {
-		switch modelConfig.Type {
-		case mode.Responses,
-			mode.ResponsesGet,
-			mode.ResponsesDelete,
-			mode.ResponsesCancel,
-			mode.ResponsesInputItems:
+		if responsesOnly, ok := model.GetModelConfigBool(
+			modelConfig.Config,
+			model.ModelConfigResponsesOnlyKey,
+		); ok && responsesOnly {
 			return true
 		}
 	}

@@ -88,7 +88,7 @@ export function ChannelDialog({
             <AnimatePresence mode="wait">
                 {open && (
                     <motion.div {...dialogEnterExitAnimation}>
-                        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+                        <DialogContent className="max-h-[85vh] w-[min(1120px,calc(100vw-2rem))] max-w-none overflow-y-auto p-0">
                             <motion.div {...dialogContentAnimation}>
                                 <motion.div {...dialogHeaderAnimation}>
                                     <DialogHeader className="p-6 pb-3">

@@ -318,32 +318,7 @@ func NewDistribute(mode mode.Mode) gin.HandlerFunc {
 }
 
 func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
-	if modelMode == mode.Unknown {
-		return true
-	}
-
-	switch requestMode {
-	case mode.ChatCompletions, mode.Completions, mode.Anthropic, mode.Gemini,
-		mode.Responses, mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
-		return modelMode == mode.ChatCompletions ||
-			modelMode == mode.Completions ||
-			modelMode == mode.Anthropic ||
-			modelMode == mode.Gemini ||
-			modelMode == mode.Responses ||
-			modelMode == mode.ResponsesGet ||
-			modelMode == mode.ResponsesDelete ||
-			modelMode == mode.ResponsesCancel ||
-			modelMode == mode.ResponsesInputItems
-	case mode.ImagesGenerations, mode.ImagesEdits:
-		return modelMode == mode.ImagesGenerations ||
-			modelMode == mode.ImagesEdits
-	case mode.VideoGenerationsJobs, mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent:
-		return modelMode == mode.VideoGenerationsJobs ||
-			modelMode == mode.VideoGenerationsGetJobs ||
-			modelMode == mode.VideoGenerationsContent
-	default:
-		return requestMode == modelMode
-	}
+	return modelMode.IsCompatibleWith(requestMode)
 }
 
 func distribute(c *gin.Context, mode mode.Mode) {

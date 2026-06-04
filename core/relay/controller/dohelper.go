@@ -80,9 +80,15 @@ func putBuffer(buf *bytes.Buffer) {
 }
 
 type BodyDetail struct {
-	RequestBody  string
-	ResponseBody string
-	FirstByteAt  time.Time
+	RequestBody      string
+	ResponseBody     string
+	ConvertRequestAt time.Time
+	UpstreamHeaderAt time.Time
+	FirstChunkAt     time.Time
+	FirstByteAt      time.Time
+	FinishedAt       time.Time
+	ConvertRequestMS int64
+	UpstreamStream   bool
 }
 
 type BodyDetailOption struct {
@@ -105,6 +111,9 @@ func DoHelper(
 ) {
 	detail := BodyDetail{}
 	detailOption := mergeBodyDetailOptions(opts...)
+	defer func() {
+		detail.FinishedAt = time.Now()
+	}()
 
 	if requestBody, err := requestBodyDetail(c, detailOption); err != nil {
 		common.GetLogger(c).Warnf("get request body detail failed: %v", err)
@@ -115,7 +124,7 @@ func DoHelper(
 	// donot use c.Request.Context() because it will be canceled by the client
 	ctx := context.Background()
 
-	resp, err := prepareAndDoRequest(ctx, a, c, meta, store)
+	resp, err := prepareAndDoRequest(ctx, a, c, meta, store, &detail)
 	if err != nil {
 		return adaptor.DoResponseResult{}, &detail, err
 	}
@@ -156,16 +165,36 @@ func DoHelper(
 	return result, &detail, nil
 }
 
+type firstReadCloser struct {
+	io.ReadCloser
+	firstReadAt *time.Time
+}
+
+func (r *firstReadCloser) Read(p []byte) (int, error) {
+	n, err := r.ReadCloser.Read(p)
+	if n > 0 && r.firstReadAt != nil && r.firstReadAt.IsZero() {
+		*r.firstReadAt = time.Now()
+	}
+
+	return n, err
+}
+
 func prepareAndDoRequest(
 	ctx context.Context,
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
 	store adaptor.Store,
+	detail *BodyDetail,
 ) (*http.Response, adaptor.Error) {
 	log := common.GetLogger(c)
 
+	convertStart := time.Now()
 	convertResult, err := a.ConvertRequest(meta, store, c.Request)
+	if detail != nil {
+		detail.ConvertRequestAt = time.Now()
+		detail.ConvertRequestMS = detail.ConvertRequestAt.Sub(convertStart).Milliseconds()
+	}
 	if err != nil {
 		return nil, mapRequestError(meta, err, http.StatusBadRequest, "convert request failed")
 	}
@@ -219,7 +248,20 @@ func prepareAndDoRequest(
 		return nil, err
 	}
 
-	return doRequest(a, c, meta, store, req)
+	resp, relayErr := doRequest(a, c, meta, store, req)
+	if detail != nil && relayErr == nil {
+		detail.UpstreamHeaderAt = time.Now()
+		if resp != nil && resp.Body != nil {
+			detail.UpstreamStream = strings.Contains(resp.Header.Get("Content-Type"), "event-stream") ||
+				strings.Contains(resp.Header.Get("Content-Type"), "x-ndjson")
+			resp.Body = &firstReadCloser{
+				ReadCloser:  resp.Body,
+				firstReadAt: &detail.FirstChunkAt,
+			}
+		}
+	}
+
+	return resp, relayErr
 }
 
 func closeRequestReader(r io.Reader) {

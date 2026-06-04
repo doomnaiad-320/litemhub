@@ -181,6 +181,7 @@ func TestPrepareAndDoRequestConvertRequestReturnsAdaptorError(t *testing.T) {
 		c,
 		relayMeta,
 		nil,
+		&BodyDetail{},
 	)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -207,6 +208,7 @@ func TestPrepareAndDoRequestConvertRequestCanceled(t *testing.T) {
 		c,
 		relayMeta,
 		nil,
+		&BodyDetail{},
 	)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -233,6 +235,7 @@ func TestPrepareAndDoRequestConvertRequestGenericError(t *testing.T) {
 		c,
 		relayMeta,
 		nil,
+		&BodyDetail{},
 	)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -259,6 +262,7 @@ func TestPrepareAndDoRequestConvertRequestEOF(t *testing.T) {
 		c,
 		relayMeta,
 		nil,
+		&BodyDetail{},
 	)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -503,6 +507,7 @@ func TestPrepareAndDoRequestClosesConvertedRequestBodyWhenGetRequestURLFails(t *
 		c,
 		relayMeta,
 		nil,
+		&BodyDetail{},
 	)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()

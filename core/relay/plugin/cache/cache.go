@@ -167,6 +167,10 @@ func (c *Cache) getPluginConfig(meta *meta.Meta) (config *Config, err error) {
 	return &pluginConfig, nil
 }
 
+func supportFullResponseCache(meta *meta.Meta) bool {
+	return meta == nil || !meta.Mode.IsChatLike()
+}
+
 // Redis cache operations
 func (c *Cache) getFromRedis(ctx context.Context, key string) (*Item, error) {
 	if c.rdb == nil {
@@ -248,6 +252,10 @@ func (c *Cache) ConvertRequest(
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
+	if !supportFullResponseCache(meta) {
+		return do.ConvertRequest(meta, store, req)
+	}
+
 	pluginConfig, err := c.getPluginConfig(meta)
 	if err != nil {
 		return do.ConvertRequest(meta, store, req)
@@ -355,6 +363,10 @@ func (c *Cache) DoResponse(
 	resp *http.Response,
 	do adaptor.DoResponse,
 ) (result adaptor.DoResponseResult, adapterErr adaptor.Error) {
+	if !supportFullResponseCache(meta) {
+		return do.DoResponse(meta, store, ctx, resp)
+	}
+
 	pluginConfig, err := c.getPluginConfig(meta)
 	if err != nil {
 		return do.DoResponse(meta, store, ctx, resp)

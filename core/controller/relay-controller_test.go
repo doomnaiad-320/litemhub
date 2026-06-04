@@ -10,6 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	relaycontroller "github.com/labring/aiproxy/core/relay/controller"
+	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,6 +110,72 @@ func TestCalculateRelayBackoffDelay(t *testing.T) {
 	assert.Equal(t, 2500*time.Millisecond, calculateRelayBackoffDelay(2, 500*time.Millisecond))
 	assert.Equal(t, 5*time.Second, calculateRelayBackoffDelay(20, time.Second))
 	assert.Equal(t, 2*time.Second, calculateRelayBackoffDelay(1, time.Second))
+}
+
+func TestWithRelayTimingMetadata(t *testing.T) {
+	t.Parallel()
+
+	requestAt := time.Unix(100, 0)
+	metadata := withRelayTimingMetadata(
+		map[string]string{"existing": "value"},
+		&meta.Meta{
+			RequestAt: requestAt,
+			Mode:      mode.ChatCompletions,
+			Channel: meta.ChannelMeta{
+				Type: model.ChannelTypeOpenAI,
+			},
+		},
+		&relaycontroller.HandleResult{
+			BodyDetail: &relaycontroller.BodyDetail{
+				ConvertRequestMS: 3,
+				UpstreamHeaderAt: requestAt.Add(20 * time.Millisecond),
+				FirstChunkAt:     requestAt.Add(30 * time.Millisecond),
+				FirstByteAt:      requestAt.Add(40 * time.Millisecond),
+				FinishedAt:       requestAt.Add(50 * time.Millisecond),
+				UpstreamStream:   true,
+			},
+		},
+	)
+
+	assert.Equal(t, "value", metadata["existing"])
+	assert.Equal(t, "3", metadata["relay_convert_request_ms"])
+	assert.Equal(t, "20", metadata["relay_upstream_header_ms"])
+	assert.Equal(t, "30", metadata["relay_first_chunk_ms"])
+	assert.Equal(t, "40", metadata["relay_ttfb_ms"])
+	assert.Equal(t, "50", metadata["relay_total_ms"])
+	assert.Equal(t, "true", metadata["relay_stream"])
+	assert.Equal(t, "ChatCompletions", metadata["relay_mode"])
+	assert.Equal(t, "true", metadata["relay_chat_like"])
+	assert.Equal(t, "1", metadata["relay_channel_type"])
+}
+
+func TestWithBillingMetadata(t *testing.T) {
+	t.Parallel()
+
+	t.Run("records token override multiplier", func(t *testing.T) {
+		t.Parallel()
+
+		metadata := withBillingMetadata(
+			map[string]string{"existing": "value"},
+			&meta.Meta{
+				Group: model.GroupCache{PriceMultiplier: 2},
+				Token: model.TokenCache{PriceMultiplierOverride: 1.5},
+			},
+		)
+
+		assert.Equal(t, "value", metadata["existing"])
+		assert.Equal(t, "1.5", metadata["price_multiplier"])
+	})
+
+	t.Run("falls back to group multiplier", func(t *testing.T) {
+		t.Parallel()
+
+		metadata := withBillingMetadata(nil, &meta.Meta{
+			Group: model.GroupCache{PriceMultiplier: 2},
+		})
+
+		assert.Equal(t, "2", metadata["price_multiplier"])
+	})
 }
 
 func TestGetReserveOutputTokens(t *testing.T) {

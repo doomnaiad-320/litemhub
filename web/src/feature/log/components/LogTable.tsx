@@ -27,7 +27,7 @@ const columnHelper = createColumnHelper<LogRecord>()
 
 // 点击 group/token_name 时不展开行的列 ID
 const NON_EXPAND_COLUMNS = new Set(['details', 'group', 'token_name', 'model'])
-const RIGHT_ALIGNED_COLUMNS = new Set(['input_tokens', 'output_tokens', 'duration', 'used_amount'])
+const RIGHT_ALIGNED_COLUMNS = new Set(['input_tokens', 'output_tokens', 'cache_tokens', 'duration', 'used_amount'])
 
 function useMediaQuery(query: string) {
     const getMatches = () => {
@@ -155,6 +155,20 @@ export function LogTable({
 
     const formatUsedAmount = (log: LogRecord) => `$${Number(log.amount?.used_amount ?? log.used_amount ?? 0).toFixed(4)}`
 
+    const formatCompactNumber = (value?: number) => {
+        const numberValue = Number(value || 0)
+
+        if (numberValue >= 1000000) {
+            return `${Number((numberValue / 1000000).toFixed(1)).toString()}M`
+        }
+
+        if (numberValue >= 10000) {
+            return `${Number((numberValue / 1000).toFixed(1)).toString()}K`
+        }
+
+        return numberValue.toLocaleString()
+    }
+
     const getPriceMultiplier = (log: LogRecord) => {
         const rawValue = log.metadata?.price_multiplier
             || log.metadata?.group_multiplier
@@ -179,23 +193,37 @@ export function LogTable({
         }
 
         return (
-            <div className="min-w-0 space-y-0.5">
+            <div className="flex min-w-0 items-center gap-2">
+                <div className="shrink-0 font-mono text-xs text-muted-foreground">
+                    #{userID || '-'}
+                </div>
                 <div className="truncate text-sm font-medium" title={account || undefined}>
                     {account || '-'}
-                </div>
-                <div className="font-mono text-xs text-muted-foreground">
-                    #{userID || '-'}
                 </div>
             </div>
         )
     }
 
-    const renderMobileMetric = (label: string, value: React.ReactNode) => (
-        <div className="min-w-0 text-left">
-            <div className="text-[11px] leading-4 text-muted-foreground">{label}</div>
-            <div className="mt-0.5 truncate font-mono text-[12px] leading-5 text-foreground">{value}</div>
+    const renderCacheUsage = (log: LogRecord) => (
+        <div className="space-y-0.5 text-right font-mono text-xs leading-4">
+            <div>{t('log.cacheRead')} {(log.usage?.cached_tokens || 0).toLocaleString()}</div>
+            <div>{t('log.cacheWrite')} {(log.usage?.cache_creation_tokens || 0).toLocaleString()}</div>
         </div>
     )
+
+    const renderMobileMetric = (label: string, value: React.ReactNode, align: 'left' | 'center' | 'right' = 'left') => {
+        const textAlign = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
+        const justify = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
+
+        return (
+        <div className={`min-w-0 ${textAlign}`}>
+            <div className="text-[11px] leading-4 text-muted-foreground">{label}</div>
+            <div className={`mt-0.5 flex min-h-10 items-end overflow-hidden font-mono text-[12px] leading-5 text-foreground ${justify}`}>
+                <div className="min-w-0 truncate">{value}</div>
+            </div>
+        </div>
+        )
+    }
 
     const columns = useMemo(
         () => [
@@ -291,6 +319,12 @@ export function LogTable({
                         {row.original.usage?.output_tokens?.toLocaleString() || 0}
                     </div>
                 ),
+                size: 100,
+            }),
+            columnHelper.display({
+                id: 'cache_tokens',
+                header: t('log.cache'),
+                cell: ({ row }) => renderCacheUsage(row.original),
                 size: 100,
             }),
             columnHelper.display({
@@ -556,12 +590,17 @@ export function LogTable({
                                                             {formatCreatedAt(log.created_at)}
                                                         </div>
                                                     </div>
-                                                    <div className={isSuccess ? 'shrink-0 text-[14px] font-medium text-green-500' : 'shrink-0 text-[14px] font-medium text-destructive'}>
-                                                        {isSuccess ? t('log.success') : t('log.failed')}
+                                                    <div className="shrink-0 text-right">
+                                                        <div className={isSuccess ? 'text-[14px] font-medium text-green-500' : 'text-[14px] font-medium text-destructive'}>
+                                                            {isSuccess ? t('log.success') : t('log.failed')}
+                                                        </div>
+                                                        <div className="mt-1 font-mono text-[12px] leading-4 text-red-400 dark:text-red-300">
+                                                            {formatUsedAmount(log)}
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-5 flex items-center justify-between gap-3 text-[12px] leading-4 text-muted-foreground">
+                                                <div className="mt-5 grid grid-cols-3 items-center gap-2 text-[12px] leading-4 text-muted-foreground">
                                                     <button
                                                         type="button"
                                                         className={onOpenGroupLog && log.group ? 'min-w-0 truncate text-left transition-colors hover:text-primary' : 'min-w-0 truncate text-left'}
@@ -569,17 +608,24 @@ export function LogTable({
                                                     >
                                                         {t('log.group')}: {log.group || '-'}
                                                     </button>
-                                                    <div className="shrink-0 whitespace-nowrap">倍率: {getPriceMultiplier(log)}</div>
-                                                    <div className="shrink-0 whitespace-nowrap">消费: {formatUsedAmount(log)}</div>
+                                                    <div className="min-w-0 truncate text-center">{t('log.duration')}: {formatDuration(log)}</div>
+                                                    <div className="min-w-0 truncate text-right">倍率: {getPriceMultiplier(log)}</div>
                                                 </div>
 
                                                 <div className="mt-4 border-t border-border/70" />
 
-                                                <div className="mt-4 grid w-full grid-cols-4 gap-1">
-                                                    {renderMobileMetric(t('log.duration'), formatDuration(log))}
-                                                    {renderMobileMetric(t('log.ttfb'), `${log.ttfb_milliseconds || 0}ms`)}
+                                                <div className="mt-4 grid w-full grid-cols-3 gap-0">
                                                     {renderMobileMetric(t('log.inputTokens'), (log.usage?.input_tokens || 0).toLocaleString())}
-                                                    {renderMobileMetric(t('log.outputTokens'), (log.usage?.output_tokens || 0).toLocaleString())}
+                                                    {renderMobileMetric(t('log.outputTokens'), (log.usage?.output_tokens || 0).toLocaleString(), 'center')}
+                                                    {renderMobileMetric(t('log.cache'), (
+                                                        <span
+                                                            className="inline-flex min-w-0 flex-col"
+                                                            title={`${t('log.cacheRead')} ${(log.usage?.cached_tokens || 0).toLocaleString()} / ${t('log.cacheWrite')} ${(log.usage?.cache_creation_tokens || 0).toLocaleString()}`}
+                                                        >
+                                                            <span className="truncate">{t('log.cacheRead')} {formatCompactNumber(log.usage?.cached_tokens)}</span>
+                                                            <span className="truncate">{t('log.cacheWrite')} {formatCompactNumber(log.usage?.cache_creation_tokens)}</span>
+                                                        </span>
+                                                    ), 'right')}
                                                 </div>
 
                                                 <Button
