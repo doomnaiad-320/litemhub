@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
@@ -51,6 +51,20 @@ const sanitizeObjectForDisplay = (value: unknown): unknown => {
 }
 
 const getAppUserAccount = (log: LogRecord) => log.app_user?.username || log.app_user?.email || log.app_user?.phone || ''
+
+const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => (
+    <section className="min-w-0 rounded-md border border-border/70 bg-card">
+        <h4 className="border-b border-border/60 px-3 py-2 text-sm font-semibold">{title}</h4>
+        <div className="divide-y divide-border/60">{children}</div>
+    </section>
+)
+
+const DetailRow = ({ label, children }: { label: string; children: ReactNode }) => (
+    <div className="grid min-w-0 grid-cols-[104px_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
+        <div className="shrink-0 text-muted-foreground">{label}</div>
+        <div className="min-w-0 text-right text-foreground [overflow-wrap:anywhere]">{children}</div>
+    </div>
+)
 
 export const ExpandedLogContent = ({
     log,
@@ -145,80 +159,43 @@ export const ExpandedLogContent = ({
         })
     }
 
+    const renderCopyValue = (value?: string, left = 8, right = 8) => {
+        if (!value) return '-'
+
+        return (
+            <button
+                type="button"
+                className="inline-block max-w-full cursor-pointer truncate align-bottom font-mono text-xs underline-offset-4 transition-colors hover:text-primary hover:underline"
+                title={value}
+                onClick={() => copyToClipboard(value)}
+            >
+                {truncateMiddle(value, left, right)}
+            </button>
+        )
+    }
+
     return (
-        <div className="p-4 space-y-4 bg-muted/50 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* Basic info */}
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">{t('log.basicInfo')}</h4>
-                    <div className="space-y-1 text-sm">
-                        <div><span className="font-medium">{t('log.id')}:</span> {log.id}</div>
-                        <div className="min-w-0">
-                            <span className="font-medium">{t('log.requestId')}:</span>{' '}
-                            {log.request_id ? (
-                                <button
-                                    type="button"
-                                    className="font-mono text-xs cursor-pointer text-left max-w-full truncate align-middle underline-offset-4 transition-colors hover:text-primary hover:underline"
-                                    title={log.request_id}
-                                    onClick={() => copyToClipboard(log.request_id)}
-                                >
-                                    {truncateMiddle(log.request_id, 8, 8)}
-                                </button>
-                            ) : '-'}
-                        </div>
-                        <div className="min-w-0">
-                            <span className="font-medium">{t('log.upstreamId')}:</span>{' '}
-                            {log.upstream_id ? (
-                                <button
-                                    type="button"
-                                    className="font-mono text-xs cursor-pointer text-left max-w-full truncate align-middle underline-offset-4 transition-colors hover:text-primary hover:underline"
-                                    title={log.upstream_id}
-                                    onClick={() => copyToClipboard(log.upstream_id)}
-                                >
-                                    {truncateMiddle(log.upstream_id, 10, 10)}
-                                </button>
-                            ) : '-'}
-                        </div>
-                        <div className="min-w-0">
-                            <span className="font-medium">{t('log.promptCacheKey')}:</span>{' '}
-                            {log.prompt_cache_key ? (
-                                <button
-                                    type="button"
-                                    className="font-mono text-xs cursor-pointer text-left max-w-full truncate align-middle underline-offset-4 transition-colors hover:text-primary hover:underline"
-                                    title={log.prompt_cache_key}
-                                    onClick={() => copyToClipboard(log.prompt_cache_key)}
-                                >
-                                    {truncateMiddle(log.prompt_cache_key, 10, 10)}
-                                </button>
-                            ) : '-'}
-                        </div>
-                        <div><span className="font-medium">{t('log.group')}:</span> {log.group || '-'}</div>
-                        <div><span className="font-medium">{t('log.keyName')}:</span> {log.token_name || '-'}</div>
-                        {scope === 'admin' && (
-                            <div className="min-w-0">
-                                <span className="font-medium">{t('log.appUser')}:</span>{' '}
-                                {log.app_user?.id || log.owner_user_id || getAppUserAccount(log)
-                                    ? `${getAppUserAccount(log) || '-'} (#${log.app_user?.id || log.owner_user_id || '-'})`
-                                    : '-'}
-                            </div>
-                        )}
-                        <div className="min-w-0">
-                            <span className="font-medium">{t('log.model')}:</span>{' '}
-                            {log.model ? (
-                                <button
-                                    type="button"
-                                    className="font-mono text-xs cursor-pointer text-left max-w-full truncate align-middle underline-offset-4 transition-colors hover:text-primary hover:underline"
-                                    title={log.model}
-                                    onClick={() => copyToClipboard(log.model)}
-                                >
-                                    {log.model}
-                                </button>
-                            ) : '-'}
-                        </div>
-                        <div className="flex items-center gap-1 min-w-0">
-                            <span className="font-medium">{t('log.channel')}:</span>
-                            {log.channel ? (
-                                isAdminScope ? (
+        <div className="space-y-4 border-t bg-muted/50 p-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <DetailSection title={t('log.basicInfo')}>
+                    <DetailRow label={t('log.id')}>{log.id}</DetailRow>
+                    <DetailRow label={t('log.requestId')}>{renderCopyValue(log.request_id, 8, 8)}</DetailRow>
+                    <DetailRow label={t('log.upstreamId')}>{renderCopyValue(log.upstream_id, 10, 10)}</DetailRow>
+                    <DetailRow label={t('log.promptCacheKey')}>{renderCopyValue(log.prompt_cache_key, 10, 10)}</DetailRow>
+                    <DetailRow label={t('log.group')}>{log.group || '-'}</DetailRow>
+                    <DetailRow label={t('log.keyName')}>{log.token_name || '-'}</DetailRow>
+                    {scope === 'admin' && (
+                        <DetailRow label={t('log.appUser')}>
+                            {log.app_user?.id || log.owner_user_id || getAppUserAccount(log)
+                                ? `#${log.app_user?.id || log.owner_user_id || '-'} ${getAppUserAccount(log) || '-'}`
+                                : '-'}
+                        </DetailRow>
+                    )}
+                    <DetailRow label={t('log.model')}>{renderCopyValue(log.model, 18, 12)}</DetailRow>
+                    <DetailRow label={t('log.channel')}>
+                        {log.channel ? (
+                            isAdminScope ? (
+                                <span className="inline-flex max-w-full justify-end">
                                     <ChannelLabel
                                         id={log.channel}
                                         info={channelInfo || undefined}
@@ -227,96 +204,80 @@ export const ExpandedLogContent = ({
                                         className="max-w-full"
                                         onClick={() => openChannelEdit(log.channel)}
                                     />
-                                ) : (
-                                    <span className="font-mono text-xs">{log.channel}</span>
-                                )
-                            ) : '-'}
-                        </div>
-                        <div><span className="font-medium">{t('log.mode')}:</span> {t(`modeType.${log.mode}`, { defaultValue: log.mode?.toString() || '-' })}</div>
-                        <div><span className="font-medium">{t('log.statusCode')}:</span> {log.code || '-'}</div>
-                        <div><span className="font-medium">{t('log.serviceTier')}:</span> {log.service_tier || '-'}</div>
-                        <div><span className="font-medium">{t('log.user')}:</span> {log.user || '-'}</div>
-                        <div><span className="font-medium">{t('log.ip')}:</span> {log.ip || '-'}</div>
-                        <div><span className="font-medium">{t('log.endpoint')}:</span> {log.endpoint || '-'}</div>
-                        {log.content && <div><span className="font-medium">{t('log.content')}:</span> {log.content}</div>}
-                    </div>
-                </div>
+                                </span>
+                            ) : (
+                                <span className="font-mono text-xs">{log.channel}</span>
+                            )
+                        ) : '-'}
+                    </DetailRow>
+                    <DetailRow label={t('log.mode')}>{t(`modeType.${log.mode}`, { defaultValue: log.mode?.toString() || '-' })}</DetailRow>
+                    <DetailRow label={t('log.statusCode')}>{log.code || '-'}</DetailRow>
+                    <DetailRow label={t('log.serviceTier')}>{log.service_tier || '-'}</DetailRow>
+                    <DetailRow label={t('log.user')}>{log.user || '-'}</DetailRow>
+                    <DetailRow label={t('log.ip')}>{log.ip || '-'}</DetailRow>
+                    <DetailRow label={t('log.endpoint')}>{log.endpoint || '-'}</DetailRow>
+                    {log.content && <DetailRow label={t('log.content')}>{log.content}</DetailRow>}
+                </DetailSection>
 
-                {/* Time info */}
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">{t('log.timeInfo')}</h4>
-                    <div className="space-y-1 text-sm">
-                        <div><span className="font-medium">{t('log.created')}:</span> {log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</div>
-                        <div><span className="font-medium">{t('log.request')}:</span> {log.request_at ? format(new Date(log.request_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</div>
-                        <div><span className="font-medium">{t('log.duration')}:</span> {calculateDuration()}</div>
-                        {log.retry_at && <div><span className="font-medium">{t('log.retry')}:</span> {format(new Date(log.retry_at), 'yyyy-MM-dd HH:mm:ss')}</div>}
-                        <div><span className="font-medium">{t('log.retryTimes')}:</span> {log.retry_times || 0}</div>
-                        <div><span className="font-medium">{t('log.ttfb')}:</span> {log.ttfb_milliseconds || 0}ms</div>
-                    </div>
-                </div>
+                <DetailSection title={t('log.timeInfo')}>
+                    <DetailRow label={t('log.created')}>{log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</DetailRow>
+                    <DetailRow label={t('log.request')}>{log.request_at ? format(new Date(log.request_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</DetailRow>
+                    <DetailRow label={t('log.duration')}>{calculateDuration()}</DetailRow>
+                    {log.retry_at && <DetailRow label={t('log.retry')}>{format(new Date(log.retry_at), 'yyyy-MM-dd HH:mm:ss')}</DetailRow>}
+                    <DetailRow label={t('log.retryTimes')}>{log.retry_times || 0}</DetailRow>
+                    <DetailRow label={t('log.ttfb')}>{log.ttfb_milliseconds || 0}ms</DetailRow>
+                </DetailSection>
 
-                {/* Token usage info */}
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">{t('log.tokenInfo')}</h4>
-                    <div className="space-y-1 text-sm">
-                        <div><span className="font-medium">{t('log.inputTokens')}:</span> {log.usage?.input_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.outputTokens')}:</span> {log.usage?.output_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.total')}:</span> {log.usage?.total_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.cacheCreation')}:</span> {log.usage?.cache_creation_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.cached')}:</span> {log.usage?.cached_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.imageInput')}:</span> {log.usage?.image_input_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.audioInput')}:</span> {log.usage?.audio_input_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.videoInput')}:</span> {log.usage?.video_input_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.imageOutput')}:</span> {log.usage?.image_output_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.audioOutput')}:</span> {log.usage?.audio_output_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.reasoning')}:</span> {log.usage?.reasoning_tokens?.toLocaleString() || 0}</div>
-                        <div><span className="font-medium">{t('log.webSearchCount')}:</span> {log.usage?.web_search_count || 0}</div>
-                    </div>
-                </div>
+                <DetailSection title={t('log.tokenInfo')}>
+                    <DetailRow label={t('log.inputTokens')}>{log.usage?.input_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.outputTokens')}>{log.usage?.output_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.total')}>{log.usage?.total_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.cacheCreation')}>{log.usage?.cache_creation_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.cached')}>{log.usage?.cached_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.imageInput')}>{log.usage?.image_input_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.audioInput')}>{log.usage?.audio_input_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.videoInput')}>{log.usage?.video_input_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.imageOutput')}>{log.usage?.image_output_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.audioOutput')}>{log.usage?.audio_output_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.reasoning')}>{log.usage?.reasoning_tokens?.toLocaleString() || 0}</DetailRow>
+                    <DetailRow label={t('log.webSearchCount')}>{log.usage?.web_search_count || 0}</DetailRow>
+                </DetailSection>
 
-                {/* Price info */}
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">{t('log.priceInfo')}</h4>
-                    <div className="space-y-1 text-sm">
-                        <div><span className="font-medium">{t('log.inputPrice')}:</span> {formatPrice(log.price?.input_price, log.price?.input_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.outputPrice')}:</span> {formatPrice(log.price?.output_price, log.price?.output_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.cacheCreationPrice')}:</span> {formatPrice(log.price?.cache_creation_price, log.price?.cache_creation_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.cachedPrice')}:</span> {formatPrice(log.price?.cached_price, log.price?.cached_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.imageInputPrice')}:</span> {formatPrice(log.price?.image_input_price, log.price?.image_input_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.audioInputPrice')}:</span> {formatPrice(log.price?.audio_input_price, log.price?.audio_input_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.videoInputPrice')}:</span> {formatPrice(log.price?.video_input_price, log.price?.video_input_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.imageOutputPrice')}:</span> {formatPrice(log.price?.image_output_price, log.price?.image_output_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.audioOutputPrice')}:</span> {formatPrice(log.price?.audio_output_price, log.price?.audio_output_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.inputRequestPrice')}:</span> {log.price?.input_request_price || '-'}</div>
-                        <div><span className="font-medium">{t('log.outputRequestPrice')}:</span> {log.price?.output_request_price || '-'}</div>
-                        <div><span className="font-medium">{t('log.perRequestPrice')}:</span> {log.price?.per_request_price || '-'}</div>
-                        <div><span className="font-medium">{t('log.thinkingPrice')}:</span> {formatPrice(log.price?.thinking_mode_output_price, log.price?.thinking_mode_output_price_unit)}</div>
-                        <div><span className="font-medium">{t('log.webSearchPrice')}:</span> {formatPrice(log.price?.web_search_price, log.price?.web_search_price_unit)}</div>
-                    </div>
-                </div>
+                <DetailSection title={t('log.priceInfo')}>
+                    <DetailRow label={t('log.inputPrice')}>{formatPrice(log.price?.input_price, log.price?.input_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.outputPrice')}>{formatPrice(log.price?.output_price, log.price?.output_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.cacheCreationPrice')}>{formatPrice(log.price?.cache_creation_price, log.price?.cache_creation_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.cachedPrice')}>{formatPrice(log.price?.cached_price, log.price?.cached_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.imageInputPrice')}>{formatPrice(log.price?.image_input_price, log.price?.image_input_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.audioInputPrice')}>{formatPrice(log.price?.audio_input_price, log.price?.audio_input_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.videoInputPrice')}>{formatPrice(log.price?.video_input_price, log.price?.video_input_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.imageOutputPrice')}>{formatPrice(log.price?.image_output_price, log.price?.image_output_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.audioOutputPrice')}>{formatPrice(log.price?.audio_output_price, log.price?.audio_output_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.inputRequestPrice')}>{log.price?.input_request_price || '-'}</DetailRow>
+                    <DetailRow label={t('log.outputRequestPrice')}>{log.price?.output_request_price || '-'}</DetailRow>
+                    <DetailRow label={t('log.perRequestPrice')}>{log.price?.per_request_price || '-'}</DetailRow>
+                    <DetailRow label={t('log.thinkingPrice')}>{formatPrice(log.price?.thinking_mode_output_price, log.price?.thinking_mode_output_price_unit)}</DetailRow>
+                    <DetailRow label={t('log.webSearchPrice')}>{formatPrice(log.price?.web_search_price, log.price?.web_search_price_unit)}</DetailRow>
+                </DetailSection>
 
-                {/* Consumption info */}
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">{t('log.consumeInfo')}</h4>
-                    <div className="space-y-1 text-sm">
-                        <div><span className="font-medium">{t('log.usedAmount')}:</span> {formatAmount(totalUsedAmount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.inputRequest')}:</span> {formatAmount(amount?.input_request_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.outputRequest')}:</span> {formatAmount(amount?.output_request_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.input')}:</span> {formatAmount(amount?.input_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.cached')}:</span> {formatAmount(amount?.cached_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.cacheCreation')}:</span> {formatAmount(amount?.cache_creation_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.imageInput')}:</span> {formatAmount(amount?.image_input_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.audioInput')}:</span> {formatAmount(amount?.audio_input_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.videoInput')}:</span> {formatAmount(amount?.video_input_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.output')}:</span> {formatAmount(amount?.output_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.imageOutput')}:</span> {formatAmount(amount?.image_output_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.audioOutput')}:</span> {formatAmount(amount?.audio_output_amount)}</div>
-                        <div><span className="font-medium">{t('log.costBreakdown.webSearch')}:</span> {formatAmount(amount?.web_search_amount)}</div>
-                    </div>
-                </div>
+                <DetailSection title={t('log.consumeInfo')}>
+                    <DetailRow label={t('log.usedAmount')}>{formatAmount(totalUsedAmount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.inputRequest')}>{formatAmount(amount?.input_request_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.outputRequest')}>{formatAmount(amount?.output_request_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.input')}>{formatAmount(amount?.input_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.cached')}>{formatAmount(amount?.cached_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.cacheCreation')}>{formatAmount(amount?.cache_creation_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.imageInput')}>{formatAmount(amount?.image_input_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.audioInput')}>{formatAmount(amount?.audio_input_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.videoInput')}>{formatAmount(amount?.video_input_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.output')}>{formatAmount(amount?.output_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.imageOutput')}>{formatAmount(amount?.image_output_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.audioOutput')}>{formatAmount(amount?.audio_output_amount)}</DetailRow>
+                    <DetailRow label={t('log.costBreakdown.webSearch')}>{formatAmount(amount?.web_search_amount)}</DetailRow>
+                </DetailSection>
             </div>
 
-            {/* Metadata */}
+            {/* Metadata display is intentionally disabled for the log detail view.
             {log.metadata && Object.keys(log.metadata).length > 0 && (
                 <>
                     <Separator />
@@ -332,6 +293,7 @@ export const ExpandedLogContent = ({
                     </div>
                 </>
             )}
+            */}
 
             <Separator />
 

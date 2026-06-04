@@ -88,6 +88,7 @@ export interface LogRecord {
   created_at: string | number
   endpoint: string
   group: string
+  group_price_multiplier?: number
   id: number
   ip: string
   metadata: Record<string, string>

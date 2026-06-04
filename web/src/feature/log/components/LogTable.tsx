@@ -170,13 +170,10 @@ export function LogTable({
     }
 
     const getPriceMultiplier = (log: LogRecord) => {
-        const rawValue = log.metadata?.price_multiplier
-            || log.metadata?.group_multiplier
-            || log.metadata?.multiplier
-        const multiplier = Number(rawValue)
+        const multiplier = Number(log.group_price_multiplier)
 
-        if (!rawValue || Number.isNaN(multiplier) || multiplier <= 0) {
-            return 'x1'
+        if (Number.isNaN(multiplier) || multiplier <= 0) {
+            return '-'
         }
 
         return `x${Number(multiplier.toFixed(4)).toString()}`
