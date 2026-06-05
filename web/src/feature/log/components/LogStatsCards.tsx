@@ -86,7 +86,7 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
                             <Icon className="hidden h-3.5 w-3.5 shrink-0 text-primary lg:block" />
                             <span className="truncate">{t(`log.stats.${card.key}`)}</span>
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-xs font-semibold tracking-tight lg:mt-2 lg:text-xl">
+                        <div className="mt-0.5 truncate font-mono text-xs tracking-tight lg:mt-2 lg:text-xl">
                             {loading ? <Skeleton className="h-4 w-12 lg:h-7 lg:w-24" /> : card.value}
                         </div>
                         {/* 说明文字：H5 隐藏以压缩 hero 高度，lg 起显示 */}
