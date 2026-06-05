@@ -22,7 +22,7 @@ import { ExpandedLogContent } from './ExpandedLogContent'
 import { toast } from 'sonner'
 import type { LogRecord } from '@/types/log'
 import type { LogDetailScope } from '@/feature/log/hooks'
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery'
+import { useIsDesktop } from '@/lib/hooks/useMediaQuery'
 
 const columnHelper = createColumnHelper<LogRecord>()
 
@@ -67,7 +67,7 @@ export function LogTable({
     const { t } = useTranslation()
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
     const [selectedMobileLog, setSelectedMobileLog] = useState<LogRecord | null>(null)
-    const isDesktop = useMediaQuery('(min-width: 768px)')
+    const isDesktop = useIsDesktop()
     const desktopScrollRef = useRef<HTMLDivElement>(null)
     const mobileScrollRef = useRef<HTMLDivElement>(null)
 
