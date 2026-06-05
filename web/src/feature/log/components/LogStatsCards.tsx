@@ -76,18 +76,18 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
     ]
 
     return (
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3 xl:grid-cols-4 2xl:grid-cols-8">
+        <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-3 xl:grid-cols-4 2xl:grid-cols-8">
             {cards.map((card) => {
                 const Icon = card.icon
 
                 return (
-                    <div key={card.key} className="min-w-0 rounded-md border border-border bg-card p-2 lg:rounded-lg lg:p-3">
-                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground lg:text-xs lg:gap-2">
+                    <div key={card.key} className="min-w-0 rounded-md border border-border bg-card p-1.5 lg:rounded-lg lg:p-3">
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground lg:text-xs lg:gap-2">
                             <Icon className="hidden h-3.5 w-3.5 shrink-0 text-primary lg:block" />
                             <span className="truncate">{t(`log.stats.${card.key}`)}</span>
                         </div>
-                        <div className="mt-0.5 font-mono text-sm font-semibold tracking-tight lg:mt-2 lg:text-xl">
-                            {loading ? <Skeleton className="h-5 w-14 lg:h-7 lg:w-24" /> : card.value}
+                        <div className="mt-0.5 truncate font-mono text-xs font-semibold tracking-tight lg:mt-2 lg:text-xl">
+                            {loading ? <Skeleton className="h-4 w-12 lg:h-7 lg:w-24" /> : card.value}
                         </div>
                         {/* 说明文字：H5 隐藏以压缩 hero 高度，lg 起显示 */}
                         <div className="mt-2 hidden lg:block">
