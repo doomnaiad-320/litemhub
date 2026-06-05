@@ -89,8 +89,14 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
                         <div className="mt-1 font-mono text-base font-semibold tracking-tight lg:mt-2 lg:text-xl">
                             {loading ? <Skeleton className="h-6 w-20 lg:h-7 lg:w-24" /> : card.value}
                         </div>
-                        <div className="mt-0.5 truncate text-[11px] text-muted-foreground lg:mt-1 lg:text-xs">
-                            {loading ? <Skeleton className="h-4 w-24 lg:w-28" /> : card.detail}
+                        <div className="mt-1.5 lg:mt-2">
+                            {loading ? (
+                                <Skeleton className="h-5 w-24 rounded-full lg:w-28" />
+                            ) : (
+                                <span className="inline-flex max-w-full items-center truncate rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                    {card.detail}
+                                </span>
+                            )}
                         </div>
                     </div>
                 )
