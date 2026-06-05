@@ -26,6 +26,7 @@ import { Loader2 } from 'lucide-react'
 import { DataTable } from '@/components/table/motion-data-table'
 import { ServerPagination } from '@/components/table/server-pagination'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
+import { ChannelMobileList } from './ChannelMobileList'
 import { DefaultModelsDialog } from './DefaultModelsDialog'
 import { ChannelTestDialog } from './ChannelTestDialog'
 import { ChannelModelTestSelectorDialog } from './ChannelModelTestSelectorDialog'
@@ -48,6 +49,7 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useIsDesktop } from '@/lib/hooks/useMediaQuery'
 import { ROUTES } from '@/routes/constants'
 import { useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import { openResourceDialog, showDeletedResourceToast } from '@/utils/resource-dialog'
@@ -73,6 +75,7 @@ export function ChannelTable() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const isDesktop = useIsDesktop()
 
     // 状态管理
     const [channelDialogOpen, setChannelDialogOpen] = useState(false)
@@ -952,12 +955,12 @@ export function ChannelTable() {
 
     return (
         <>
-            <Card className="border-none shadow-none p-6 flex flex-col h-full">
+            <Card className="border-none shadow-none p-4 lg:p-6 flex flex-col h-full">
                 {/* 标题和操作按钮 */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
                     <h2 className="text-xl font-semibold text-primary dark:text-[#6A6DE6]">{t("channel.management")}</h2>
-                    <div className="flex gap-2">
-                        <div className="w-48">
+                    <div className="flex flex-wrap gap-2">
+                        <div className="w-full sm:w-48">
                             <Select
                                 value={selectedChannelType ? String(selectedChannelType) : ''}
                                 onValueChange={(value) => {
@@ -978,13 +981,13 @@ export function ChannelTable() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="relative">
+                        <div className="relative w-full sm:w-auto">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder={t("common.search")}
                                 value={searchInput}
                                 onChange={(e) => handleSearchChange(e.target.value)}
-                                className="h-9 w-48 pl-8"
+                                className="h-9 w-full sm:w-48 pl-8"
                             />
                         </div>
                         <AnimatedButton>
@@ -1079,15 +1082,34 @@ export function ChannelTable() {
                 {/* 表格容器 */}
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <div className="overflow-auto flex-1">
-                        <DataTable
-                            table={table}
-                            loadingStyle="skeleton"
-                            columns={columns}
-                            isLoading={isLoading || isLoadingRuntimeMetrics}
-                            fixedHeader={true}
-                            animatedRows={true}
-                            showScrollShadows={true}
-                        />
+                        {isDesktop ? (
+                            <DataTable
+                                table={table}
+                                loadingStyle="skeleton"
+                                columns={columns}
+                                isLoading={isLoading || isLoadingRuntimeMetrics}
+                                fixedHeader={true}
+                                animatedRows={true}
+                                showScrollShadows={true}
+                            />
+                        ) : (
+                            <ChannelMobileList
+                                channels={channels}
+                                isLoading={isLoading || isLoadingRuntimeMetrics}
+                                getChannelTypeName={getChannelTypeName}
+                                getDisplayModels={getDisplayModels}
+                                isTestingChannel={isTestingChannel}
+                                isStatusUpdating={isStatusUpdating}
+                                actions={{
+                                    onTest: handleTestChannel,
+                                    onEdit: openUpdateDialog,
+                                    onCopy: openCopyDialog,
+                                    onToggleStatus: handleStatusChange,
+                                    onDelete: openDeleteDialog,
+                                    onExport: exportSingleChannel,
+                                }}
+                            />
+                        )}
                     </div>
 
                     {/* 分页 */}
