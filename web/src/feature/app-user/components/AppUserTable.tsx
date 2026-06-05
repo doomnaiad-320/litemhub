@@ -7,9 +7,11 @@ import {
 } from '@tanstack/react-table'
 import {
     BadgeDollarSign,
+    ChevronRight,
     Eye,
     Gauge,
     Key,
+    Loader2,
     MoreHorizontal,
     Pencil,
     Plus,
@@ -53,6 +55,7 @@ import { ServerPagination } from '@/components/table/server-pagination'
 import { AnimatedButton } from '@/components/ui/animation/components/animated-button'
 import { AnimatedIcon } from '@/components/ui/animation/components/animated-icon'
 import { cn } from '@/lib/utils'
+import { useIsDesktop } from '@/lib/hooks/useMediaQuery'
 import type { AppUser } from '@/types/app-user'
 import { APP_USER_STATUS } from '@/types/app-user'
 import {
@@ -102,6 +105,7 @@ export function AppUserTable() {
     const { data, isLoading, refetch } = useAppUsers(page, pageSize, searchKeyword, statusValue)
     const { updateAppUserStatus, isLoading: isStatusUpdating } = useUpdateAppUserStatus()
     const { deleteAppUser, isLoading: isDeleting } = useDeleteAppUser()
+    const isDesktop = useIsDesktop()
 
     const users = useMemo(() => data?.app_users || [], [data?.app_users])
     const total = data?.total || 0
@@ -301,7 +305,7 @@ export function AppUserTable() {
     return (
         <div className="flex h-full min-h-0 flex-col">
             <Card className="flex min-h-0 flex-1 flex-col gap-0 rounded-md border-border bg-background p-0 shadow-none">
-                <div className="flex flex-col gap-5 border-b border-border/60 px-6 py-6">
+                <div className="flex flex-col gap-5 border-b border-border/60 px-4 py-5 lg:px-6 lg:py-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-sm text-primary">
@@ -315,13 +319,13 @@ export function AppUserTable() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="relative">
+                            <div className="relative w-full sm:w-auto">
                                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder={t('common.search')}
                                     value={searchInput}
                                     onChange={(e) => handleSearchChange(e.target.value)}
-                                    className="h-10 w-56 rounded-md border-border bg-background pl-9 shadow-none"
+                                    className="h-10 w-full sm:w-56 rounded-md border-border bg-background pl-9 shadow-none"
                                 />
                             </div>
 
@@ -375,19 +379,67 @@ export function AppUserTable() {
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col">
-                    <div className="flex-1 overflow-auto px-6 py-4">
-                        <div className="overflow-hidden rounded-md border border-border bg-background">
-                            <DataTable
-                                table={table}
-                                columns={columns}
-                                isLoading={isLoading}
-                                loadingStyle="skeleton"
-                                fixedHeader={true}
-                                animatedRows={true}
-                                showScrollShadows={false}
-                                onRowClick={openDetail}
-                            />
-                        </div>
+                    <div className="flex-1 overflow-auto px-4 py-4 lg:px-6">
+                        {isDesktop ? (
+                            <div className="overflow-hidden rounded-md border border-border bg-background">
+                                <DataTable
+                                    table={table}
+                                    columns={columns}
+                                    isLoading={isLoading}
+                                    loadingStyle="skeleton"
+                                    fixedHeader={true}
+                                    animatedRows={true}
+                                    showScrollShadows={false}
+                                    onRowClick={openDetail}
+                                />
+                            </div>
+                        ) : isLoading && users.length === 0 ? (
+                            <div className="flex items-center justify-center py-16 text-muted-foreground">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
+                        ) : users.length === 0 ? (
+                            <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+                                {t('common.noResult')}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {users.map((user) => (
+                                    <Card
+                                        key={user.id}
+                                        onClick={() => openDetail(user)}
+                                        className="cursor-pointer gap-0 border border-border p-4 shadow-none transition-colors active:bg-muted/50"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm font-semibold text-foreground">
+                                                    {getUserDisplayName(user)}
+                                                </div>
+                                                <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                                    {[user.email, user.phone].filter(Boolean).join(' / ') || t('appUser.emptyAccount')}
+                                                </div>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                <Badge variant="outline" className={getStatusBadgeClass(user.status)}>
+                                                    {user.status === APP_USER_STATUS.DISABLED ? t('appUser.disabled') : t('appUser.enabled')}
+                                                </Badge>
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                                            <span className="text-muted-foreground">
+                                                #{user.id}
+                                                <span className="mx-1.5">·</span>
+                                                {formatDateTime(user.created_at)}
+                                            </span>
+                                            <span className="font-mono text-foreground">
+                                                {formatMoney(user.available_balance)}
+                                            </span>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="border-t border-border/60 px-4 pb-2">
