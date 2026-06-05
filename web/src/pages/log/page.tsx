@@ -164,8 +164,8 @@ export default function LogPage() {
         <div className="h-full flex flex-col">
             <div className="flex-shrink-0 p-4 pb-2 lg:p-6 lg:pb-2">
                 <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                        <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                        <div className="flex h-9 flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm sm:flex-none">
                             <Switch
                                 checked={autoRefreshEnabled}
                                 onCheckedChange={setAutoRefreshEnabled}
@@ -179,7 +179,7 @@ export default function LogPage() {
                             >
                                 <SelectTrigger
                                     size="sm"
-                                    className="h-7 w-[78px] border-0 bg-muted/70 px-2 shadow-none"
+                                    className="ml-auto h-7 w-[78px] border-0 bg-muted/70 px-2 shadow-none sm:ml-0"
                                     aria-label={t('log.autoRefreshInterval')}
                                 >
                                     <SelectValue />
@@ -193,21 +193,23 @@ export default function LogPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRefresh}
-                            disabled={isFetching || isStatsFetching}
-                            className="h-9 px-3"
-                        >
-                            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching || isStatsFetching ? 'animate-spin' : ''}`} />
-                            {t('common.refresh')}
-                        </Button>
-                        <LogExportDialog
-                            scope="global"
-                            currentFilters={filters}
-                        />
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefresh}
+                                disabled={isFetching || isStatsFetching}
+                                className="h-9 flex-1 px-3 sm:flex-none"
+                            >
+                                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching || isStatsFetching ? 'animate-spin' : ''}`} />
+                                {t('common.refresh')}
+                            </Button>
+                            <LogExportDialog
+                                scope="global"
+                                currentFilters={filters}
+                            />
+                        </div>
                     </div>
 
                     <LogStatsCards

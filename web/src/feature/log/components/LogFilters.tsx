@@ -136,7 +136,7 @@ export function LogFilters({
 
     // Channel filter
     const channelFilter = showChannel && (
-        <div className="w-56 flex-shrink-0">
+        <div className="col-span-2 w-full sm:w-56 sm:flex-shrink-0">
             <Select value={channel} onValueChange={setChannel} disabled={loading}>
                 <SelectTrigger className="h-9">
                     <SelectValue placeholder={t('log.filters.channelPlaceholder')} />
@@ -155,7 +155,7 @@ export function LogFilters({
 
     // Model filter
     const modelFilter = (
-        <div className="w-44 flex-shrink-0">
+        <div className="w-full sm:w-44 sm:flex-shrink-0">
             <Combobox
                 options={(availableModels || []).map((m) => ({ value: m, label: m }))}
                 value={model}
@@ -171,7 +171,7 @@ export function LogFilters({
 
     // Token name filter
     const tokenNameFilter = showTokenName && (
-        <div className="w-44 flex-shrink-0">
+        <div className="w-full sm:w-44 sm:flex-shrink-0">
             <Select value={tokenName} onValueChange={setTokenName} disabled={loading}>
                 <SelectTrigger className="h-9">
                     <SelectValue placeholder={t('log.filters.tokenNamePlaceholder')} />
@@ -188,7 +188,7 @@ export function LogFilters({
 
     return (
         <div className="bg-card border border-border rounded-lg p-3 shadow-none">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                 {/* 根据 tokenNameFirst 控制顺序 */}
                 {tokenNameFirst ? (
                     <>{tokenNameFilter}{channelFilter}{modelFilter}</>
@@ -197,7 +197,7 @@ export function LogFilters({
                 )}
 
                 {/* Status filter */}
-                <div className="w-28 flex-shrink-0">
+                <div className="w-full sm:w-28 sm:flex-shrink-0">
                     <Select
                         value={codeType}
                         onValueChange={(value: 'all' | 'success' | 'error') => setCodeType(value)}
@@ -214,10 +214,10 @@ export function LogFilters({
                     </Select>
                 </div>
 
-                <div className="flex-1" />
+                <div className="hidden flex-1 sm:block" />
 
                 {/* Date range */}
-                <div className="w-56 flex-shrink-0">
+                <div className="col-span-2 w-full sm:w-56 sm:flex-shrink-0">
                     <DateRangePicker
                         value={dateRange}
                         onChange={setDateRange}
@@ -227,7 +227,7 @@ export function LogFilters({
                     />
                 </div>
 
-                <div className="w-44 flex-shrink-0">
+                <div className="w-full sm:w-44 sm:flex-shrink-0">
                     <Input
                         placeholder={t('log.filters.userPlaceholder')}
                         value={user}
@@ -243,7 +243,7 @@ export function LogFilters({
                     variant="outline"
                     onClick={handleReset}
                     disabled={loading}
-                    className="h-9 px-3 flex-shrink-0"
+                    className="h-9 w-full px-3 sm:w-auto sm:flex-shrink-0"
                     size="sm"
                 >
                     <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
