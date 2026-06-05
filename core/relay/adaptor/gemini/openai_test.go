@@ -185,6 +185,106 @@ func TestConvertRequest_Gemini25FlashLiteDoesNotAutoInjectThinkingConfig(t *test
 	assert.Nil(t, geminiReq.GenerationConfig.ThinkingConfig)
 }
 
+func TestConvertRequest_SystemInstructionRoles(t *testing.T) {
+	tests := []struct {
+		name           string
+		messages       []relaymodel.Message
+		wantSystemText string
+	}{
+		{
+			name: "system message becomes system instruction",
+			messages: []relaymodel.Message{
+				{
+					Role:    relaymodel.RoleSystem,
+					Content: "You are a precise assistant.",
+				},
+				{
+					Role:    relaymodel.RoleUser,
+					Content: "Hello",
+				},
+			},
+			wantSystemText: "You are a precise assistant.",
+		},
+		{
+			name: "developer message becomes system instruction",
+			messages: []relaymodel.Message{
+				{
+					Role:    relaymodel.RoleDeveloper,
+					Content: "Always answer in JSON.",
+				},
+				{
+					Role:    relaymodel.RoleUser,
+					Content: "Hello",
+				},
+			},
+			wantSystemText: "Always answer in JSON.",
+		},
+		{
+			name: "system and developer messages are merged",
+			messages: []relaymodel.Message{
+				{
+					Role:    relaymodel.RoleSystem,
+					Content: "You are concise.",
+				},
+				{
+					Role:    relaymodel.RoleDeveloper,
+					Content: "Use Chinese.",
+				},
+				{
+					Role:    relaymodel.RoleUser,
+					Content: "Hello",
+				},
+			},
+			wantSystemText: "You are concise.\nUse Chinese.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			channel := &model.Channel{
+				Type: model.ChannelTypeGoogleGemini,
+			}
+			meta := meta.NewMeta(
+				channel,
+				mode.ChatCompletions,
+				"gemini-2.5-pro",
+				model.ModelConfig{},
+			)
+
+			openAIReq := relaymodel.GeneralOpenAIRequest{
+				Model:    "gemini-2.5-pro",
+				Messages: tt.messages,
+			}
+
+			jsonData, _ := sonic.Marshal(openAIReq)
+			req, _ := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http://localhost/v1/chat/completions",
+				bytes.NewBuffer(jsonData),
+			)
+
+			result, err := gemini.ConvertRequest(meta, req)
+			assert.NoError(t, err)
+
+			bodyBytes, _ := io.ReadAll(result.Body)
+
+			var geminiReq relaymodel.GeminiChatRequest
+			err = json.Unmarshal(bodyBytes, &geminiReq)
+			assert.NoError(t, err)
+
+			assert.NotNil(t, geminiReq.SystemInstruction)
+			assert.Len(t, geminiReq.SystemInstruction.Parts, 1)
+			assert.Equal(t, tt.wantSystemText, geminiReq.SystemInstruction.Parts[0].Text)
+			assert.Len(t, geminiReq.Contents, 1)
+			assert.Equal(t, relaymodel.RoleUser, geminiReq.Contents[0].Role)
+			assert.Equal(t, "Hello", geminiReq.Contents[0].Parts[0].Text)
+		})
+	}
+}
+
 func TestConvertRequest_Gemini25ProAutoInjectsThinkingConfig(t *testing.T) {
 	channel := &model.Channel{
 		Type: model.ChannelTypeVertexAI,

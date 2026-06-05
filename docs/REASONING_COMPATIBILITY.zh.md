@@ -2034,3 +2034,34 @@ Moonshot adaptor 当前把以下 actual upstream model name 视为支持 thinkin
    - budget 上下限
    - `max_tokens` / `maxOutputTokens` 相关限制
    - `OriginModel` 命中、`ActualModel` 回退命中
+
+## 附录：Gemini OpenAI 协议预设提示词修复记录
+
+### 背景
+
+当模型 `type` 设置为 Gemini，用户通过 OpenAI `/v1/chat/completions` 请求 Google Gemini 渠道时，用户反馈预设提示词没有被上游模型遵循。
+
+当前路由判断本身没有发现直接问题：OpenAI Chat 请求进入后，`meta.Mode` 仍然是 `ChatCompletions`，最终由 Gemini adaptor 将 OpenAI Chat 请求转换为 Gemini `generateContent` 请求。
+
+### 已确认问题
+
+- 当前 OpenAI Chat 转 Gemini 时只识别 `role=system`。
+- 新版 OpenAI 风格和部分客户端可能使用 `role=developer` 表示预设/开发者指令。
+- 当前多个 `system` 消息会互相覆盖，只保留最后一个。
+- 如果 `developer` 被当作普通 message 传入 Gemini `contents`，Gemini 上游不一定能正确处理该角色。
+
+### 修复目标
+
+- OpenAI Chat 转 Gemini 时同时识别 `system` 和 `developer`。
+- 多条 `system/developer` 合并为一个 Gemini `systemInstruction`。
+- `system/developer` 不进入 Gemini `contents`。
+- 保持路由、数据库、计费、缓存逻辑不变。
+
+### TODO
+
+- [x] 在 Gemini OpenAI 转换逻辑中增加 `developer` 系统指令兼容。
+- [x] 合并多条 `system/developer` 文本，避免覆盖。
+- [x] 补充单元测试覆盖单条 `system`。
+- [x] 补充单元测试覆盖单条 `developer`。
+- [x] 补充单元测试覆盖多条 `system + developer`。
+- [x] 运行 Gemini adaptor 相关测试。

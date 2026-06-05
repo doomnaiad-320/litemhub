@@ -482,6 +482,22 @@ func mergeConsecutiveContents(
 	return mergedContents
 }
 
+func isSystemInstructionRole(role string) bool {
+	return role == relaymodel.RoleSystem || role == relaymodel.RoleDeveloper
+}
+
+func buildSystemInstruction(parts []string) *relaymodel.GeminiChatContent {
+	if len(parts) == 0 {
+		return nil
+	}
+
+	return &relaymodel.GeminiChatContent{
+		Parts: []*relaymodel.GeminiPart{{
+			Text: strings.Join(parts, "\n"),
+		}},
+	}
+}
+
 func buildContents(
 	textRequest *relaymodel.GeneralOpenAIRequest,
 	collectImageTasks bool,
@@ -489,8 +505,8 @@ func buildContents(
 	contents := make([]*relaymodel.GeminiChatContent, 0, len(textRequest.Messages))
 
 	var (
-		imageTasks    []*relaymodel.GeminiPart
-		systemContent *relaymodel.GeminiChatContent
+		imageTasks         []*relaymodel.GeminiPart
+		systemInstructions []string
 	)
 
 	toolCallMap := make(map[string]string)
@@ -505,12 +521,9 @@ func buildContents(
 			appendAssistantToolCalls(&content, message.ToolCalls, toolCallMap)
 		case message.Role == "tool" && message.ToolCallID != "":
 			appendToolResponse(&content, message, toolCallMap)
-		case message.Role == relaymodel.RoleSystem:
-			systemContent = &relaymodel.GeminiChatContent{
-				Role: relaymodel.RoleUser,
-				Parts: []*relaymodel.GeminiPart{{
-					Text: message.StringContent(),
-				}},
+		case isSystemInstructionRole(message.Role):
+			if text := strings.TrimSpace(message.StringContent()); text != "" {
+				systemInstructions = append(systemInstructions, text)
 			}
 
 			continue
@@ -527,7 +540,7 @@ func buildContents(
 		}
 	}
 
-	return systemContent, mergeConsecutiveContents(contents), imageTasks
+	return buildSystemInstruction(systemInstructions), mergeConsecutiveContents(contents), imageTasks
 }
 
 func processImageTasks(
