@@ -76,21 +76,21 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
     ]
 
     return (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4 2xl:grid-cols-8">
             {cards.map((card) => {
                 const Icon = card.icon
 
                 return (
-                    <div key={card.key} className="min-w-0 rounded-lg border border-border bg-card p-3">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Icon className="h-3.5 w-3.5 text-primary" />
+                    <div key={card.key} className="min-w-0 rounded-lg border border-border bg-card p-2.5 lg:p-3">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground lg:gap-2">
+                            <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
                             <span className="truncate">{t(`log.stats.${card.key}`)}</span>
                         </div>
-                        <div className="mt-2 font-mono text-xl font-semibold tracking-tight">
-                            {loading ? <Skeleton className="h-7 w-24" /> : card.value}
+                        <div className="mt-1 font-mono text-base font-semibold tracking-tight lg:mt-2 lg:text-xl">
+                            {loading ? <Skeleton className="h-6 w-20 lg:h-7 lg:w-24" /> : card.value}
                         </div>
-                        <div className="mt-1 truncate text-xs text-muted-foreground">
-                            {loading ? <Skeleton className="h-4 w-28" /> : card.detail}
+                        <div className="mt-0.5 truncate text-[11px] text-muted-foreground lg:mt-1 lg:text-xs">
+                            {loading ? <Skeleton className="h-4 w-24 lg:w-28" /> : card.detail}
                         </div>
                     </div>
                 )

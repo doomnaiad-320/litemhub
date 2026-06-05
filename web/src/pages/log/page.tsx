@@ -162,7 +162,7 @@ export default function LogPage() {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex-shrink-0 p-6 pb-2">
+            <div className="flex-shrink-0 p-4 pb-2 lg:p-6 lg:pb-2">
                 <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm">
@@ -235,7 +235,7 @@ export default function LogPage() {
                 )}
             </div>
 
-            <div className="flex-1 px-6 pb-6 min-h-0">
+            <div className="flex-1 px-4 pb-4 min-h-0 lg:px-6 lg:pb-6">
                 <LogTable
                     data={logData?.logs || []}
                     total={logData?.total || 0}
