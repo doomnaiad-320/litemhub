@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, SlidersHorizontal } from 'lucide-react'
 
 import { useLogs, useLogStats } from '@/feature/log/hooks'
 import { LogExportDialog } from '@/feature/log/components/LogExportDialog'
@@ -82,6 +82,8 @@ export default function LogPage() {
     const [groupDialogOpen, setGroupDialogOpen] = useState(false)
     const [groupDialogGroupId, setGroupDialogGroupId] = useState<string | null>(null)
     const [groupDialogTokenName, setGroupDialogTokenName] = useState<string | undefined>()
+    // H5 筛选器默认收起，避免 hero 区占满整屏
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
     const {
         data: logData,
@@ -198,6 +200,17 @@ export default function LogPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                                aria-expanded={mobileFiltersOpen}
+                                className="h-9 px-3 sm:hidden"
+                            >
+                                <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+                                {t('log.filters.toggle')}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={handleRefresh}
                                 disabled={isFetching || isStatsFetching}
                                 className="h-9 flex-1 px-3 sm:flex-none"
@@ -217,13 +230,16 @@ export default function LogPage() {
                         loading={isStatsLoading}
                     />
 
-                    <LogFilters
-                        onFiltersChange={handleFiltersChange}
-                        loading={isLoading}
-                        availableModels={logData?.models}
-                        availableTokenNames={logData?.token_names}
-                        availableChannels={logData?.channels}
-                    />
+                    {/* H5 默认收起筛选器以压缩 hero 高度；lg 起常显 */}
+                    <div className={mobileFiltersOpen ? 'block' : 'hidden lg:block'}>
+                        <LogFilters
+                            onFiltersChange={handleFiltersChange}
+                            loading={isLoading}
+                            availableModels={logData?.models}
+                            availableTokenNames={logData?.token_names}
+                            availableChannels={logData?.channels}
+                        />
+                    </div>
                 </div>
 
                 {error && (

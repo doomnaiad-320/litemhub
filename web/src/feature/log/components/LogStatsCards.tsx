@@ -89,7 +89,8 @@ export function LogStatsCards({ stats, loading = false }: LogStatsCardsProps) {
                         <div className="mt-1 font-mono text-base font-semibold tracking-tight lg:mt-2 lg:text-xl">
                             {loading ? <Skeleton className="h-6 w-20 lg:h-7 lg:w-24" /> : card.value}
                         </div>
-                        <div className="mt-1.5 lg:mt-2">
+                        {/* 说明文字：H5 隐藏以压缩 hero 高度，lg 起显示 */}
+                        <div className="mt-2 hidden lg:block">
                             {loading ? (
                                 <Skeleton className="h-5 w-24 rounded-full lg:w-28" />
                             ) : (

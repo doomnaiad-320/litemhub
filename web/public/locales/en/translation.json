@@ -787,7 +787,8 @@
       "requestIdPlaceholder": "Request ID",
       "codePlaceholder": "Code",
       "search": "Search",
-      "reset": "Reset"
+      "reset": "Reset",
+      "toggle": "Filters"
     },
     "stats": {
       "requests": "Requests",
