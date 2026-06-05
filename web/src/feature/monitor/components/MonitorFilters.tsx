@@ -136,7 +136,7 @@ export function MonitorFilters({
             <div className="flex flex-wrap items-center gap-2">
                 {/* Channel */}
                 {availableChannels.length > 0 && (
-                    <div className="w-56 flex-shrink-0">
+                    <div className="w-full sm:w-56 sm:flex-shrink-0">
                         <Select value={channel} onValueChange={setChannel} disabled={loading}>
                             <SelectTrigger className="h-9">
                                 <SelectValue placeholder={t('monitor.filters.channelPlaceholder')} />
@@ -155,7 +155,7 @@ export function MonitorFilters({
 
                 {/* Model */}
                 {availableModels.length > 0 && (
-                    <div className="w-44 flex-shrink-0">
+                    <div className="w-full sm:w-44 sm:flex-shrink-0">
                         <Select value={model} onValueChange={setModel} disabled={loading}>
                             <SelectTrigger className="h-9">
                                 <SelectValue placeholder={t('monitor.filters.modelPlaceholder')} />
@@ -172,7 +172,7 @@ export function MonitorFilters({
 
                 {/* Data Source Selector */}
                 {showDataSourceSelector && (
-                    <div className="w-36 flex-shrink-0">
+                    <div className="w-full sm:w-36 sm:flex-shrink-0">
                         <Select value={dataSource} onValueChange={(value) => onDataSourceChange?.(value as DataSourceMode)} disabled={loading}>
                             <SelectTrigger className="h-9">
                                 <SelectValue />
@@ -193,10 +193,10 @@ export function MonitorFilters({
                     </div>
                 )}
 
-                <div className="flex-1" />
+                <div className="hidden flex-1 sm:block" />
 
                 {/* Date range */}
-                <div className="w-56 flex-shrink-0">
+                <div className="w-full sm:w-56 sm:flex-shrink-0">
                     <DateRangePicker
                         value={dateRange}
                         onChange={setDateRange}
@@ -213,7 +213,7 @@ export function MonitorFilters({
                 />
 
                 {/* Timespan */}
-                <div className="w-22 flex-shrink-0">
+                <div className="w-full sm:w-22 sm:flex-shrink-0">
                     <Select
                         value={timespan}
                         onValueChange={(value: 'minute' | 'hour' | 'day' | 'month') => setTimespan(value)}
@@ -237,7 +237,7 @@ export function MonitorFilters({
                     variant="outline"
                     onClick={handleReset}
                     disabled={loading}
-                    className="h-9 px-3 flex-shrink-0"
+                    className="h-9 w-full px-3 sm:w-auto sm:flex-shrink-0"
                 >
                     <RotateCcw className="h-4 w-4 mr-1.5" />
                     {t('monitor.filters.reset')}
