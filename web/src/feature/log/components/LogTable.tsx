@@ -22,40 +22,13 @@ import { ExpandedLogContent } from './ExpandedLogContent'
 import { toast } from 'sonner'
 import type { LogRecord } from '@/types/log'
 import type { LogDetailScope } from '@/feature/log/hooks'
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery'
 
 const columnHelper = createColumnHelper<LogRecord>()
 
 // 点击 group/token_name 时不展开行的列 ID
 const NON_EXPAND_COLUMNS = new Set(['details', 'group', 'token_name', 'model'])
 const RIGHT_ALIGNED_COLUMNS = new Set(['input_tokens', 'output_tokens', 'cache_tokens', 'duration', 'used_amount'])
-
-function useMediaQuery(query: string) {
-    const getMatches = () => {
-        if (typeof window === 'undefined') {
-            return false
-        }
-
-        return window.matchMedia(query).matches
-    }
-
-    const [matches, setMatches] = useState(getMatches)
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return
-        }
-
-        const mediaQuery = window.matchMedia(query)
-        const handleChange = () => setMatches(mediaQuery.matches)
-
-        handleChange()
-        mediaQuery.addEventListener('change', handleChange)
-
-        return () => mediaQuery.removeEventListener('change', handleChange)
-    }, [query])
-
-    return matches
-}
 
 interface LogTableProps {
     data: LogRecord[]
