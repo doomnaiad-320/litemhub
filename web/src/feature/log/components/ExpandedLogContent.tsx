@@ -69,9 +69,11 @@ const DetailRow = ({ label, children }: { label: string; children: ReactNode }) 
 export const ExpandedLogContent = ({
     log,
     scope = 'admin',
+    embedded = false,
 }: {
     log: LogRecord
     scope?: LogDetailScope
+    embedded?: boolean
 }) => {
     const { t } = useTranslation()
     const isAdminScope = scope === 'admin'
@@ -175,7 +177,7 @@ export const ExpandedLogContent = ({
     }
 
     return (
-        <div className="space-y-4 border-t bg-muted/50 p-4">
+        <div className={embedded ? 'space-y-3' : 'space-y-4 border-t bg-muted/50 p-4'}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <DetailSection title={t('log.basicInfo')}>
                     <DetailRow label={t('log.id')}>{log.id}</DetailRow>

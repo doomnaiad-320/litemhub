@@ -697,8 +697,8 @@ export function LogTable({
                                 {selectedMobileLog?.request_id || (selectedMobileLog ? `#${selectedMobileLog.id}` : '')}
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="max-h-[calc(88dvh-92px)] overflow-y-auto p-3 sm:p-4">
-                            {selectedMobileLog && <ExpandedLogContent log={selectedMobileLog} scope={detailScope} />}
+                        <div className="max-h-[calc(88dvh-92px)] overflow-y-auto px-4 py-3 sm:px-6">
+                            {selectedMobileLog && <ExpandedLogContent log={selectedMobileLog} scope={detailScope} embedded />}
                         </div>
                     </DialogContent>
                 </Dialog>
