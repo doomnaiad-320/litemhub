@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, createContext, useContext, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { Separator } from '@/components/ui/separator'
@@ -52,19 +52,29 @@ const sanitizeObjectForDisplay = (value: unknown): unknown => {
 
 const getAppUserAccount = (log: LogRecord) => log.app_user?.username || log.app_user?.email || log.app_user?.phone || ''
 
-const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => (
-    <section className="min-w-0 rounded-md border border-border/70 bg-card">
-        <h4 className="border-b border-border/60 px-3 py-2 text-sm font-semibold">{title}</h4>
-        <div className="divide-y divide-border/60">{children}</div>
-    </section>
-)
+const EmbeddedContext = createContext(false)
 
-const DetailRow = ({ label, children }: { label: string; children: ReactNode }) => (
-    <div className="grid min-w-0 grid-cols-[104px_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
-        <div className="shrink-0 text-muted-foreground">{label}</div>
-        <div className="min-w-0 text-right text-foreground [overflow-wrap:anywhere]">{children}</div>
-    </div>
-)
+const DetailSection = ({ title, children }: { title: string; children: ReactNode }) => {
+    const embedded = useContext(EmbeddedContext)
+
+    return (
+        <section className="min-w-0 rounded-md border border-border/70 bg-card">
+            <h4 className={`border-b border-border/60 font-semibold ${embedded ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm'}`}>{title}</h4>
+            <div className="divide-y divide-border/60">{children}</div>
+        </section>
+    )
+}
+
+const DetailRow = ({ label, children }: { label: string; children: ReactNode }) => {
+    const embedded = useContext(EmbeddedContext)
+
+    return (
+        <div className={`grid min-w-0 grid-cols-[96px_minmax(0,1fr)] gap-3 ${embedded ? 'px-2.5 py-1 text-xs' : 'px-3 py-2 text-sm'}`}>
+            <div className="shrink-0 text-muted-foreground">{label}</div>
+            <div className="min-w-0 text-right text-foreground [overflow-wrap:anywhere]">{children}</div>
+        </div>
+    )
+}
 
 export const ExpandedLogContent = ({
     log,
@@ -177,8 +187,9 @@ export const ExpandedLogContent = ({
     }
 
     return (
+        <EmbeddedContext.Provider value={embedded}>
         <div className={embedded ? 'space-y-3' : 'space-y-4 border-t bg-muted/50 p-4'}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 ${embedded ? 'gap-2.5' : 'gap-4'}`}>
                 <DetailSection title={t('log.basicInfo')}>
                     <DetailRow label={t('log.id')}>{log.id}</DetailRow>
                     <DetailRow label={t('log.requestId')}>{renderCopyValue(log.request_id, 8, 8)}</DetailRow>
@@ -372,5 +383,6 @@ export const ExpandedLogContent = ({
                 />
             )}
         </div>
+        </EmbeddedContext.Provider>
     )
 }
